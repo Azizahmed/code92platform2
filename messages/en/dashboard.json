@@ -1,0 +1,30 @@
+{
+  "title": "Dashboard",
+  "subtitle": "All Code 92 products at a glance",
+  "stats": {
+    "products": "Products",
+    "overdue": "Overdue reviews",
+    "health": "Health",
+    "trends": "New trends · 7d"
+  },
+  "card": {
+    "viewProduct": "View product",
+    "updated": "Since update",
+    "daysSinceUpdate": "{count, plural, =0 {Updated today} one {<num>#</num> day since update} other {<num>#</num> days since update}}",
+    "noUpdates": "No updates yet",
+    "nextReview": "Next review",
+    "noReview": "Not scheduled",
+    "trendsLabel": "Trends · 7d",
+    "trendsTitle": "New trends in the last 7 days",
+    "noSummary": "No status updates yet — post the first one from the product page."
+  },
+  "empty": {
+    "title": "No products yet",
+    "body": "Register the first Code 92 product to start tracking health, review cadence, and market trends from one console.",
+    "cta": "Register a product"
+  },
+  "error": {
+    "title": "Could not load the dashboard",
+    "body": "The product overview query failed. Refresh the page or try again shortly."
+  }
+}

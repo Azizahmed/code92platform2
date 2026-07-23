@@ -1,0 +1,29 @@
+{
+  "title": "Trends",
+  "subtitle": "Market intelligence across all Code 92 products",
+  "panel": {
+    "title": "Market trends",
+    "emptyTitle": "No linked trends",
+    "emptyBody": "Trend items linked to this product will appear here after the next scan."
+  },
+  "filters": {
+    "product": "Product",
+    "allProducts": "All products",
+    "source": "Source",
+    "allSources": "All sources",
+    "apply": "Apply"
+  },
+  "card": {
+    "dismiss": "Dismiss",
+    "relevance": "Relevance",
+    "why": "Why it matters",
+    "openArticle": "Open article"
+  },
+  "empty": {
+    "title": "No trends yet",
+    "body": "Scans run daily. Once the pipeline links trend items to products, they will show up here."
+  },
+  "errors": {
+    "generic": "Something went wrong. Try again."
+  }
+}

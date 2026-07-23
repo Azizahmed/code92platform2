@@ -1,0 +1,65 @@
+{
+  "title": "Admin",
+  "subtitle": "Team access and the trend-scan pipeline",
+  "forbidden": {
+    "title": "Admins only",
+    "body": "This console is restricted to team admins. Ask an admin if you need access."
+  },
+  "members": {
+    "title": "Team members",
+    "name": "Name",
+    "userId": "User ID",
+    "role": "Role",
+    "status": "Status",
+    "joined": "Joined",
+    "actions": "Actions",
+    "you": "you",
+    "roles": {
+      "admin": "Admin",
+      "member": "Member"
+    },
+    "states": {
+      "active": "Active",
+      "inactive": "Inactive"
+    },
+    "activate": "Activate",
+    "deactivate": "Deactivate",
+    "makeAdmin": "Make admin",
+    "makeMember": "Make member",
+    "empty": "No team members found."
+  },
+  "scans": {
+    "title": "Scan runs",
+    "status": "Status",
+    "products": "Products",
+    "inserted": "Inserted",
+    "linked": "Linked",
+    "started": "Started",
+    "finished": "Finished",
+    "details": "Details",
+    "statuses": {
+      "running": "Running",
+      "success": "Success",
+      "partial": "Partial",
+      "failed": "Failed"
+    },
+    "noProductsDue": "No products were due for scanning",
+    "productErrors": "{count, plural, one {# product error} other {# product errors}}",
+    "empty": "No scan runs yet."
+  },
+  "scanNow": {
+    "button": "Scan now",
+    "scanning": "Scanning…",
+    "result": "Scan finished",
+    "resultCounts": "{products} products · {inserted} items inserted · {linked} linked"
+  },
+  "errors": {
+    "generic": "Something went wrong. Try again.",
+    "notAdmin": "Only admins can do this.",
+    "lastAdmin": "Cannot demote or deactivate the last active admin.",
+    "notFound": "Team member not found.",
+    "invalidRole": "Invalid role.",
+    "scanFailed": "The scan failed to start. Try again.",
+    "scanUnauthorized": "The scan function rejected this session (admins only)."
+  }
+}
