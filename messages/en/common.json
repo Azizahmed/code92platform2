@@ -51,5 +51,11 @@
   },
   "footer": {
     "internal": "Internal tool — Code 92 team only"
+  },
+  "states": {
+    "loading": "Loading…",
+    "errorTitle": "Something went wrong",
+    "errorBody": "The console hit an unexpected error while rendering this page. Try again.",
+    "retry": "Retry"
   }
 }
