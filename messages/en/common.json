@@ -1,0 +1,55 @@
+{
+  "appName": "Code 92 Command Center",
+  "appNameShort": "Code 92",
+  "consoleTag": "Mission Control",
+  "nav": {
+    "dashboard": "Dashboard",
+    "products": "Products",
+    "trends": "Trends",
+    "admin": "Admin",
+    "section": "Navigate"
+  },
+  "actions": {
+    "signOut": "Sign out",
+    "cancel": "Cancel",
+    "save": "Save"
+  },
+  "health": {
+    "label": "Health",
+    "green": "Healthy",
+    "yellow": "At risk",
+    "red": "Critical",
+    "unknown": "Unknown"
+  },
+  "stages": {
+    "label": "Stage",
+    "idea": "Idea",
+    "development": "Development",
+    "beta": "Beta",
+    "live": "Live",
+    "paused": "Paused",
+    "sunset": "Sunset"
+  },
+  "overdue": "Overdue",
+  "language": {
+    "label": "Language",
+    "en": "English",
+    "ar": "العربية"
+  },
+  "time": {
+    "justNow": "just now"
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "subtitle": "All Code 92 products at a glance",
+    "emptyTitle": "No products yet",
+    "emptyBody": "The product registry ships in the next milestone. Once products are registered, health, review status, and market trends will show up here."
+  },
+  "placeholder": {
+    "title": "Coming soon",
+    "body": "This section is part of a later milestone. The shell, navigation, and access control are already live."
+  },
+  "footer": {
+    "internal": "Internal tool — Code 92 team only"
+  }
+}
