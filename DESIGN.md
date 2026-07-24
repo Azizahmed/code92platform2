@@ -31,6 +31,15 @@ Rules:
 - Borders are always `border border-hairline` (1px). No shadows except the
   small status-dot glow in `HealthBadge`.
 
+## Responsive shell
+
+- Desktop (`md` and above): fixed logical-start sidebar, `w-60`.
+- Mobile: compact sticky header plus a fixed bottom icon navigation bar.
+- Language, appearance, account identity, and sign-out live in the mobile
+  preferences sheet opened from the header.
+- Main content uses phone-safe padding and reserves space for the bottom bar,
+  including `safe-area-inset-bottom` on notched devices.
+
 ## Atmosphere
 
 Defined once in `app/globals.css` on `body`: a faint 32px engineering grid

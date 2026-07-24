@@ -40,14 +40,14 @@ export default async function ProductsPage() {
 
   return (
     <section className="space-y-6">
-      <header className="flex items-start justify-between gap-4">
+      <header className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h1 className="text-xl font-semibold">{t('list.title')}</h1>
           <p className="mt-1 text-sm text-muted">{t('list.subtitle')}</p>
         </div>
         <Link
           href="/products/new"
-          className="inline-flex items-center gap-2 rounded-md bg-accent px-3.5 py-2 text-sm font-semibold text-bg transition-opacity hover:opacity-90"
+          className="inline-flex w-fit items-center gap-2 rounded-md bg-accent px-3.5 py-2 text-sm font-semibold text-bg transition-opacity hover:opacity-90"
         >
           <Plus className="h-4 w-4" strokeWidth={2} />
           {t('list.newProduct')}

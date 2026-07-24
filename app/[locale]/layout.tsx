@@ -1,4 +1,4 @@
-import type {Metadata} from 'next';
+import type {Metadata, Viewport} from 'next';
 import {
   IBM_Plex_Mono,
   IBM_Plex_Sans,
@@ -52,6 +52,12 @@ const plexMono = IBM_Plex_Mono({
 export function generateStaticParams() {
   return routing.locales.map((locale) => ({locale}));
 }
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  viewportFit: 'cover'
+};
 
 export async function generateMetadata({
   params

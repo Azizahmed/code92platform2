@@ -6,8 +6,11 @@
     "dashboard": "Dashboard",
     "tasks": "All tasks",
     "products": "Products",
+    "knowledge": "Knowledge",
     "trends": "Trends",
     "admin": "Admin",
+    "preferences": "Preferences",
+    "closePreferences": "Close preferences",
     "section": "Navigate"
   },
   "actions": {

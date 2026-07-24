@@ -8,6 +8,7 @@ import OverdueBadge from '@/components/OverdueBadge';
 import RelativeTime from '@/components/RelativeTime';
 import StageChip, {type Stage} from '@/components/StageChip';
 import StatusUpdateForm from '@/components/products/StatusUpdateForm';
+import ProductKnowledgePanel from '@/components/products/ProductKnowledgePanel';
 import ProductTasksPanel, {
   type TaskMemberOption
 } from '@/components/products/ProductTasksPanel';
@@ -165,7 +166,7 @@ export default async function ProductDetailPage({
         </Link>
       </div>
 
-      <header className="rounded-lg border border-hairline bg-panel p-6">
+      <header className="rounded-lg border border-hairline bg-panel p-4 sm:p-6">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="flex min-w-0 items-center gap-4">
             {p.logo_url ? (
@@ -429,6 +430,8 @@ export default async function ProductDetailPage({
 
         <div>{p.archived_at ? null : <StatusUpdateForm productId={p.id} />}</div>
       </div>
+
+      <ProductKnowledgePanel productId={p.id} />
 
       <ProductTrendsPanel productId={p.id} locale={locale} />
     </section>

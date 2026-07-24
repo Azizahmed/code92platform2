@@ -225,7 +225,7 @@ export default function ProductForm(props: Props) {
   return (
     <form
       onSubmit={handleSubmit}
-      className="space-y-5 rounded-lg border border-hairline bg-panel p-6"
+      className="space-y-5 rounded-lg border border-hairline bg-panel p-4 sm:p-6"
     >
       <div className="grid gap-5 sm:grid-cols-2">
         <label className={LABEL_CLASS}>

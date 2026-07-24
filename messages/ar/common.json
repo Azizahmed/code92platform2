@@ -6,8 +6,11 @@
     "dashboard": "لوحة التحكم",
     "tasks": "كل المهام",
     "products": "المنتجات",
+    "knowledge": "المعرفة",
     "trends": "الاتجاهات",
     "admin": "الإدارة",
+    "preferences": "التفضيلات",
+    "closePreferences": "إغلاق التفضيلات",
     "section": "التنقل"
   },
   "actions": {

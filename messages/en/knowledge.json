@@ -1,0 +1,130 @@
+{
+  "title": "Knowledge base",
+  "subtitle": "Articles, notes, and sources the team collects — linkable to any product",
+  "newItem": "New item",
+  "backToList": "Back to knowledge base",
+  "backToItem": "Back to item",
+  "archivedTag": "Archived",
+  "byAuthor": "by {name}",
+  "hasLink": "External link",
+  "resultCount": "{count, plural, =0 {No results} one {# result} other {# results}}",
+  "kinds": {
+    "article": "Article",
+    "note": "Note",
+    "source": "Source"
+  },
+  "statuses": {
+    "draft": "Draft",
+    "published": "Published",
+    "to_review": "To review",
+    "in_use": "In use",
+    "processed": "Processed"
+  },
+  "filters": {
+    "search": "Search",
+    "searchPlaceholder": "Search titles and content…",
+    "kind": "Type",
+    "allKinds": "All types",
+    "status": "Status",
+    "allStatuses": "All statuses",
+    "writingGroup": "Articles & notes",
+    "sourceGroup": "Sources",
+    "tag": "Tag",
+    "allTags": "All tags",
+    "product": "Product",
+    "allProducts": "All products",
+    "includeArchived": "Include archived",
+    "apply": "Apply"
+  },
+  "empty": {
+    "title": "The knowledge base is empty",
+    "body": "Start by writing an article or a note, or add a source to come back to later. Every item can link to any number of products.",
+    "filteredTitle": "No matches",
+    "filteredBody": "Nothing matches these filters. Try a broader search or clear a filter."
+  },
+  "new": {
+    "title": "New knowledge item",
+    "subtitle": "Write an article or a note, or register an external source."
+  },
+  "edit": {
+    "title": "Edit item",
+    "subtitle": "Update the content, status, tags, or linked products.",
+    "action": "Edit"
+  },
+  "detail": {
+    "author": "Author",
+    "created": "Created",
+    "updated": "Updated",
+    "tags": "Tags",
+    "sourceTitle": "Source",
+    "productsTitle": "Linked products"
+  },
+  "fields": {
+    "kind": "Type",
+    "kindLocked": "A source cannot be converted to another type.",
+    "status": "Status",
+    "title": "Title",
+    "titlePlaceholder": "A short, clear title",
+    "url": "Link",
+    "urlHint": "The original source link — optional if you upload a file instead.",
+    "file": "File",
+    "fileHint": "PDF, document, or image, up to 25 MB.",
+    "chooseFile": "Choose file",
+    "replaceFile": "Replace file",
+    "removeFile": "Remove file",
+    "content": "Content",
+    "sourceNotes": "Notes (optional)",
+    "contentPlaceholder": "Write in Arabic or English…",
+    "contentHint": "Markdown supported. Each paragraph picks up its own text direction.",
+    "tags": "Tags",
+    "products": "Products",
+    "productsHint": "Leave empty for company-wide knowledge."
+  },
+  "form": {
+    "create": "Create item",
+    "save": "Save changes",
+    "submitting": "Saving…"
+  },
+  "tags": {
+    "none": "No tags yet",
+    "placeholder": "Type a tag and press Enter",
+    "add": "Add",
+    "remove": "Remove {name}"
+  },
+  "products": {
+    "none": "No active products yet."
+  },
+  "file": {
+    "opening": "Opening…"
+  },
+  "panel": {
+    "title": "Knowledge",
+    "viewAll": "View all",
+    "emptyTitle": "No linked knowledge",
+    "emptyBody": "Link an article, note, or source to this product and it will show up here.",
+    "more": "+{count} more"
+  },
+  "danger": {
+    "title": "Danger zone",
+    "body": "Archiving hides the item from the default list but keeps it. Deleting is permanent.",
+    "archive": "Archive",
+    "unarchive": "Restore",
+    "delete": "Delete",
+    "archiveConfirm": "Archive this item?",
+    "unarchiveConfirm": "Restore this item from the archive?",
+    "deleteConfirm": "Permanently delete this item? This cannot be undone."
+  },
+  "errors": {
+    "invalid": "Check the fields and try again.",
+    "forbidden": "You do not have permission for this action.",
+    "generic": "Could not save the changes. Try again.",
+    "notFound": "That item no longer exists.",
+    "kindLocked": "A source cannot be converted to another type.",
+    "invalidTag": "That tag name is not valid.",
+    "contentRequired": "Articles and notes need content.",
+    "sourceNeedsLinkOrFile": "A source needs a link or an uploaded file.",
+    "fileType": "That file type is not supported.",
+    "fileSize": "That file is larger than 25 MB.",
+    "uploadFailed": "The upload failed. Try again."
+  }
+}

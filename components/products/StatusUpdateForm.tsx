@@ -107,7 +107,7 @@ export default function StatusUpdateForm({productId}: {productId: string}) {
     >
       <h2 className="text-sm font-medium">{t('update.title')}</h2>
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid gap-3 sm:grid-cols-2">
         <label className="block space-y-1.5">
           <span className="text-xs text-muted">{t('update.health')}</span>
           <select

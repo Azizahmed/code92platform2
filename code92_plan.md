@@ -81,6 +81,14 @@ Shared: `HealthBadge`, `StageChip`, `RelativeTime`, `OverdueBadge`, `LocaleSwitc
 - **M6 Trends UI** — `/trends`, product trends panel, dismiss, admin scan panel + Scan now. *Verify:* feed shows scanned items; dismiss persists; member "Scan now" rejected.
 - **M7 RTL audit+polish** — grep-ban physical direction classes, icon mirroring, localized dates, both message files complete, empty/loading/error states. *Verify:* full click-through of every route in both locales, desktop + narrow; final `diagnose`.
 
+- **M8 Knowledge base** — company knowledge base of **articles, notes, and sources**, taggable and linkable to any number of products.
+  - **Data** (`20260724143608_add-knowledge-base.sql`): `knowledge_items` (`kind` article|note|source, `title`, markdown `content`, source `url` + private-bucket file columns, kind-specific `status`, `author_id`, `archived_at`), shared `tags` table (case-insensitive unique, any member may add, admins rename/delete), and the `knowledge_item_tags` / `knowledge_item_products` join tables. Links are optional and many-to-many, so company-wide knowledge simply stays unlinked.
+  - **Status vocabulary is per kind** — articles/notes: `draft → published`; sources: `to_review → in_use → processed` — enforced by a CHECK constraint, defaulted by trigger, and re-validated in the UI. Archiving is separate (`archived_at`), matching products. A source can never be converted to another kind.
+  - **Search**: stored `search_vector` indexed under two configs — `english` (stemming) and `simple` (verbatim tokens, which is what Arabic needs since Postgres has no Arabic stemmer) — title weighted above body. The `search_knowledge_items` RPC (invoker rights, so RLS still applies) ORs both parses of the query and ranks with `ts_rank`; it also carries the kind/status/tag/product/archived filters, so the list view is one round trip.
+  - **Storage**: source files live in a **private** `knowledge-files` bucket; readers get a 5-minute signed URL minted on click, never a stored public link.
+  - **App**: `lib/actions/knowledge.ts` + `lib/knowledge.ts` (shared vocabulary) + `lib/knowledge-upload.ts`; routes `/knowledge`, `/knowledge/new`, `/knowledge/[id]`, `/knowledge/[id]/edit`; markdown rendered with `dir="auto"` per block so Arabic paragraphs flow RTL inside an English document; a Knowledge panel on the product detail page. Adds `react-markdown` + `remark-gfm`.
+  - *Verify:* kind/status pairing and body-present constraints reject bad rows; status defaults per kind; source→article conversion rejected; `deploy` query matches "deploying" and an Arabic query matches its note; `anon` holds no privilege on any of the four tables; `author_id`/`search_vector` absent from the column-level UPDATE grant; signed-out `/knowledge` deep links redirect to login in both locales.
+
 One commit per milestone minimum; schema changes always as new migrations.
 
 ## Risks & defaults
