@@ -15,7 +15,7 @@ export default async function ProductsPage() {
     insforge.database
       .from('products')
       .select(
-        'id, name, slug, stage, health, owner_id, next_review_at, last_status_update_at, archived_at'
+        'id, name, slug, logo_url, stage, health, owner_id, next_review_at, last_status_update_at, archived_at'
       )
       .order('created_at', {ascending: false}),
     insforge.database.from('team_members').select('user_id, display_name')
@@ -29,6 +29,7 @@ export default async function ProductsPage() {
     id: p.id as string,
     name: p.name as string,
     slug: p.slug as string,
+    logoUrl: (p.logo_url as string | null) ?? null,
     stage: p.stage as ProductRow['stage'],
     health: p.health as ProductRow['health'],
     ownerName: ownerNames.get(p.owner_id as string) ?? null,

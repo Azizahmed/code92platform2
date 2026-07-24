@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import {useMemo, useState} from 'react';
 import {Package} from 'lucide-react';
 import {useFormatter, useTranslations} from 'next-intl';
@@ -14,6 +15,7 @@ export type ProductRow = {
   id: string;
   name: string;
   slug: string;
+  logoUrl: string | null;
   stage: Stage;
   health: Health;
   ownerName: string | null;
@@ -156,16 +158,32 @@ export default function ProductsTable({products}: {products: ProductRow[]}) {
                     <td className="px-4 py-3">
                       <Link
                         href={`/products/${p.id}`}
-                        className="group block"
+                        className="group flex items-center gap-3"
                       >
-                        <span className="font-medium text-ink group-hover:text-accent">
-                          {p.name}
+                        <span className="relative flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-hairline bg-raised font-mono text-xs text-faint">
+                          {p.logoUrl ? (
+                            <Image
+                              src={p.logoUrl}
+                              alt={p.name}
+                              fill
+                              unoptimized
+                              sizes="36px"
+                              className="object-cover"
+                            />
+                          ) : (
+                            p.name.slice(0, 1).toUpperCase()
+                          )}
                         </span>
-                        <span
-                          dir="ltr"
-                          className="block font-mono text-[11px] text-faint"
-                        >
-                          {p.slug}
+                        <span className="min-w-0">
+                          <span className="block font-medium text-ink group-hover:text-accent">
+                            {p.name}
+                          </span>
+                          <span
+                            dir="ltr"
+                            className="block font-mono text-[11px] text-faint"
+                          >
+                            {p.slug}
+                          </span>
                         </span>
                       </Link>
                     </td>

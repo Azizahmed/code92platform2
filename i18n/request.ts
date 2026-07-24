@@ -7,7 +7,15 @@ import {routing} from './routing';
 // so parallel workstreams can add files without merge conflicts.
 // To add a namespace: create <namespace>.json for BOTH locales and append
 // the namespace name here.
-const NAMESPACES = ['common', 'auth', 'dashboard', 'products', 'trends', 'admin'] as const;
+const NAMESPACES = [
+  'common',
+  'auth',
+  'dashboard',
+  'products',
+  'tasks',
+  'trends',
+  'admin'
+] as const;
 
 type Messages = Record<string, unknown>;
 

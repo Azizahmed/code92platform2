@@ -1,4 +1,5 @@
 import {ChevronLeft, ExternalLink, Pencil, Rss} from 'lucide-react';
+import Image from 'next/image';
 import {notFound} from 'next/navigation';
 import {getFormatter, getTranslations} from 'next-intl/server';
 
@@ -7,10 +8,17 @@ import OverdueBadge from '@/components/OverdueBadge';
 import RelativeTime from '@/components/RelativeTime';
 import StageChip, {type Stage} from '@/components/StageChip';
 import StatusUpdateForm from '@/components/products/StatusUpdateForm';
+import ProductTasksPanel, {
+  type TaskMemberOption
+} from '@/components/products/ProductTasksPanel';
 import {ProductTrendsPanel} from '@/components/trends/ProductTrendsPanel';
 import {Link} from '@/i18n/navigation';
 import {requireActiveMember} from '@/lib/auth';
 import type {Product} from '@/lib/actions/products';
+import type {
+  ProductTask,
+  TaskAttachment
+} from '@/lib/actions/tasks';
 import {createInsForgeServerClient} from '@/lib/insforge/server';
 
 type StatusUpdate = {
@@ -20,6 +28,18 @@ type StatusUpdate = {
   summary: string;
   details: string | null;
   author_id: string | null;
+  created_at: string;
+  attachments: StatusUpdateAttachment[];
+};
+
+type StatusUpdateAttachment = {
+  id: string;
+  status_update_id: string;
+  storage_url: string;
+  storage_key: string;
+  file_name: string;
+  mime_type: string;
+  size_bytes: number;
   created_at: string;
 };
 
@@ -51,19 +71,84 @@ export default async function ProductDetailPage({
   // Archived products stay viewable for owner/admin; everyone else gets 404.
   if (p.archived_at && !isOwner && !isAdmin) notFound();
 
-  const [{data: members}, {data: updates}] = await Promise.all([
-    insforge.database.from('team_members').select('user_id, display_name'),
+  const [{data: members}, {data: updates}, {data: tasks}] = await Promise.all([
+    insforge.database
+      .from('team_members')
+      .select('user_id, display_name')
+      .eq('is_active', true)
+      .order('display_name'),
     insforge.database
       .from('status_updates')
       .select('id, health, stage, summary, details, author_id, created_at')
       .eq('product_id', id)
-      .order('created_at', {ascending: false})
+      .order('created_at', {ascending: false}),
+    insforge.database
+      .from('product_tasks')
+      .select(
+        'id, product_id, parent_task_id, title, notes, due_date, assignee_id, status, position, created_by, completed_at, created_at, updated_at'
+      )
+      .eq('product_id', id)
+      .order('position', {ascending: true})
+      .order('created_at', {ascending: true})
   ]);
+
+  const taskIds = (tasks ?? []).map((task) => task.id as string);
+  const updateIds = (updates ?? []).map((update) => update.id as string);
+  const [{data: taskAttachments}, {data: updateAttachments}] =
+    await Promise.all([
+      taskIds.length > 0
+        ? insforge.database
+            .from('task_attachments')
+            .select(
+              'id, task_id, storage_url, storage_key, file_name, mime_type, size_bytes, created_at'
+            )
+            .in('task_id', taskIds)
+            .order('created_at', {ascending: true})
+        : Promise.resolve({data: []}),
+      updateIds.length > 0
+        ? insforge.database
+            .from('status_update_attachments')
+            .select(
+              'id, status_update_id, storage_url, storage_key, file_name, mime_type, size_bytes, created_at'
+            )
+            .in('status_update_id', updateIds)
+            .order('created_at', {ascending: true})
+        : Promise.resolve({data: []})
+    ]);
 
   const memberNames = new Map<string, string>(
     (members ?? []).map((m) => [m.user_id as string, m.display_name as string])
   );
-  const timeline = (updates ?? []) as unknown as StatusUpdate[];
+  const taskAttachmentMap = new Map<string, TaskAttachment[]>();
+  for (const attachment of (taskAttachments ?? []) as unknown as TaskAttachment[]) {
+    const list = taskAttachmentMap.get(attachment.task_id) ?? [];
+    list.push(attachment);
+    taskAttachmentMap.set(attachment.task_id, list);
+  }
+  const workItems: ProductTask[] = (
+    (tasks ?? []) as unknown as Omit<ProductTask, 'attachments'>[]
+  ).map((task) => ({
+    ...task,
+    attachments: taskAttachmentMap.get(task.id) ?? []
+  }));
+
+  const updateAttachmentMap = new Map<string, StatusUpdateAttachment[]>();
+  for (const attachment of (updateAttachments ??
+    []) as unknown as StatusUpdateAttachment[]) {
+    const list = updateAttachmentMap.get(attachment.status_update_id) ?? [];
+    list.push(attachment);
+    updateAttachmentMap.set(attachment.status_update_id, list);
+  }
+  const timeline: StatusUpdate[] = (
+    (updates ?? []) as unknown as Omit<StatusUpdate, 'attachments'>[]
+  ).map((update) => ({
+    ...update,
+    attachments: updateAttachmentMap.get(update.id) ?? []
+  }));
+  const memberOptions: TaskMemberOption[] = (members ?? []).map((m) => ({
+    userId: m.user_id as string,
+    displayName: m.display_name as string
+  }));
   const overdue =
     p.next_review_at !== null && new Date(p.next_review_at).getTime() < Date.now();
   const links = Object.entries(p.links ?? {});
@@ -82,19 +167,38 @@ export default async function ProductDetailPage({
 
       <header className="rounded-lg border border-hairline bg-panel p-6">
         <div className="flex flex-wrap items-start justify-between gap-4">
-          <div className="space-y-2">
-            <div className="flex flex-wrap items-center gap-3">
-              <h1 className="text-xl font-semibold">{p.name}</h1>
-              <StageChip stage={p.stage} />
-              <HealthBadge health={p.health} />
-              {p.archived_at ? (
-                <span className="rounded border border-hairline bg-raised px-1.5 py-0.5 text-[10px] uppercase tracking-wider text-faint">
-                  {t('detail.archivedTag')}
-                </span>
-              ) : null}
-            </div>
-            <div dir="ltr" className="font-mono text-xs text-faint">
-              {p.slug}
+          <div className="flex min-w-0 items-center gap-4">
+            {p.logo_url ? (
+              <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-xl border border-hairline bg-raised">
+                <Image
+                  src={p.logo_url}
+                  alt={p.name}
+                  fill
+                  unoptimized
+                  sizes="56px"
+                  className="object-cover"
+                  priority
+                />
+              </div>
+            ) : (
+              <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl border border-hairline bg-raised font-mono text-lg font-semibold text-faint">
+                {p.name.slice(0, 1).toUpperCase()}
+              </div>
+            )}
+            <div className="min-w-0 space-y-2">
+              <div className="flex flex-wrap items-center gap-3">
+                <h1 className="text-xl font-semibold">{p.name}</h1>
+                <StageChip stage={p.stage} />
+                <HealthBadge health={p.health} />
+                {p.archived_at ? (
+                  <span className="rounded border border-hairline bg-raised px-1.5 py-0.5 text-[10px] uppercase tracking-wider text-faint">
+                    {t('detail.archivedTag')}
+                  </span>
+                ) : null}
+              </div>
+              <div dir="ltr" className="font-mono text-xs text-faint">
+                {p.slug}
+              </div>
             </div>
           </div>
           {isOwner || isAdmin ? (
@@ -248,6 +352,14 @@ export default async function ProductDetailPage({
         </p>
       ) : null}
 
+      <ProductTasksPanel
+        productId={p.id}
+        tasks={workItems}
+        members={memberOptions}
+        locale={locale}
+        disabled={Boolean(p.archived_at)}
+      />
+
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="space-y-4 lg:col-span-2">
           <h2 className="text-sm font-medium">{t('detail.timelineTitle')}</h2>
@@ -279,6 +391,29 @@ export default async function ProductDetailPage({
                     <p className="mt-1 whitespace-pre-wrap text-sm leading-relaxed text-muted">
                       {u.details}
                     </p>
+                  ) : null}
+                  {u.attachments.length > 0 ? (
+                    <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
+                      {u.attachments.map((attachment) => (
+                        <a
+                          key={attachment.id}
+                          href={attachment.storage_url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="relative aspect-[4/3] overflow-hidden rounded-md border border-hairline bg-bg transition-colors hover:border-accent/40"
+                          title={attachment.file_name}
+                        >
+                          <Image
+                            src={attachment.storage_url}
+                            alt={attachment.file_name}
+                            fill
+                            unoptimized
+                            sizes="(max-width: 640px) 50vw, 220px"
+                            className="object-cover"
+                          />
+                        </a>
+                      ))}
+                    </div>
                   ) : null}
                   <div className="mt-2 text-[11px] text-faint">
                     {t('detail.byAuthor', {

@@ -1,0 +1,103 @@
+{
+  "section": {
+    "title": "Product tasks",
+    "subtitle": "Plan the work, assign ownership, and keep every detail with the product.",
+    "newTask": "Add task",
+    "open": "{count, plural, =0 {No open tasks} =1 {1 open task} other {# open tasks}}",
+    "completed": "{count, plural, =0 {None completed} =1 {1 completed} other {# completed}}",
+    "emptyTitle": "No tasks yet",
+    "emptyBody": "Add the first task to turn this product's next step into owned, dated work."
+  },
+  "form": {
+    "newTitle": "New task",
+    "subtaskTitle": "New subtask",
+    "editTitle": "Edit task",
+    "title": "Task",
+    "titlePlaceholder": "What needs to be done?",
+    "notes": "Notes",
+    "notesPlaceholder": "Add context, links, or acceptance notes…",
+    "dueDate": "Due date",
+    "assignee": "Assignee",
+    "unassigned": "Unassigned",
+    "images": "Images",
+    "imagesHint": "Up to 8 images, 10 MB each.",
+    "create": "Create task",
+    "creating": "Creating…",
+    "save": "Save changes",
+    "saving": "Saving…",
+    "cancel": "Cancel"
+  },
+  "task": {
+    "subtasks": "{count, plural, =1 {1 subtask} other {# subtasks}}",
+    "addSubtask": "Add subtask",
+    "edit": "Edit",
+    "delete": "Delete",
+    "deleteConfirm": "Delete this task and all its subtasks and images?",
+    "complete": "Mark complete",
+    "reopen": "Reopen task",
+    "addImages": "Add images",
+    "uploading": "Uploading…",
+    "due": "Due {date}",
+    "overdue": "Overdue",
+    "assignedTo": "Assigned to {name}",
+    "unassigned": "Unassigned",
+    "noNotes": "No notes"
+  },
+  "logo": {
+    "label": "Product logo",
+    "hint": "Square PNG, JPG, WebP, or SVG works best. Maximum 10 MB.",
+    "choose": "Choose logo",
+    "replace": "Replace logo",
+    "remove": "Remove logo",
+    "previewAlt": "{name} logo"
+  },
+  "media": {
+    "updateImages": "Update images",
+    "chooseImages": "Choose images",
+    "selected": "{count, plural, =1 {1 image selected} other {# images selected}}",
+    "attachmentAlt": "Attached image: {name}",
+    "imageCount": "{count, plural, =1 {1 image} other {# images}}"
+  },
+  "all": {
+    "title": "All tasks",
+    "subtitle": "One operational view of every task across every product.",
+    "searchPlaceholder": "Search tasks, products, notes, or people…",
+    "allProducts": "All products",
+    "assignedToMe": "Assigned to me",
+    "noDueDate": "No date",
+    "emptyTitle": "No tasks match this view",
+    "emptyBody": "Adjust the filters, or add a new task from a product page.",
+    "scope": {
+      "open": "Open",
+      "all": "All",
+      "completed": "Completed"
+    },
+    "stats": {
+      "open": "Open",
+      "dueToday": "Due today",
+      "overdue": "Overdue",
+      "completed": "Completed"
+    },
+    "columns": {
+      "task": "Task",
+      "assignee": "Assignee",
+      "due": "Due date",
+      "status": "Status"
+    },
+    "status": {
+      "open": "Open",
+      "overdue": "Overdue",
+      "completed": "Done"
+    }
+  },
+  "errors": {
+    "generic": "Something went wrong. Please try again.",
+    "invalid": "Check the task fields and try again.",
+    "forbidden": "You don't have permission to do that.",
+    "notFound": "The task could not be found.",
+    "imageType": "Only image files can be uploaded.",
+    "imageSize": "Each image must be smaller than 10 MB.",
+    "tooManyImages": "You can upload up to 8 images at a time.",
+    "uploadFailed": "The image upload failed. Please try again."
+  }
+}

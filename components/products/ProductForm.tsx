@@ -1,5 +1,7 @@
 'use client';
 
+import Image from 'next/image';
+import {ImagePlus, Trash2} from 'lucide-react';
 import {useState, useTransition} from 'react';
 import {useTranslations} from 'next-intl';
 
@@ -10,6 +12,11 @@ import {
   updateProductAction,
   type ProductStage
 } from '@/lib/actions/products';
+import {
+  removeStoredImages,
+  uploadImages,
+  validateImageFiles
+} from '@/lib/media-upload';
 
 export type ProductFormInitial = {
   name: string;
@@ -23,6 +30,8 @@ export type ProductFormInitial = {
   reviewIntervalDays: number;
   trendScanEnabled: boolean;
   ownerId: string;
+  logoUrl: string | null;
+  logoKey: string | null;
 };
 
 export type MemberOption = {userId: string; displayName: string};
@@ -63,6 +72,7 @@ type Props =
 
 export default function ProductForm(props: Props) {
   const t = useTranslations('products');
+  const tTasks = useTranslations('tasks');
   const tCommon = useTranslations('common');
   const router = useRouter();
 
@@ -80,7 +90,9 @@ export default function ProductForm(props: Props) {
           links: {},
           reviewIntervalDays: 14,
           trendScanEnabled: true,
-          ownerId: ''
+          ownerId: '',
+          logoUrl: null,
+          logoKey: null
         };
 
   const [name, setName] = useState(initial.name);
@@ -103,6 +115,8 @@ export default function ProductForm(props: Props) {
     initial.trendScanEnabled
   );
   const [ownerId, setOwnerId] = useState(initial.ownerId);
+  const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [removeLogo, setRemoveLogo] = useState(false);
   const [errorKey, setErrorKey] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
@@ -140,20 +154,44 @@ export default function ProductForm(props: Props) {
       .filter(Boolean);
 
     const interval = Number(reviewIntervalDays);
-    const payload = {
-      name,
-      slug,
-      description: description.trim() === '' ? null : description.trim(),
-      descriptionAr: descriptionAr.trim() === '' ? null : descriptionAr.trim(),
-      category: category.trim() === '' ? null : category.trim(),
-      stage: stage as ProductStage,
-      keywords,
-      links,
-      reviewIntervalDays: interval,
-      trendScanEnabled
-    };
-
     startTransition(async () => {
+      let uploadedLogo:
+        | {url: string; key: string; fileName: string; mimeType: string; sizeBytes: number}
+        | null = null;
+      if (logoFile) {
+        try {
+          [uploadedLogo] = await uploadImages(
+            [logoFile],
+            `products/logos`
+          );
+        } catch (error) {
+          setErrorKey(
+            error instanceof Error &&
+              ['imageType', 'imageSize', 'tooManyImages', 'uploadFailed'].includes(
+                error.message
+              )
+              ? error.message
+              : 'uploadFailed'
+          );
+          return;
+        }
+      }
+
+      const payload = {
+        name,
+        slug,
+        description: description.trim() === '' ? null : description.trim(),
+        descriptionAr: descriptionAr.trim() === '' ? null : descriptionAr.trim(),
+        category: category.trim() === '' ? null : category.trim(),
+        stage: stage as ProductStage,
+        keywords,
+        links,
+        reviewIntervalDays: interval,
+        trendScanEnabled,
+        logoUrl: uploadedLogo?.url ?? (removeLogo ? null : initial.logoUrl),
+        logoKey: uploadedLogo?.key ?? (removeLogo ? null : initial.logoKey)
+      };
+
       const result =
         props.mode === 'create'
           ? await createProductAction(payload)
@@ -163,8 +201,16 @@ export default function ProductForm(props: Props) {
             });
 
       if (!result.ok) {
+        if (uploadedLogo) await removeStoredImages([uploadedLogo.key]);
         setErrorKey(result.error);
         return;
+      }
+      if (
+        initial.logoKey &&
+        (removeLogo || uploadedLogo?.key !== undefined) &&
+        initial.logoKey !== uploadedLogo?.key
+      ) {
+        await removeStoredImages([initial.logoKey]);
       }
       router.push(`/products/${result.productId}`);
       router.refresh();
@@ -215,6 +261,73 @@ export default function ProductForm(props: Props) {
           />
           <span className={HINT_CLASS}>{t('fields.slugHint')}</span>
         </label>
+      </div>
+
+      <div className="rounded-md border border-hairline bg-bg/40 p-4">
+        <div className="flex flex-wrap items-center gap-4">
+          <div className="relative flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-hairline bg-raised">
+            {!removeLogo && (logoFile || initial.logoUrl) ? (
+              logoFile ? (
+                <ImagePlus className="h-6 w-6 text-accent" strokeWidth={1.5} />
+              ) : (
+                <Image
+                  src={initial.logoUrl as string}
+                  alt={tTasks('logo.previewAlt', {name})}
+                  fill
+                  unoptimized
+                  sizes="64px"
+                  className="object-cover"
+                />
+              )
+            ) : (
+              <ImagePlus className="h-6 w-6 text-faint" strokeWidth={1.5} />
+            )}
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="text-xs text-muted">{tTasks('logo.label')}</div>
+            <p className="mt-1 text-[11px] text-faint">
+              {logoFile?.name ?? tTasks('logo.hint')}
+            </p>
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              <label className="inline-flex cursor-pointer items-center gap-2 rounded-md border border-hairline px-3 py-1.5 text-xs text-muted transition-colors hover:bg-raised hover:text-ink">
+                <ImagePlus className="h-3.5 w-3.5" />
+                {initial.logoUrl && !removeLogo
+                  ? tTasks('logo.replace')
+                  : tTasks('logo.choose')}
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="sr-only"
+                  onChange={(event) => {
+                    const file = event.target.files?.[0] ?? null;
+                    if (!file) return;
+                    const invalid = validateImageFiles([file]);
+                    if (invalid) {
+                      setErrorKey(invalid);
+                      event.target.value = '';
+                      return;
+                    }
+                    setLogoFile(file);
+                    setRemoveLogo(false);
+                  }}
+                />
+              </label>
+              {(initial.logoUrl || logoFile) && !removeLogo ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setLogoFile(null);
+                    setRemoveLogo(true);
+                  }}
+                  className="inline-flex items-center gap-2 rounded-md px-3 py-1.5 text-xs text-faint transition-colors hover:bg-danger/10 hover:text-danger"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                  {tTasks('logo.remove')}
+                </button>
+              ) : null}
+            </div>
+          </div>
+        </div>
       </div>
 
       <div className="grid gap-5 sm:grid-cols-2">
@@ -350,7 +463,11 @@ export default function ProductForm(props: Props) {
 
       {errorKey ? (
         <p className="rounded-md border border-danger/30 bg-danger/10 px-3 py-2 text-xs text-danger">
-          {t(`errors.${errorKey}`)}
+          {['imageType', 'imageSize', 'tooManyImages', 'uploadFailed'].includes(
+            errorKey
+          )
+            ? tTasks(`errors.${errorKey}`)
+            : t(`errors.${errorKey}`)}
         </p>
       ) : null}
 

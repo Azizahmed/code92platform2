@@ -25,4 +25,5 @@ export type ProductOverview = {
   last_update_summary: string | null;
   last_update_author: string | null;
   trend_count_7d: number;
+  logo_url: string | null;
 };

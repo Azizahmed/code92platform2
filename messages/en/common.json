@@ -4,6 +4,7 @@
   "consoleTag": "Mission Control",
   "nav": {
     "dashboard": "Dashboard",
+    "tasks": "All tasks",
     "products": "Products",
     "trends": "Trends",
     "admin": "Admin",

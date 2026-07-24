@@ -36,6 +36,8 @@ export type Product = {
   last_status_update_at: string | null;
   last_trend_scan_at: string | null;
   archived_at: string | null;
+  logo_url: string | null;
+  logo_key: string | null;
   created_at: string;
 };
 
@@ -60,7 +62,11 @@ const productInputSchema = z.object({
   keywords: z.array(z.string().trim().min(1).max(60)).max(20),
   links: z.record(z.string().trim().min(1).max(60), z.string().url().max(500)),
   reviewIntervalDays: z.number().int().min(1).max(365),
-  trendScanEnabled: z.boolean()
+  trendScanEnabled: z.boolean(),
+  logoUrl: z.string().url().max(2000).nullable(),
+  logoKey: z.string().trim().min(1).max(1000).nullable()
+}).refine((value) => Boolean(value.logoUrl) === Boolean(value.logoKey), {
+  message: 'logo URL and key must be provided together'
 });
 
 type ProductInput = z.infer<typeof productInputSchema>;
@@ -102,7 +108,7 @@ export async function createProductAction(
   const caller = await requireActiveCaller();
   if (!caller) return {ok: false, error: 'forbidden'};
 
-  const {name, slug, description, descriptionAr, category, stage, keywords, links, reviewIntervalDays, trendScanEnabled} =
+  const {name, slug, description, descriptionAr, category, stage, keywords, links, reviewIntervalDays, trendScanEnabled, logoUrl, logoKey} =
     parsed.data;
 
   const insforge = await createInsForgeServerClient();
@@ -122,7 +128,9 @@ export async function createProductAction(
         links,
         keywords,
         review_interval_days: reviewIntervalDays,
-        trend_scan_enabled: trendScanEnabled
+        trend_scan_enabled: trendScanEnabled,
+        logo_url: logoUrl,
+        logo_key: logoKey
       }
     ])
     .select('id')
@@ -149,7 +157,7 @@ export async function updateProductAction(
   if (!caller) return {ok: false, error: 'forbidden'};
 
   const isAdmin = caller.member.role === 'admin';
-  const {name, slug, description, descriptionAr, category, stage, keywords, links, reviewIntervalDays, trendScanEnabled} =
+  const {name, slug, description, descriptionAr, category, stage, keywords, links, reviewIntervalDays, trendScanEnabled, logoUrl, logoKey} =
     parsed.data;
 
   // Only column-granted fields. owner_id reassignment is admin-only: RLS
@@ -164,7 +172,9 @@ export async function updateProductAction(
     keywords,
     links,
     review_interval_days: reviewIntervalDays,
-    trend_scan_enabled: trendScanEnabled
+    trend_scan_enabled: trendScanEnabled,
+    logo_url: logoUrl,
+    logo_key: logoKey
   };
   if (isAdmin && typeof input.ownerId === 'string' && z.string().uuid().safeParse(input.ownerId).success) {
     patch.owner_id = input.ownerId;

@@ -1,4 +1,5 @@
 import {CalendarClock, TrendingUp} from 'lucide-react';
+import Image from 'next/image';
 import {useLocale, useTranslations} from 'next-intl';
 
 import HealthBadge from '@/components/HealthBadge';
@@ -41,22 +42,38 @@ export default function ProductCard({product}: {product: ProductOverview}) {
   return (
     <article className="group flex h-full flex-col rounded-lg border border-hairline bg-panel p-4 transition-colors hover:border-accent/30 hover:bg-raised/40">
       <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <Link
-            href={`/products/${product.id}`}
-            title={t('viewProduct')}
-            className="block truncate text-sm font-medium text-ink transition-colors group-hover:text-accent"
-          >
-            {product.name}
-          </Link>
-          <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs">
-            <HealthBadge health={product.health} />
-            {product.owner_name ? (
-              <span className="text-faint">· {product.owner_name}</span>
-            ) : null}
-            {product.category ? (
-              <span className="text-faint">· {product.category}</span>
-            ) : null}
+        <div className="flex min-w-0 items-center gap-3">
+          <div className="relative flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-hairline bg-raised font-mono text-xs text-faint">
+            {product.logo_url ? (
+              <Image
+                src={product.logo_url}
+                alt={product.name}
+                fill
+                unoptimized
+                sizes="40px"
+                className="object-cover"
+              />
+            ) : (
+              product.name.slice(0, 1).toUpperCase()
+            )}
+          </div>
+          <div className="min-w-0">
+            <Link
+              href={`/products/${product.id}`}
+              title={t('viewProduct')}
+              className="block truncate text-sm font-medium text-ink transition-colors group-hover:text-accent"
+            >
+              {product.name}
+            </Link>
+            <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs">
+              <HealthBadge health={product.health} />
+              {product.owner_name ? (
+                <span className="text-faint">· {product.owner_name}</span>
+              ) : null}
+              {product.category ? (
+                <span className="text-faint">· {product.category}</span>
+              ) : null}
+            </div>
           </div>
         </div>
         <StageChip stage={product.stage} />

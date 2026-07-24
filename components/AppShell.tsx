@@ -3,6 +3,7 @@
 import {useState} from 'react';
 import {
   LayoutDashboard,
+  ListTodo,
   LogOut,
   Package,
   ShieldCheck,
@@ -23,6 +24,7 @@ type Props = {
 
 const NAV_ITEMS = [
   {href: '/', key: 'dashboard', icon: LayoutDashboard},
+  {href: '/tasks', key: 'tasks', icon: ListTodo},
   {href: '/products', key: 'products', icon: Package},
   {href: '/trends', key: 'trends', icon: TrendingUp}
 ] as const;

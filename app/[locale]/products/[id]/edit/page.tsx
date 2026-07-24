@@ -53,7 +53,9 @@ export default async function EditProductPage({
     links: p.links ?? {},
     reviewIntervalDays: p.review_interval_days,
     trendScanEnabled: p.trend_scan_enabled,
-    ownerId: p.owner_id
+    ownerId: p.owner_id,
+    logoUrl: p.logo_url,
+    logoKey: p.logo_key
   };
 
   const memberOptions: MemberOption[] = (members ?? []).map((m) => ({
