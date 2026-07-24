@@ -37,6 +37,11 @@
     "en": "English",
     "ar": "العربية"
   },
+  "theme": {
+    "label": "Appearance",
+    "light": "Light",
+    "dark": "Dark"
+  },
   "time": {
     "justNow": "just now"
   },

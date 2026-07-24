@@ -335,7 +335,7 @@ function TaskCard({
           ? 'border-hairline opacity-65'
           : isOverdue
             ? 'border-amber/25'
-            : 'border-hairline hover:border-white/10'
+            : 'border-hairline hover:border-accent/20'
       }`}
     >
       <div className="p-4">

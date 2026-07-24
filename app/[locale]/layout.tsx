@@ -14,6 +14,20 @@ import {getOwnMembership, getSessionUser} from '@/lib/auth';
 
 import '../globals.css';
 
+const themeBootScript = `
+  (function () {
+    try {
+      var stored = localStorage.getItem('code92-theme');
+      var theme = stored === 'light' || stored === 'dark'
+        ? stored
+        : (window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
+      document.documentElement.classList.add(theme);
+    } catch (_) {
+      document.documentElement.classList.add('dark');
+    }
+  })();
+`;
+
 const plexSans = IBM_Plex_Sans({
   subsets: ['latin'],
   weight: ['400', '500', '600', '700'],
@@ -71,7 +85,11 @@ export default async function LocaleLayout({
       lang={locale}
       dir={locale === 'ar' ? 'rtl' : 'ltr'}
       className={`${plexSans.variable} ${plexArabic.variable} ${plexMono.variable}`}
+      suppressHydrationWarning
     >
+      <head>
+        <script dangerouslySetInnerHTML={{__html: themeBootScript}} />
+      </head>
       <body>
         <NextIntlClientProvider>
           <AppShell

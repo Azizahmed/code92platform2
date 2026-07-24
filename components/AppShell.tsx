@@ -14,6 +14,7 @@ import {useTranslations} from 'next-intl';
 import {Link, usePathname, useRouter} from '@/i18n/navigation';
 import {signOutAction} from '@/lib/actions/auth';
 import LocaleSwitcher from '@/components/LocaleSwitcher';
+import ThemeSwitcher from '@/components/ThemeSwitcher';
 
 type Props = {
   userName: string | null;
@@ -94,6 +95,7 @@ export default function AppShell({userName, userEmail, isAdmin, children}: Props
 
         <div className="space-y-3 border-t border-hairline px-4 py-4">
           <LocaleSwitcher />
+          <ThemeSwitcher />
           <div className="flex items-center justify-between gap-2">
             <div className="min-w-0 leading-tight">
               <div className="truncate text-sm font-medium">

@@ -5,7 +5,9 @@ data-dense, precise. **Not** a marketing page — restraint over flash.
 
 ## Theme
 
-Dark only. No light mode, no theme toggle.
+Dark and light modes are available from the sidebar preference controls. The
+saved choice is restored before the app renders; otherwise the operating-system
+preference is used.
 
 | Token      | Value                     | Tailwind class  | Usage                                   |
 | ---------- | ------------------------- | --------------- | --------------------------------------- |

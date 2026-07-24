@@ -6,20 +6,17 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        // layered surfaces, dark only
-        bg: '#0B0E13',
-        panel: '#11151C',
-        raised: '#161C26',
-        hairline: 'rgba(255,255,255,0.07)',
-        // phosphor green: primary actions + healthy status
-        accent: '#34D399',
-        // status hues are the only other saturated colors
-        amber: '#FBBF24',
-        danger: '#F87171',
-        // text
-        ink: '#E6EAF2',
-        muted: '#8B95A7',
-        faint: '#5B6577'
+        // Theme-aware RGB channels are defined in app/globals.css.
+        bg: 'rgb(var(--color-bg) / <alpha-value>)',
+        panel: 'rgb(var(--color-panel) / <alpha-value>)',
+        raised: 'rgb(var(--color-raised) / <alpha-value>)',
+        hairline: 'rgb(var(--color-hairline) / <alpha-value>)',
+        accent: 'rgb(var(--color-accent) / <alpha-value>)',
+        amber: 'rgb(var(--color-amber) / <alpha-value>)',
+        danger: 'rgb(var(--color-danger) / <alpha-value>)',
+        ink: 'rgb(var(--color-ink) / <alpha-value>)',
+        muted: 'rgb(var(--color-muted) / <alpha-value>)',
+        faint: 'rgb(var(--color-faint) / <alpha-value>)'
       },
       fontFamily: {
         sans: ['var(--font-plex-sans)', 'system-ui', 'sans-serif'],
