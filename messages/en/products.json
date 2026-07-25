@@ -76,7 +76,9 @@
     "timelineTitle": "Status timeline",
     "timelineEmptyTitle": "No status updates yet",
     "timelineEmptyBody": "Post the first update to set this product's health and schedule its next review.",
-    "byAuthor": "by {name}"
+    "byAuthor": "by {name}",
+    "deleteUpdate": "Remove update",
+    "deleteUpdateConfirm": "Remove this update from the timeline? The product returns to the health and stage of the previous update."
   },
   "update": {
     "title": "Post status update",

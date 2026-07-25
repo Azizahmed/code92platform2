@@ -3,11 +3,15 @@ import Image from 'next/image';
 import {notFound} from 'next/navigation';
 import {getFormatter, getTranslations} from 'next-intl/server';
 
-import HealthBadge, {type Health} from '@/components/HealthBadge';
+import HealthBadge from '@/components/HealthBadge';
 import OverdueBadge from '@/components/OverdueBadge';
 import RelativeTime from '@/components/RelativeTime';
-import StageChip, {type Stage} from '@/components/StageChip';
+import StageChip from '@/components/StageChip';
 import StatusUpdateForm from '@/components/products/StatusUpdateForm';
+import StatusTimeline, {
+  type StatusUpdateAttachment,
+  type TimelineEntry
+} from '@/components/products/StatusTimeline';
 import ProductKnowledgePanel from '@/components/products/ProductKnowledgePanel';
 import ProductTasksPanel, {
   type TaskMemberOption
@@ -21,28 +25,6 @@ import type {
   TaskAttachment
 } from '@/lib/actions/tasks';
 import {createInsForgeServerClient} from '@/lib/insforge/server';
-
-type StatusUpdate = {
-  id: string;
-  health: Health;
-  stage: Stage | null;
-  summary: string;
-  details: string | null;
-  author_id: string | null;
-  created_at: string;
-  attachments: StatusUpdateAttachment[];
-};
-
-type StatusUpdateAttachment = {
-  id: string;
-  status_update_id: string;
-  storage_url: string;
-  storage_key: string;
-  file_name: string;
-  mime_type: string;
-  size_bytes: number;
-  created_at: string;
-};
 
 export default async function ProductDetailPage({
   params
@@ -140,12 +122,15 @@ export default async function ProductDetailPage({
     list.push(attachment);
     updateAttachmentMap.set(attachment.status_update_id, list);
   }
-  const timeline: StatusUpdate[] = (
-    (updates ?? []) as unknown as Omit<StatusUpdate, 'attachments'>[]
+  const timeline: TimelineEntry[] = (
+    (updates ?? []) as unknown as Omit<TimelineEntry, 'attachments'>[]
   ).map((update) => ({
     ...update,
     attachments: updateAttachmentMap.get(update.id) ?? []
   }));
+  // StatusTimeline is a Client Component, so the lookup crosses the RSC
+  // boundary and has to be a plain object — a Map is not serializable.
+  const authorNames = Object.fromEntries(memberNames);
   const memberOptions: TaskMemberOption[] = (members ?? []).map((m) => ({
     userId: m.user_id as string,
     displayName: m.display_name as string
@@ -364,68 +349,14 @@ export default async function ProductDetailPage({
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="space-y-4 lg:col-span-2">
           <h2 className="text-sm font-medium">{t('detail.timelineTitle')}</h2>
-          {timeline.length === 0 ? (
-            <div className="rounded-lg border border-dashed border-hairline bg-panel/50 px-6 py-12 text-center">
-              <div className="text-sm font-medium">
-                {t('detail.timelineEmptyTitle')}
-              </div>
-              <p className="mx-auto mt-1 max-w-sm text-sm leading-relaxed text-muted">
-                {t('detail.timelineEmptyBody')}
-              </p>
-            </div>
-          ) : (
-            <ol className="space-y-3">
-              {timeline.map((u) => (
-                <li
-                  key={u.id}
-                  className="rounded-lg border border-hairline bg-panel p-4"
-                >
-                  <div className="flex flex-wrap items-center gap-3">
-                    <HealthBadge health={u.health} />
-                    {u.stage ? <StageChip stage={u.stage} /> : null}
-                    <span className="ms-auto">
-                      <RelativeTime date={u.created_at} />
-                    </span>
-                  </div>
-                  <p className="mt-2 text-sm font-medium">{u.summary}</p>
-                  {u.details ? (
-                    <p className="mt-1 whitespace-pre-wrap text-sm leading-relaxed text-muted">
-                      {u.details}
-                    </p>
-                  ) : null}
-                  {u.attachments.length > 0 ? (
-                    <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
-                      {u.attachments.map((attachment) => (
-                        <a
-                          key={attachment.id}
-                          href={attachment.storage_url}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="relative aspect-[4/3] overflow-hidden rounded-md border border-hairline bg-bg transition-colors hover:border-accent/40"
-                          title={attachment.file_name}
-                        >
-                          <Image
-                            src={attachment.storage_url}
-                            alt={attachment.file_name}
-                            fill
-                            unoptimized
-                            sizes="(max-width: 640px) 50vw, 220px"
-                            className="object-cover"
-                          />
-                        </a>
-                      ))}
-                    </div>
-                  ) : null}
-                  <div className="mt-2 text-[11px] text-faint">
-                    {t('detail.byAuthor', {
-                      name:
-                        (u.author_id && memberNames.get(u.author_id)) || '—'
-                    })}
-                  </div>
-                </li>
-              ))}
-            </ol>
-          )}
+          <StatusTimeline
+            updates={timeline}
+            authorNames={authorNames}
+            currentUserId={user.id}
+            isAdmin={isAdmin}
+            disabled={Boolean(p.archived_at)}
+          />
+
         </div>
 
         <div>{p.archived_at ? null : <StatusUpdateForm productId={p.id} />}</div>

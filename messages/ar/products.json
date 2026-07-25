@@ -76,7 +76,9 @@
     "timelineTitle": "سجل الحالة",
     "timelineEmptyTitle": "لا توجد تحديثات حالة بعد",
     "timelineEmptyBody": "انشر أول تحديث لتحديد حالة هذا المنتج وجدولة مراجعته التالية.",
-    "byAuthor": "بواسطة {name}"
+    "byAuthor": "بواسطة {name}",
+    "deleteUpdate": "حذف التحديث",
+    "deleteUpdateConfirm": "هل تريد حذف هذا التحديث من السجل؟ ستعود حالة المنتج ومرحلته إلى التحديث السابق."
   },
   "update": {
     "title": "نشر تحديث حالة",
