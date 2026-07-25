@@ -33,11 +33,9 @@ export default function KnowledgeItemActions({
 
     startTransition(async () => {
       const result = await setKnowledgeArchivedAction(itemId, !archived);
-      if (!result.ok) {
-        setErrorKey(result.error);
-        return;
-      }
-      router.refresh();
+      if (!result.ok) setErrorKey(result.error);
+      // No router.refresh(): revalidatePath in the action already returns the
+      // re-rendered page with the response.
     });
   }
 
@@ -53,8 +51,9 @@ export default function KnowledgeItemActions({
       }
       // The row is gone; clean up its storage object too.
       if (result.fileKey) await removeKnowledgeFile(result.fileKey);
+      // revalidatePath already invalidated the client router cache, so this
+      // push lands on a freshly fetched list.
       router.push('/knowledge');
-      router.refresh();
     });
   }
 

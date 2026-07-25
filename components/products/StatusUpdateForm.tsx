@@ -6,7 +6,6 @@ import {useTranslations} from 'next-intl';
 
 import {type Health} from '@/components/HealthBadge';
 import {type Stage} from '@/components/StageChip';
-import {useRouter} from '@/i18n/navigation';
 import {addStatusUpdateAttachmentsAction} from '@/lib/actions/media';
 import {postStatusUpdateAction} from '@/lib/actions/status-updates';
 import {
@@ -32,7 +31,6 @@ export default function StatusUpdateForm({productId}: {productId: string}) {
   const t = useTranslations('products');
   const tTasks = useTranslations('tasks');
   const tCommon = useTranslations('common');
-  const router = useRouter();
 
   const [health, setHealth] = useState<Health>('green');
   const [stage, setStage] = useState<'' | Stage>('');
@@ -88,15 +86,14 @@ export default function StatusUpdateForm({productId}: {productId: string}) {
         }
       }
       // The AFTER INSERT trigger already moved product health/stage and
-      // next_review_at; revalidatePath in the action plus this refresh
-      // re-render the header and timeline with those effects.
+      // next_review_at; revalidatePath in the action returns the re-rendered
+      // header and timeline with the response, so no refresh is needed.
       setSummary('');
       setDetails('');
       setFiles([]);
       if (fileInput.current) fileInput.current.value = '';
       setStage('');
       setPosted(true);
-      router.refresh();
     });
   }
 

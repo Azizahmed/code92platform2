@@ -16,7 +16,7 @@ import {
   X
 } from 'lucide-react';
 import {useTranslations} from 'next-intl';
-import {useMemo, useRef, useState, useTransition} from 'react';
+import {useMemo, useOptimistic, useRef, useState, useTransition} from 'react';
 
 import {
   addTaskAttachmentsAction,
@@ -34,7 +34,6 @@ import {
   uploadImages,
   validateImageFiles
 } from '@/lib/media-upload';
-import {useRouter} from '@/i18n/navigation';
 
 export type TaskMemberOption = {
   userId: string;
@@ -43,6 +42,39 @@ export type TaskMemberOption = {
 
 const INPUT_CLASS =
   'w-full rounded-md border border-hairline bg-bg px-3 py-2 text-sm outline-none transition-colors placeholder:text-faint focus:border-accent/50';
+
+// Applied to the server-rendered task list the instant a mutation starts, so
+// the row reacts on click instead of after the round trip. React drops these
+// once the transition settles and the action's fresh payload arrives.
+type OptimisticAction =
+  | {type: 'toggle'; taskId: string}
+  | {type: 'delete'; taskId: string};
+
+function applyOptimisticAction(
+  current: ProductTask[],
+  action: OptimisticAction
+): ProductTask[] {
+  switch (action.type) {
+    case 'toggle':
+      return current.map((task) =>
+        task.id === action.taskId
+          ? {
+              ...task,
+              status: task.status === 'completed' ? 'pending' : 'completed'
+            }
+          : task
+      );
+    case 'delete': {
+      // deleteTaskAction cascades to subtasks; mirror that here so a parent
+      // and its children disappear together rather than in two steps.
+      const removed = new Set([action.taskId]);
+      for (const task of current) {
+        if (task.parent_task_id === action.taskId) removed.add(task.id);
+      }
+      return current.filter((task) => !removed.has(task.id));
+    }
+  }
+}
 
 function errorKey(error: unknown): string {
   if (!(error instanceof Error)) return 'generic';
@@ -72,7 +104,6 @@ function TaskEditor({
   onError: (key: string) => void;
 }) {
   const t = useTranslations('tasks');
-  const router = useRouter();
   const fileInput = useRef<HTMLInputElement>(null);
   const [title, setTitle] = useState(task?.title ?? '');
   const [notes, setNotes] = useState(task?.notes ?? '');
@@ -137,8 +168,9 @@ function TaskEditor({
         }
       }
 
+      // No router.refresh(): the action called revalidatePath, so its own
+      // response already carries the re-rendered page.
       onDone();
-      router.refresh();
     });
   }
 
@@ -535,30 +567,35 @@ export default function ProductTasksPanel({
   disabled?: boolean;
 }) {
   const t = useTranslations('tasks');
-  const router = useRouter();
   const [creatingRoot, setCreatingRoot] = useState(false);
   const [addingUnderId, setAddingUnderId] = useState<string | null>(null);
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
   const [uploadingTaskId, setUploadingTaskId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [, startTransition] = useTransition();
+  const [optimisticTasks, applyOptimistic] = useOptimistic(
+    tasks,
+    applyOptimisticAction
+  );
 
   const roots = useMemo(
-    () => tasks.filter((task) => task.parent_task_id === null),
-    [tasks]
+    () => optimisticTasks.filter((task) => task.parent_task_id === null),
+    [optimisticTasks]
   );
   const children = useMemo(() => {
     const map = new Map<string, ProductTask[]>();
-    for (const task of tasks) {
+    for (const task of optimisticTasks) {
       if (!task.parent_task_id) continue;
       const list = map.get(task.parent_task_id) ?? [];
       list.push(task);
       map.set(task.parent_task_id, list);
     }
     return map;
-  }, [tasks]);
-  const openCount = tasks.filter((task) => task.status === 'pending').length;
-  const completedCount = tasks.length - openCount;
+  }, [optimisticTasks]);
+  const openCount = optimisticTasks.filter(
+    (task) => task.status === 'pending'
+  ).length;
+  const completedCount = optimisticTasks.length - openCount;
 
   function closeEditors() {
     setCreatingRoot(false);
@@ -569,6 +606,8 @@ export default function ProductTasksPanel({
   function toggle(task: ProductTask) {
     setError(null);
     startTransition(async () => {
+      // Flip the row first — the await below costs a full round trip.
+      applyOptimistic({type: 'toggle', taskId: task.id});
       const status: TaskStatus =
         task.status === 'completed' ? 'pending' : 'completed';
       const result = await updateTaskAction(task.id, {
@@ -578,8 +617,8 @@ export default function ProductTasksPanel({
         assigneeId: task.assignee_id,
         status
       });
+      // On failure React rolls the optimistic flip back for us.
       if (!result.ok) setError(result.error);
-      router.refresh();
     });
   }
 
@@ -587,6 +626,7 @@ export default function ProductTasksPanel({
     if (!window.confirm(t('task.deleteConfirm'))) return;
     setError(null);
     startTransition(async () => {
+      applyOptimistic({type: 'delete', taskId: task.id});
       const result = await deleteTaskAction(task.id);
       if (!result.ok) {
         setError(result.error);
@@ -595,7 +635,6 @@ export default function ProductTasksPanel({
       if (result.storageKeys?.length) {
         await removeStoredImages(result.storageKeys);
       }
-      router.refresh();
     });
   }
 
@@ -620,7 +659,6 @@ export default function ProductTasksPanel({
         setError(result.error);
         return;
       }
-      router.refresh();
     } catch (uploadError) {
       setError(errorKey(uploadError));
     } finally {

@@ -13,9 +13,9 @@ import {
   UserRound
 } from 'lucide-react';
 import {useTranslations} from 'next-intl';
-import {useMemo, useState, useTransition} from 'react';
+import {useMemo, useOptimistic, useState, useTransition} from 'react';
 
-import {Link, useRouter} from '@/i18n/navigation';
+import {Link} from '@/i18n/navigation';
 import type {ProductTask, TaskStatus} from '@/lib/actions/tasks';
 import {updateTaskAction} from '@/lib/actions/tasks';
 
@@ -37,6 +37,22 @@ type Scope = 'open' | 'all' | 'completed';
 const SELECT_CLASS =
   'rounded-md border border-hairline bg-bg px-2.5 py-2 text-xs text-muted outline-none transition-colors focus:border-accent/50';
 
+// Flips a row's status locally while the action is in flight; React discards
+// this once the transition settles and the fresh server payload lands.
+function applyOptimisticToggle(
+  current: AllTaskItem[],
+  taskId: string
+): AllTaskItem[] {
+  return current.map((task) =>
+    task.id === taskId
+      ? {
+          ...task,
+          status: task.status === 'completed' ? 'pending' : 'completed'
+        }
+      : task
+  );
+}
+
 export default function AllTasksBoard({
   tasks,
   products,
@@ -49,7 +65,6 @@ export default function AllTasksBoard({
   locale: string;
 }) {
   const t = useTranslations('tasks');
-  const router = useRouter();
   const [scope, setScope] = useState<Scope>('open');
   const [productId, setProductId] = useState('all');
   const [mineOnly, setMineOnly] = useState(false);
@@ -57,6 +72,10 @@ export default function AllTasksBoard({
   const [pendingTaskId, setPendingTaskId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [, startTransition] = useTransition();
+  const [optimisticTasks, applyOptimisticToggleFor] = useOptimistic(
+    tasks,
+    applyOptimisticToggle
+  );
 
   const now = new Date();
   const today = new Date(
@@ -65,15 +84,17 @@ export default function AllTasksBoard({
     now.getDate()
   ).getTime();
 
-  const openCount = tasks.filter((task) => task.status === 'pending').length;
-  const completedCount = tasks.length - openCount;
-  const overdueCount = tasks.filter(
+  const openCount = optimisticTasks.filter(
+    (task) => task.status === 'pending'
+  ).length;
+  const completedCount = optimisticTasks.length - openCount;
+  const overdueCount = optimisticTasks.filter(
     (task) =>
       task.status === 'pending' &&
       task.due_date !== null &&
       new Date(`${task.due_date}T00:00:00`).getTime() < today
   ).length;
-  const dueTodayCount = tasks.filter(
+  const dueTodayCount = optimisticTasks.filter(
     (task) =>
       task.status === 'pending' &&
       task.due_date !== null &&
@@ -82,7 +103,7 @@ export default function AllTasksBoard({
 
   const visible = useMemo(() => {
     const normalizedQuery = query.trim().toLocaleLowerCase(locale);
-    return tasks.filter((task) => {
+    return optimisticTasks.filter((task) => {
       if (scope !== 'all' && task.status !== scope.replace('open', 'pending')) {
         return false;
       }
@@ -105,12 +126,22 @@ export default function AllTasksBoard({
       }
       return true;
     });
-  }, [currentUserId, locale, mineOnly, productId, query, scope, tasks]);
+  }, [
+    currentUserId,
+    locale,
+    mineOnly,
+    optimisticTasks,
+    productId,
+    query,
+    scope
+  ]);
 
   function toggle(task: AllTaskItem) {
     setError(null);
     setPendingTaskId(task.id);
     startTransition(async () => {
+      // Flip the row first — the await below costs a full round trip.
+      applyOptimisticToggleFor(task.id);
       const status: TaskStatus =
         task.status === 'completed' ? 'pending' : 'completed';
       const result = await updateTaskAction(task.id, {
@@ -120,9 +151,9 @@ export default function AllTasksBoard({
         assigneeId: task.assignee_id,
         status
       });
+      // On failure React rolls the optimistic flip back for us.
       if (!result.ok) setError(result.error);
       setPendingTaskId(null);
-      router.refresh();
     });
   }
 

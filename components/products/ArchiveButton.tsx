@@ -4,7 +4,6 @@ import {useState, useTransition} from 'react';
 import {Archive, ArchiveRestore} from 'lucide-react';
 import {useTranslations} from 'next-intl';
 
-import {useRouter} from '@/i18n/navigation';
 import {setProductArchivedAction} from '@/lib/actions/products';
 
 // Rendered for admins only (the page gates it); the server action and the
@@ -17,7 +16,6 @@ export default function ArchiveButton({
   archived: boolean;
 }) {
   const t = useTranslations('products');
-  const router = useRouter();
   const [errorKey, setErrorKey] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
@@ -30,11 +28,9 @@ export default function ArchiveButton({
 
     startTransition(async () => {
       const result = await setProductArchivedAction(productId, !archived);
-      if (!result.ok) {
-        setErrorKey(result.error);
-        return;
-      }
-      router.refresh();
+      if (!result.ok) setErrorKey(result.error);
+      // No router.refresh(): the action's revalidatePath already returns the
+      // re-rendered page with the response.
     });
   }
 

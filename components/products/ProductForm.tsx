@@ -212,8 +212,9 @@ export default function ProductForm(props: Props) {
       ) {
         await removeStoredImages([initial.logoKey]);
       }
+      // revalidatePath already invalidated the client router cache, so this
+      // push lands on a freshly fetched page.
       router.push(`/products/${result.productId}`);
-      router.refresh();
     });
   }
 

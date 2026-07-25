@@ -167,8 +167,9 @@ export default function KnowledgeForm(props: Props) {
         await removeKnowledgeFile(result.previousFileKey);
       }
 
+      // revalidatePath already invalidated the client router cache, so this
+      // push lands on a freshly fetched page.
       router.push(`/knowledge/${result.itemId}`);
-      router.refresh();
     });
   }
 
