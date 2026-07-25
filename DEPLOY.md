@@ -1,63 +1,91 @@
 # Deployment
 
-## Region pinning — read this before changing `vercel.json`
+Deploys go through InsForge, which hosts on Vercel:
 
-Every page in this app is dynamic: `createInsForgeServerClient()` reads `cookies()`,
-so nothing is statically cached and each render talks to the InsForge backend.
-A product detail page issues **7 backend round trips in sequence** before it can
-paint. That makes server-to-backend latency the dominant cost of the whole app,
-far ahead of bundle size or render time.
+```bash
+npx @insforge/cli deployments deploy .
+```
 
-The backend is fixed in place:
+Live at `https://5nteb3xb.insforge.site`. Env vars (`NEXT_PUBLIC_INSFORGE_URL`,
+`NEXT_PUBLIC_INSFORGE_ANON_KEY`) are already set as persistent deployment vars
+and are applied automatically — `.env*` is excluded from the upload, so they
+cannot come from the repo.
 
-- InsForge project `code92-command-center`, region label `us-east`
-  (`.insforge/project.json`)
-- `5nteb3xb.us-east.insforge.app` resolves to
-  `alb-prod-gatewy-397152418.us-east-2.elb.amazonaws.com` — **AWS us-east-2 (Ohio)**
+## Measured latency structure — read before optimising anything
 
-Note the label is misleading: `us-east` is Ohio (`us-east-2`), *not* N. Virginia
-(`us-east-1`).
+Every page is dynamic (`createInsForgeServerClient()` reads `cookies()`), so
+each navigation runs a serverless function that then calls the backend.
+The measured request path, from the `X-Vercel-Id` response header:
 
-So `vercel.json` pins functions to **`cle1`** (Cleveland), which is Vercel's
-us-east-2 region — the same AWS region as the backend.
+```
+X-Vercel-Id: bom1::iad1::...
+             ^^^^  ^^^^
+             edge  function
+```
 
-Measured from a developer machine outside the US, each backend call costs
-~187 ms warm and ~573 ms cold, which is why an un-pinned or distant deployment
-makes the app feel broken:
-
-| Deployment | Per-query | Product page (7 serial queries) |
+| Hop | Location | Cost |
 | --- | --- | --- |
-| Distant from backend | ~187 ms | ~1.3 s |
-| `iad1` (N. Virginia) | ~15 ms | ~105 ms |
-| `cle1` (Ohio, same region) | ~2 ms | ~15 ms |
+| User (Gulf) → Vercel edge | `bom1` — Mumbai | ~30 ms (TCP confirmed) |
+| Edge → function | `iad1` — N. Virginia | **~200–250 ms round trip** |
+| Function → InsForge backend | AWS `us-east-2` — Ohio | ~15 ms per call |
+| Measured page TTFB (warm floor) | | **~765 ms** |
+| Static asset TTFB (`bom1` cache HIT, no function) | | ~540 ms |
 
-If `cle1` is ever unavailable for the account or plan, `iad1` is a safe
-fallback — it costs roughly 10 ms per query more, which is still ~100x better
-than serving from outside the US. Do **not** leave the region unset.
+The dominant cost is the Mumbai→Virginia leg, paid on every dynamic request.
+Backend round trips are only ~15 ms each, so reducing their *count* — which is
+worth ~187 ms each in local dev — is nearly invisible in production.
 
-If the backend is ever moved to another InsForge region, re-resolve the
-hostname and re-pin this file to match. The two must stay together.
+Note the backend region label is misleading: `us-east` in
+`.insforge/project.json` resolves to
+`alb-prod-gatewy-397152418.us-east-2.elb.amazonaws.com`, i.e. AWS **us-east-2
+(Ohio)**, not us-east-1.
 
-## Environment variables
+### `vercel.json` regions does NOT take effect
 
-Set these in the Vercel project (they are read by both server and browser code):
+`vercel.json` declares `"regions": ["cle1"]`, but functions demonstrably run in
+`iad1` (see the `X-Vercel-Id` above). The declaration is inert on this
+deployment path — most likely because the hosting Vercel account's plan pins
+functions to the default region. Do not assume changing it does anything;
+verify with `curl -sS -D- -o /dev/null <url> | grep -i x-vercel-id` before
+believing any region claim, including this file's.
 
-- `NEXT_PUBLIC_INSFORGE_URL`
-- `NEXT_PUBLIC_INSFORGE_ANON_KEY`
+The file is kept because it is correct and costs nothing if the app ever moves
+to a deployment path that honours it.
 
-Values are in `.env.local`, which is gitignored and must stay that way.
+## The real fix: move both tiers near the users
 
-## Known caveat: middleware runs at the edge
+Users are in the Gulf; compute is in Virginia and data is in Ohio. No amount of
+application-level optimisation closes a ~200 ms geographic gap.
 
-`middleware.ts` calls `updateSession()` on every request, which is a network
-call to InsForge. Vercel runs middleware in the Edge runtime, geographically
-near the *user* — not in `cle1` — so that one call does not benefit from the
-region pin and still costs a full long-haul round trip per navigation.
+InsForge regions available: `us-east`, `us-west`, `eu-central`, `ap-southeast`.
+For Gulf users `eu-central` (Frankfurt) is the best available — roughly
+40–60 ms, against ~200 ms+ to US East. Vercel's `fra1` matches it.
 
-Two ways to close this, neither done yet:
+Target architecture: InsForge project in `eu-central`, functions in `fra1`.
+Expected TTFB in the ~150–250 ms range rather than ~765 ms.
 
-1. Only refresh when the access token is actually near expiry (decode `exp`
-   from the cookie locally), and skip the refresh entirely for prefetch and
-   RSC-only requests. This is runtime-independent and the preferred fix.
-2. Move middleware to the Node.js runtime so it runs in `cle1`. Requires
-   `experimental.nodeMiddleware`, which is still experimental in Next 15.5.21.
+Migration caveat: InsForge cannot change a project's region in place
+(`projects update` takes `--name`, `--domain`, `--storage-size` — no
+`--region`). Moving means creating a new project in `eu-central`, replaying
+`migrations/` with `db migrations up --all`, moving data, and re-pointing the
+deployment env vars. Auth users do not move automatically.
+
+**Do this sooner rather than later.** As of 2026-07-25 the dataset is tiny
+(1 product, 1 task, 0 trends, 3 users), so the migration is nearly free now and
+gets more expensive with every week of real use.
+
+## TypeScript is pinned to 5.x on purpose
+
+TypeScript 7 (the native Go compiler) is published and is `latest` on npm, but
+this stack cannot use it yet:
+
+- `typescript-eslint@8.65.0` declares `typescript: ">=4.8.4 <6.1.0"` and fails
+  hard with "typescript-eslint does not support TS 7.0". No released version
+  supports it, so linting breaks entirely.
+- `next build` fails to load `next.config.ts` with
+  `TypeError: Cannot read properties of undefined (reading 'fileExists')` —
+  Next uses a TypeScript compiler API that the native port changed.
+
+Re-test when `typescript-eslint` ships TS 7 support. The only source change it
+needed was an ambient `declare module '*.css';` (TS 7 rejects side-effect
+imports of untyped modules with TS2882, which TS 5 permitted).
