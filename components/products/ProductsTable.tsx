@@ -6,10 +6,17 @@ import {Package} from 'lucide-react';
 import {useFormatter, useTranslations} from 'next-intl';
 
 import HealthBadge, {type Health} from '@/components/HealthBadge';
+import LifecycleBarCompact from '@/components/lifecycle/LifecycleBarCompact';
+import RiskTierChip from '@/components/lifecycle/RiskTierChip';
 import OverdueBadge from '@/components/OverdueBadge';
 import RelativeTime from '@/components/RelativeTime';
 import StageChip, {type Stage} from '@/components/StageChip';
 import {Link} from '@/i18n/navigation';
+import type {
+  LifecyclePhase,
+  LifecycleState,
+  RiskTier
+} from '@/lib/lifecycle';
 
 export type ProductRow = {
   id: string;
@@ -22,6 +29,10 @@ export type ProductRow = {
   nextReviewAt: string | null;
   lastStatusUpdateAt: string | null;
   archivedAt: string | null;
+  riskTier: RiskTier;
+  lifecyclePhase: LifecyclePhase | null;
+  lifecycleState: LifecycleState | null;
+  lifecycleCompleteCount: number;
 };
 
 const STAGES: Stage[] = [
@@ -40,6 +51,7 @@ const SELECT_CLASS =
 export default function ProductsTable({products}: {products: ProductRow[]}) {
   const t = useTranslations('products');
   const tCommon = useTranslations('common');
+  const tLifecycle = useTranslations('lifecycle');
   const format = useFormatter();
 
   const [stage, setStage] = useState<'all' | Stage>('all');
@@ -134,6 +146,9 @@ export default function ProductsTable({products}: {products: ProductRow[]}) {
                   {t('list.colHealth')}
                 </th>
                 <th className="px-4 py-2.5 text-start font-medium">
+                  {tLifecycle('governance.columns.phase')}
+                </th>
+                <th className="px-4 py-2.5 text-start font-medium">
                   {t('list.colOwner')}
                 </th>
                 <th className="px-4 py-2.5 text-start font-medium">
@@ -192,6 +207,23 @@ export default function ProductsTable({products}: {products: ProductRow[]}) {
                     </td>
                     <td className="px-4 py-3">
                       <HealthBadge health={p.health} />
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="min-w-32 space-y-1.5">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="truncate text-xs text-muted">
+                            {p.lifecyclePhase
+                              ? tLifecycle(`phases.${p.lifecyclePhase}`)
+                              : '—'}
+                          </span>
+                          <RiskTierChip riskTier={p.riskTier} />
+                        </div>
+                        <LifecycleBarCompact
+                          phase={p.lifecyclePhase}
+                          state={p.lifecycleState}
+                          completeCount={p.lifecycleCompleteCount}
+                        />
+                      </div>
                     </td>
                     <td className="px-4 py-3 text-muted">
                       {p.ownerName ?? '—'}

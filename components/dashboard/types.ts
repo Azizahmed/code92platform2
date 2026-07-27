@@ -1,7 +1,9 @@
 import type {Health} from '@/components/HealthBadge';
 import type {Stage} from '@/components/StageChip';
+import type {LifecyclePhase, LifecycleState, RiskTier} from '@/lib/lifecycle';
 
-// Row shape of the product_overview view (see migration 0001_core_schema).
+// Row shape of the product_overview view (see migration 0001_core_schema,
+// extended by add-product-tasks-and-media and add-product-lifecycle).
 export type ProductOverview = {
   id: string;
   name: string;
@@ -26,4 +28,10 @@ export type ProductOverview = {
   last_update_author: string | null;
   trend_count_7d: number;
   logo_url: string | null;
+  risk_tier: RiskTier;
+  // Null only for a product whose phase rows have somehow gone missing; the
+  // seed trigger creates all six on insert.
+  lifecycle_phase: LifecyclePhase | null;
+  lifecycle_state: LifecycleState | null;
+  lifecycle_complete_count: number;
 };

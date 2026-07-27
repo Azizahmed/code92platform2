@@ -11,19 +11,14 @@ export default async function ProductsPage() {
   const t = await getTranslations('products');
 
   const insforge = await createInsForgeServerClient();
-  const [{data: products}, {data: members}] = await Promise.all([
-    insforge.database
-      .from('products')
-      .select(
-        'id, name, slug, logo_url, stage, health, owner_id, next_review_at, last_status_update_at, archived_at'
-      )
-      .order('created_at', {ascending: false}),
-    insforge.database.from('team_members').select('user_id, display_name')
-  ]);
-
-  const ownerNames = new Map<string, string>(
-    (members ?? []).map((m) => [m.user_id as string, m.display_name as string])
-  );
+  // product_overview already joins the owner name and carries the lifecycle
+  // columns, so this is one round trip instead of products + team_members.
+  const {data: products} = await insforge.database
+    .from('product_overview')
+    .select(
+      'id, name, slug, logo_url, stage, health, owner_name, next_review_at, last_status_update_at, archived_at, risk_tier, lifecycle_phase, lifecycle_state, lifecycle_complete_count, created_at'
+    )
+    .order('created_at', {ascending: false});
 
   const rows: ProductRow[] = (products ?? []).map((p) => ({
     id: p.id as string,
@@ -32,10 +27,14 @@ export default async function ProductsPage() {
     logoUrl: (p.logo_url as string | null) ?? null,
     stage: p.stage as ProductRow['stage'],
     health: p.health as ProductRow['health'],
-    ownerName: ownerNames.get(p.owner_id as string) ?? null,
+    ownerName: (p.owner_name as string | null) ?? null,
     nextReviewAt: (p.next_review_at as string | null) ?? null,
     lastStatusUpdateAt: (p.last_status_update_at as string | null) ?? null,
-    archivedAt: (p.archived_at as string | null) ?? null
+    archivedAt: (p.archived_at as string | null) ?? null,
+    riskTier: p.risk_tier as ProductRow['riskTier'],
+    lifecyclePhase: (p.lifecycle_phase as ProductRow['lifecyclePhase']) ?? null,
+    lifecycleState: (p.lifecycle_state as ProductRow['lifecycleState']) ?? null,
+    lifecycleCompleteCount: (p.lifecycle_complete_count as number | null) ?? 0
   }));
 
   return (

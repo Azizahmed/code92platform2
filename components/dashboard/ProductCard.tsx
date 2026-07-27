@@ -3,6 +3,8 @@ import Image from 'next/image';
 import {useLocale, useTranslations} from 'next-intl';
 
 import HealthBadge from '@/components/HealthBadge';
+import LifecycleBarCompact from '@/components/lifecycle/LifecycleBarCompact';
+import RiskTierChip from '@/components/lifecycle/RiskTierChip';
 import OverdueBadge from '@/components/OverdueBadge';
 import StageChip from '@/components/StageChip';
 import {Link} from '@/i18n/navigation';
@@ -29,6 +31,7 @@ function MetaCell({
 
 export default function ProductCard({product}: {product: ProductOverview}) {
   const t = useTranslations('dashboard.card');
+  const tLifecycle = useTranslations('lifecycle');
   const locale = useLocale();
 
   const nextReview = product.next_review_at
@@ -134,6 +137,22 @@ export default function ProductCard({product}: {product: ProductOverview}) {
           <span className="text-faint">{t('noSummary')}</span>
         )}
       </p>
+
+      <div className="mt-auto space-y-1.5 pt-3">
+        <div className="flex items-center justify-between gap-2 text-[10px] uppercase tracking-widest text-faint">
+          <span>
+            {product.lifecycle_phase
+              ? tLifecycle(`phases.${product.lifecycle_phase}`)
+              : tLifecycle('title')}
+          </span>
+          <RiskTierChip riskTier={product.risk_tier} />
+        </div>
+        <LifecycleBarCompact
+          phase={product.lifecycle_phase}
+          state={product.lifecycle_state}
+          completeCount={product.lifecycle_complete_count ?? 0}
+        />
+      </div>
     </article>
   );
 }

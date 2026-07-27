@@ -15,6 +15,7 @@ const NAMESPACES = [
   'tasks',
   'trends',
   'knowledge',
+  'lifecycle',
   'admin'
 ] as const;
 

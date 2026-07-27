@@ -5,6 +5,7 @@ import {z} from 'zod';
 
 import {getOwnMembership, getSessionUser} from '@/lib/auth';
 import {createInsForgeServerClient} from '@/lib/insforge/server';
+import type {RiskTier} from '@/lib/lifecycle';
 
 // Shared product types used by the registry pages and components.
 
@@ -38,6 +39,8 @@ export type Product = {
   archived_at: string | null;
   logo_url: string | null;
   logo_key: string | null;
+  // Set by admins only (products_guard_risk_tier); drives the lifecycle gates.
+  risk_tier: RiskTier;
   created_at: string;
 };
 

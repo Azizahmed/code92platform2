@@ -12,6 +12,8 @@ import StatusTimeline, {
   type StatusUpdateAttachment,
   type TimelineEntry
 } from '@/components/products/StatusTimeline';
+import LifecycleSection from '@/components/lifecycle/LifecycleSection';
+import RiskTierChip from '@/components/lifecycle/RiskTierChip';
 import ProductKnowledgePanel from '@/components/products/ProductKnowledgePanel';
 import ProductTasksPanel, {
   type TaskMemberOption
@@ -25,6 +27,7 @@ import type {
   TaskAttachment
 } from '@/lib/actions/tasks';
 import {createInsForgeServerClient} from '@/lib/insforge/server';
+import {loadProductLifecycle} from '@/lib/lifecycle-queries';
 
 export default async function ProductDetailPage({
   params
@@ -54,7 +57,13 @@ export default async function ProductDetailPage({
   // Archived products stay viewable for owner/admin; everyone else gets 404.
   if (p.archived_at && !isOwner && !isAdmin) notFound();
 
-  const [{data: members}, {data: updates}, {data: tasks}] = await Promise.all([
+  const [
+    {data: members},
+    {data: updates},
+    {data: tasks},
+    lifecycle,
+    {data: knowledgeItems}
+  ] = await Promise.all([
     insforge.database
       .from('team_members')
       .select('user_id, display_name')
@@ -72,7 +81,15 @@ export default async function ProductDetailPage({
       )
       .eq('product_id', id)
       .order('position', {ascending: true})
-      .order('created_at', {ascending: true})
+      .order('created_at', {ascending: true}),
+    loadProductLifecycle(id),
+    // Options for citing an existing knowledge item as a phase artifact
+    // instead of re-uploading the same document.
+    insforge.database
+      .from('knowledge_items')
+      .select('id, title')
+      .is('archived_at', null)
+      .order('title')
   ]);
 
   const taskIds = (tasks ?? []).map((task) => task.id as string);
@@ -176,6 +193,7 @@ export default async function ProductDetailPage({
                 <h1 className="text-xl font-semibold">{p.name}</h1>
                 <StageChip stage={p.stage} />
                 <HealthBadge health={p.health} />
+                <RiskTierChip riskTier={p.risk_tier} />
                 {p.archived_at ? (
                   <span className="rounded border border-hairline bg-raised px-1.5 py-0.5 text-[10px] uppercase tracking-wider text-faint">
                     {t('detail.archivedTag')}
@@ -337,6 +355,24 @@ export default async function ProductDetailPage({
           {t('edit.archivedNotice')}
         </p>
       ) : null}
+
+      <LifecycleSection
+        productId={p.id}
+        riskTier={p.risk_tier}
+        isAdmin={isAdmin}
+        canEdit={
+          !p.archived_at &&
+          (isOwner || isAdmin) &&
+          (p.risk_tier !== 'high' || isAdmin)
+        }
+        phases={lifecycle.phases}
+        artifacts={lifecycle.artifacts}
+        knowledgeOptions={(knowledgeItems ?? []).map((item) => ({
+          id: item.id as string,
+          title: item.title as string
+        }))}
+        memberNames={authorNames}
+      />
 
       <ProductTasksPanel
         productId={p.id}

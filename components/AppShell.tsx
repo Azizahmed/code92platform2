@@ -7,6 +7,7 @@ import {
   ListTodo,
   LogOut,
   Package,
+  Scale,
   Settings2,
   ShieldCheck,
   TrendingUp,
@@ -31,6 +32,7 @@ const NAV_ITEMS = [
   {href: '/tasks', key: 'tasks', icon: ListTodo},
   {href: '/products', key: 'products', icon: Package},
   {href: '/knowledge', key: 'knowledge', icon: BookOpen},
+  {href: '/governance', key: 'governance', icon: Scale},
   {href: '/trends', key: 'trends', icon: TrendingUp}
 ] as const;
 
