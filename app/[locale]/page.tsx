@@ -56,10 +56,9 @@ export default async function DashboardPage() {
       acc.total += 1;
       if (p.is_overdue) acc.overdue += 1;
       acc[p.health] = (acc[p.health] ?? 0) + 1;
-      acc.trends += p.trend_count_7d ?? 0;
       return acc;
     },
-    {total: 0, overdue: 0, green: 0, yellow: 0, red: 0, unknown: 0, trends: 0}
+    {total: 0, overdue: 0, green: 0, yellow: 0, red: 0, unknown: 0}
   );
 
   return (
@@ -98,7 +97,6 @@ export default async function DashboardPage() {
               yellow={stats.yellow}
               red={stats.red}
               unknown={stats.unknown}
-              trends={stats.trends}
             />
           </Reveal>
 

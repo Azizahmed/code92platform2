@@ -8,17 +8,13 @@ import {
   LogOut,
   Package,
   Scale,
-  Settings2,
-  ShieldCheck,
-  TrendingUp,
-  X
+  Settings2
 } from 'lucide-react';
 import {useTranslations} from 'next-intl';
 
 import {Link, usePathname, useRouter} from '@/i18n/navigation';
 import {signOutAction} from '@/lib/actions/auth';
-import LocaleSwitcher from '@/components/LocaleSwitcher';
-import ThemeSwitcher from '@/components/ThemeSwitcher';
+import ControlPanel from '@/components/ControlPanel';
 
 type Props = {
   userName: string | null;
@@ -27,13 +23,16 @@ type Props = {
   children: React.ReactNode;
 };
 
+// Trends is deliberately absent: the pipeline is switched off (see the kill
+// switch in functions/trend-scan.ts), so navigating to a feed that can never
+// gain an item would be advertising a feature that does not work. The route
+// still resolves and explains itself for anyone holding a direct link.
 const NAV_ITEMS = [
   {href: '/', key: 'dashboard', icon: LayoutDashboard},
   {href: '/tasks', key: 'tasks', icon: ListTodo},
   {href: '/products', key: 'products', icon: Package},
   {href: '/knowledge', key: 'knowledge', icon: BookOpen},
-  {href: '/governance', key: 'governance', icon: Scale},
-  {href: '/trends', key: 'trends', icon: TrendingUp}
+  {href: '/governance', key: 'governance', icon: Scale}
 ] as const;
 
 export default function AppShell({userName, userEmail, isAdmin, children}: Props) {
@@ -41,27 +40,11 @@ export default function AppShell({userName, userEmail, isAdmin, children}: Props
   const pathname = usePathname();
   const router = useRouter();
   const [signingOut, setSigningOut] = useState(false);
-  const [mobileControlsOpen, setMobileControlsOpen] = useState(false);
+  const [controlPanelOpen, setControlPanelOpen] = useState(false);
 
   useEffect(() => {
-    setMobileControlsOpen(false);
+    setControlPanelOpen(false);
   }, [pathname]);
-
-  useEffect(() => {
-    if (!mobileControlsOpen) return;
-
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') setMobileControlsOpen(false);
-    };
-    window.addEventListener('keydown', closeOnEscape);
-
-    return () => {
-      document.body.style.overflow = previousOverflow;
-      window.removeEventListener('keydown', closeOnEscape);
-    };
-  }, [mobileControlsOpen]);
 
   // Bare chrome for the login screen: no sidebar until authenticated.
   if (pathname === '/login' || pathname.startsWith('/login/')) {
@@ -75,10 +58,10 @@ export default function AppShell({userName, userEmail, isAdmin, children}: Props
     router.refresh();
   }
 
-  const items = [
-    ...NAV_ITEMS,
-    ...(isAdmin ? [{href: '/admin', key: 'admin', icon: ShieldCheck} as const] : [])
-  ];
+  // Admin is not a nav item any more: its panels are sections of /settings,
+  // reached through the control panel. That also keeps the mobile bottom bar at
+  // five tabs for everyone instead of seven for admins.
+  const items = NAV_ITEMS;
   const activeItem = items.find(({href}) =>
     href === '/' ? pathname === '/' : pathname.startsWith(href)
   );
@@ -123,9 +106,7 @@ export default function AppShell({userName, userEmail, isAdmin, children}: Props
           </ul>
         </nav>
 
-        <div className="space-y-3 border-t border-hairline px-4 py-4">
-          <LocaleSwitcher />
-          <ThemeSwitcher />
+        <div className="border-t border-hairline px-4 py-4">
           <div className="flex items-center justify-between gap-2">
             <div className="min-w-0 leading-tight">
               <div className="truncate text-sm font-medium">
@@ -135,15 +116,28 @@ export default function AppShell({userName, userEmail, isAdmin, children}: Props
                 <div className="truncate text-[11px] text-faint">{userEmail}</div>
               ) : null}
             </div>
-            <button
-              type="button"
-              onClick={handleSignOut}
-              disabled={signingOut}
-              title={t('actions.signOut')}
-              className="rounded-md border border-hairline p-2 text-muted transition-colors hover:border-danger/40 hover:text-danger disabled:opacity-50"
-            >
-              <LogOut className="h-4 w-4" strokeWidth={1.75} />
-            </button>
+            <div className="flex shrink-0 items-center gap-1">
+              <button
+                type="button"
+                onClick={() => setControlPanelOpen(true)}
+                aria-expanded={controlPanelOpen}
+                title={t('nav.controlPanel')}
+                aria-label={t('nav.controlPanel')}
+                className="rounded-md border border-hairline p-2 text-muted transition-colors hover:bg-raised hover:text-ink"
+              >
+                <Settings2 className="h-4 w-4" strokeWidth={1.75} />
+              </button>
+              <button
+                type="button"
+                onClick={handleSignOut}
+                disabled={signingOut}
+                title={t('actions.signOut')}
+                aria-label={t('actions.signOut')}
+                className="rounded-md border border-hairline p-2 text-muted transition-colors hover:border-danger/40 hover:text-danger disabled:opacity-50"
+              >
+                <LogOut className="h-4 w-4" strokeWidth={1.75} />
+              </button>
+            </div>
           </div>
         </div>
       </aside>
@@ -159,15 +153,21 @@ export default function AppShell({userName, userEmail, isAdmin, children}: Props
                 {t('appNameShort')}
               </div>
               <div className="truncate text-[10px] text-faint">
-                {activeItem ? t(`nav.${activeItem.key}`) : t('consoleTag')}
+                {activeItem
+                  ? t(`nav.${activeItem.key}`)
+                  : // /settings is reachable from the control panel rather than
+                    // the nav, so it has no activeItem to name it.
+                    pathname.startsWith('/settings')
+                    ? t('nav.settings')
+                    : t('consoleTag')}
               </div>
             </div>
           </div>
           <button
             type="button"
-            onClick={() => setMobileControlsOpen(true)}
+            onClick={() => setControlPanelOpen(true)}
             aria-label={t('nav.preferences')}
-            aria-expanded={mobileControlsOpen}
+            aria-expanded={controlPanelOpen}
             className="flex h-10 w-10 items-center justify-center rounded-lg border border-hairline bg-bg/50 text-muted transition-colors active:bg-raised active:text-ink"
           >
             <Settings2 className="h-4 w-4" strokeWidth={1.75} />
@@ -219,55 +219,15 @@ export default function AppShell({userName, userEmail, isAdmin, children}: Props
         <div className="h-[env(safe-area-inset-bottom)]" />
       </nav>
 
-      {mobileControlsOpen ? (
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-label={t('nav.preferences')}
-          className="fixed inset-0 z-50 md:hidden"
-        >
-          <button
-            type="button"
-            onClick={() => setMobileControlsOpen(false)}
-            aria-label={t('nav.closePreferences')}
-            className="absolute inset-0 bg-bg/70 backdrop-blur-sm"
-          />
-          <div className="absolute inset-x-3 bottom-[calc(4.5rem+env(safe-area-inset-bottom))] rounded-2xl border border-hairline bg-panel p-4 shadow-2xl">
-            <div className="mb-4 flex items-center justify-between gap-3">
-              <div>
-                <div className="text-sm font-semibold">
-                  {t('nav.preferences')}
-                </div>
-                <div className="mt-0.5 text-[11px] text-faint">
-                  {userName ?? userEmail ?? '—'}
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setMobileControlsOpen(false)}
-                aria-label={t('nav.closePreferences')}
-                className="flex h-9 w-9 items-center justify-center rounded-lg border border-hairline text-muted transition-colors active:bg-raised active:text-ink"
-              >
-                <X className="h-4 w-4" strokeWidth={1.75} />
-              </button>
-            </div>
-
-            <div className="space-y-3">
-              <LocaleSwitcher />
-              <ThemeSwitcher />
-              <button
-                type="button"
-                onClick={handleSignOut}
-                disabled={signingOut}
-                className="flex min-h-11 w-full items-center justify-center gap-2 rounded-md border border-danger/30 bg-danger/5 px-3 text-sm font-medium text-danger transition-colors active:bg-danger/10 disabled:opacity-50"
-              >
-                <LogOut className="h-4 w-4" strokeWidth={1.75} />
-                {t('actions.signOut')}
-              </button>
-            </div>
-          </div>
-        </div>
-      ) : null}
+      <ControlPanel
+        open={controlPanelOpen}
+        onClose={() => setControlPanelOpen(false)}
+        userName={userName}
+        userEmail={userEmail}
+        isAdmin={isAdmin}
+        signingOut={signingOut}
+        onSignOut={handleSignOut}
+      />
     </div>
   );
 }

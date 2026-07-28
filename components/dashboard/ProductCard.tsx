@@ -1,4 +1,4 @@
-import {CalendarClock, TrendingUp} from 'lucide-react';
+import {CalendarClock} from 'lucide-react';
 import Image from 'next/image';
 import {useLocale, useTranslations} from 'next-intl';
 
@@ -40,7 +40,6 @@ export default function ProductCard({product}: {product: ProductOverview}) {
       )
     : null;
 
-  const trendCount = product.trend_count_7d ?? 0;
 
   return (
     <article className="group flex h-full flex-col rounded-lg border border-hairline bg-panel p-4 transition-colors hover:border-accent/30 hover:bg-raised/40">
@@ -82,7 +81,7 @@ export default function ProductCard({product}: {product: ProductOverview}) {
         <StageChip stage={product.stage} />
       </div>
 
-      <dl className="mt-3 grid grid-cols-3 gap-2 rounded-md border border-hairline bg-raised/50 px-3 py-2.5">
+      <dl className="mt-3 grid grid-cols-2 gap-2 rounded-md border border-hairline bg-raised/50 px-3 py-2.5">
         <MetaCell label={t('updated')}>
           {product.staleness_days === null ? (
             <span className="text-faint">{t('noUpdates')}</span>
@@ -115,20 +114,6 @@ export default function ProductCard({product}: {product: ProductOverview}) {
           ) : (
             <span className="text-faint">{t('noReview')}</span>
           )}
-        </MetaCell>
-
-        <MetaCell label={t('trendsLabel')}>
-          <span
-            title={t('trendsTitle')}
-            className={`inline-flex items-center gap-1 rounded border px-1.5 py-0.5 font-mono text-[11px] ${
-              trendCount > 0
-                ? 'border-accent/30 bg-accent/10 text-accent'
-                : 'border-hairline text-faint'
-            }`}
-          >
-            <TrendingUp className="h-3 w-3" strokeWidth={1.75} />
-            {trendCount}
-          </span>
         </MetaCell>
       </dl>
 

@@ -111,9 +111,9 @@ export default function ProductForm(props: Props) {
   const [reviewIntervalDays, setReviewIntervalDays] = useState(
     String(initial.reviewIntervalDays)
   );
-  const [trendScanEnabled, setTrendScanEnabled] = useState(
-    initial.trendScanEnabled
-  );
+  // The trend pipeline is switched off, so this is no longer editable — the
+  // value is still submitted so the column keeps whatever it already had.
+  const [trendScanEnabled] = useState(initial.trendScanEnabled);
   const [ownerId, setOwnerId] = useState(initial.ownerId);
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [removeLogo, setRemoveLogo] = useState(false);
@@ -422,16 +422,6 @@ export default function ProductForm(props: Props) {
             onChange={(e) => setReviewIntervalDays(e.target.value)}
             className={`${INPUT_CLASS} font-mono`}
           />
-        </label>
-
-        <label className="flex items-end gap-2.5 pb-2">
-          <input
-            type="checkbox"
-            checked={trendScanEnabled}
-            onChange={(e) => setTrendScanEnabled(e.target.checked)}
-            className="h-4 w-4 accent-accent"
-          />
-          <span className="text-sm text-muted">{t('fields.trendScan')}</span>
         </label>
       </div>
 

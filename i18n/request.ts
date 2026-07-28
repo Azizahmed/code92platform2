@@ -17,6 +17,7 @@ const NAMESPACES = [
   'knowledge',
   'lifecycle',
   'github',
+  'settings',
   'admin'
 ] as const;
 

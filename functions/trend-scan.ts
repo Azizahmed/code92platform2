@@ -13,6 +13,21 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'Content-Type, Authorization',
 };
 
+// KILL SWITCH — the trend pipeline is switched off.
+//
+// While this is false the function does no work at all: no database reads, no
+// scan_runs row, and above all no OpenRouter call, so it costs nothing even
+// though the schedule still fires. Nothing else in the file was changed, and no
+// table or row was touched, so re-enabling is this constant plus a redeploy:
+//
+//   npx @insforge/cli functions deploy trend-scan --file functions/trend-scan.ts
+//
+// The InsForge schedule "trend-scan" (*/15 1 * * *) is still marked active in
+// schedules.jobs; it cannot be switched off from the CLI (the table is not
+// writable by this role), so it keeps making one no-op HTTP call per slot.
+// Turn it off in the InsForge dashboard under Schedules to stop even that.
+const PIPELINE_ENABLED = false;
+
 const BATCH_SIZE = 5;
 const RESCAN_INTERVAL_HOURS = 20;
 const OPENROUTER_TIMEOUT_MS = 10000;
@@ -202,6 +217,12 @@ async function upsertTrendItem(
 export default async function (req: Request): Promise<Response> {
   if (req.method === 'OPTIONS') {
     return new Response(null, { status: 204, headers: corsHeaders });
+  }
+
+  // Checked before authorization, before the admin client, before any query —
+  // a disabled pipeline must not read, write, or spend anything.
+  if (!PIPELINE_ENABLED) {
+    return jsonResponse({ status: 'disabled', message: 'trend scanning is disabled' });
   }
 
   const baseUrl = Deno.env.get('INSFORGE_BASE_URL')!;

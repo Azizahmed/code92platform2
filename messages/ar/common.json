@@ -12,7 +12,9 @@
     "admin": "الإدارة",
     "preferences": "التفضيلات",
     "closePreferences": "إغلاق التفضيلات",
-    "section": "التنقل"
+    "section": "التنقل",
+    "controlPanel": "لوحة التحكم",
+    "settings": "الإعدادات"
   },
   "actions": {
     "signOut": "تسجيل الخروج",

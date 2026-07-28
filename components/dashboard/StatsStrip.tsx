@@ -1,4 +1,4 @@
-import {Boxes, CalendarClock, HeartPulse, TrendingUp} from 'lucide-react';
+import {Boxes, CalendarClock, HeartPulse} from 'lucide-react';
 import {useTranslations} from 'next-intl';
 
 type Props = {
@@ -8,7 +8,6 @@ type Props = {
   yellow: number;
   red: number;
   unknown: number;
-  trends: number;
 };
 
 const HEALTH_DOTS = [
@@ -41,8 +40,7 @@ export default function StatsStrip({
   green,
   yellow,
   red,
-  unknown,
-  trends
+  unknown
 }: Props) {
   const t = useTranslations('dashboard.stats');
   const tc = useTranslations('common');
@@ -54,7 +52,7 @@ export default function StatsStrip({
   };
 
   return (
-    <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+    <div className="grid grid-cols-2 gap-3 lg:grid-cols-3">
       <Tile label={t('products')}>
         <div className="flex items-center gap-2">
           <Boxes className="h-4 w-4 text-faint" strokeWidth={1.75} />
@@ -95,22 +93,6 @@ export default function StatsStrip({
               </span>
             </span>
           ))}
-        </div>
-      </Tile>
-
-      <Tile label={t('trends')}>
-        <div className="flex items-center gap-2">
-          <TrendingUp
-            className={`h-4 w-4 ${trends > 0 ? 'text-accent' : 'text-faint'}`}
-            strokeWidth={1.75}
-          />
-          <span
-            className={`font-mono text-xl font-semibold ${
-              trends > 0 ? 'text-accent' : 'text-ink'
-            }`}
-          >
-            {trends}
-          </span>
         </div>
       </Tile>
     </div>

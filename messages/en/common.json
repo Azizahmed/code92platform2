@@ -12,7 +12,9 @@
     "admin": "Admin",
     "preferences": "Preferences",
     "closePreferences": "Close preferences",
-    "section": "Navigate"
+    "section": "Navigate",
+    "controlPanel": "Control panel",
+    "settings": "Settings"
   },
   "actions": {
     "signOut": "Sign out",

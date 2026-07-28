@@ -1,77 +1,11 @@
-import {ShieldAlert} from 'lucide-react';
-import {getTranslations} from 'next-intl/server';
+import {getLocale} from 'next-intl/server';
 
-import GithubSettingsPanel from '@/components/admin/GithubSettingsPanel';
-import MembersTable, {type MemberRow} from '@/components/admin/MembersTable';
-import ScanRunsPanel, {type ScanRunRow} from '@/components/admin/ScanRunsPanel';
-import {requireActiveMember} from '@/lib/auth';
-import type {GithubConnectionStatus} from '@/lib/github';
-import {createInsForgeServerClient} from '@/lib/insforge/server';
+import {redirect} from '@/i18n/navigation';
 
-// Admin console: team roster management + trend-scan observability.
-// Admin-only — active members with role 'member' get a clear 403 state.
+// The admin console is now a section of /settings, reached from the control
+// panel. Kept as a redirect rather than deleted so existing links and
+// bookmarks still land somewhere useful.
 export default async function AdminPage() {
-  const {user, member} = await requireActiveMember();
-  const t = await getTranslations('admin');
-
-  if (member.role !== 'admin') {
-    return (
-      <section className="space-y-6">
-        <header>
-          <h1 className="text-xl font-semibold">{t('title')}</h1>
-        </header>
-        <div className="flex flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-hairline bg-panel/50 px-6 py-24 text-center">
-          <span className="flex h-12 w-12 items-center justify-center rounded-full border border-danger/30 bg-danger/10">
-            <ShieldAlert className="h-5 w-5 text-danger" strokeWidth={1.5} />
-          </span>
-          <div className="text-sm font-medium">{t('forbidden.title')}</div>
-          <p className="max-w-md text-sm leading-relaxed text-muted">
-            {t('forbidden.body')}
-          </p>
-        </div>
-      </section>
-    );
-  }
-
-  const insforge = await createInsForgeServerClient();
-  const [{data: members}, {data: runs}, {data: githubStatus}] =
-    await Promise.all([
-      insforge.database
-        .from('team_members')
-        .select('user_id, display_name, role, is_active, created_at')
-        .order('created_at', {ascending: true}),
-      insforge.database
-        .from('scan_runs')
-        .select(
-          'id, status, products_scanned, items_inserted, items_linked, details, started_at, finished_at'
-        )
-        .order('started_at', {ascending: false})
-        .limit(20),
-      // SECURITY DEFINER function, not a table read: it returns every column of
-      // github_connection EXCEPT the encrypted token, and no rows at all to a
-      // non-admin.
-      insforge.database.rpc('github_connection_status')
-    ]);
-
-  return (
-    <section className="space-y-8">
-      <header>
-        <h1 className="text-xl font-semibold">{t('title')}</h1>
-        <p className="mt-1 text-sm text-muted">{t('subtitle')}</p>
-      </header>
-
-      <MembersTable
-        members={(members ?? []) as MemberRow[]}
-        currentUserId={user.id}
-      />
-      <GithubSettingsPanel
-        status={
-          ((Array.isArray(githubStatus)
-            ? githubStatus[0]
-            : githubStatus) as GithubConnectionStatus | undefined) ?? null
-        }
-      />
-      <ScanRunsPanel runs={(runs ?? []) as ScanRunRow[]} />
-    </section>
-  );
+  const locale = await getLocale();
+  redirect({href: '/settings', locale});
 }

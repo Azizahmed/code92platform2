@@ -1,0 +1,23 @@
+{
+  "title": "Settings",
+  "subtitle": "Your preferences and, for admins, workspace administration.",
+  "language": {
+    "title": "Language",
+    "hint": "Switches the interface between English and Arabic, including text direction."
+  },
+  "appearance": {
+    "title": "Appearance",
+    "hint": "Light or dark. Follows your system setting unless you choose one."
+  },
+  "account": {
+    "title": "Account",
+    "name": "Name",
+    "email": "Email",
+    "role": "Role",
+    "roleAdmin": "Admin",
+    "roleMember": "Member"
+  },
+  "admin": {
+    "hint": "Visible to admins only"
+  }
+}

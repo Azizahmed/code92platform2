@@ -1,11 +1,10 @@
-import {ChevronLeft, ExternalLink, Pencil, Rss} from 'lucide-react';
+import {ChevronLeft, ExternalLink, Pencil} from 'lucide-react';
 import Image from 'next/image';
 import {notFound} from 'next/navigation';
 import {getFormatter, getTranslations} from 'next-intl/server';
 
 import HealthBadge from '@/components/HealthBadge';
 import OverdueBadge from '@/components/OverdueBadge';
-import RelativeTime from '@/components/RelativeTime';
 import StageChip from '@/components/StageChip';
 import StatusUpdateForm from '@/components/products/StatusUpdateForm';
 import StatusTimeline, {
@@ -19,7 +18,6 @@ import ProductKnowledgePanel from '@/components/products/ProductKnowledgePanel';
 import ProductTasksPanel, {
   type TaskMemberOption
 } from '@/components/products/ProductTasksPanel';
-import {ProductTrendsPanel} from '@/components/trends/ProductTrendsPanel';
 import {Link} from '@/i18n/navigation';
 import {requireActiveMember} from '@/lib/auth';
 import type {Product} from '@/lib/actions/products';
@@ -238,7 +236,7 @@ export default async function ProductDetailPage({
           </div>
         ) : null}
 
-        <dl className="mt-5 grid grid-cols-2 gap-x-6 gap-y-4 border-t border-hairline pt-5 sm:grid-cols-3 lg:grid-cols-6">
+        <dl className="mt-5 grid grid-cols-2 gap-x-6 gap-y-4 border-t border-hairline pt-5 sm:grid-cols-4">
           <div>
             <dt className="text-[10px] uppercase tracking-widest text-faint">
               {t('detail.owner')}
@@ -279,36 +277,6 @@ export default async function ProductDetailPage({
             </dt>
             <dd className="mt-1 text-sm text-muted">
               {t('detail.reviewEvery', {days: p.review_interval_days})}
-            </dd>
-          </div>
-          <div>
-            <dt className="text-[10px] uppercase tracking-widest text-faint">
-              {t('fields.trendScan')}
-            </dt>
-            <dd className="mt-1 flex items-center gap-1.5 text-sm">
-              <Rss
-                className={`h-3.5 w-3.5 ${p.trend_scan_enabled ? 'text-accent' : 'text-faint'}`}
-                strokeWidth={1.75}
-              />
-              <span className={p.trend_scan_enabled ? 'text-muted' : 'text-faint'}>
-                {p.trend_scan_enabled
-                  ? t('detail.trendScanOn')
-                  : t('detail.trendScanOff')}
-              </span>
-            </dd>
-          </div>
-          <div>
-            <dt className="text-[10px] uppercase tracking-widest text-faint">
-              {t('detail.lastScan')}
-            </dt>
-            <dd className="mt-1 text-sm">
-              {p.last_trend_scan_at ? (
-                <RelativeTime date={p.last_trend_scan_at} />
-              ) : (
-                <span className="text-xs text-faint">
-                  {t('detail.notScanned')}
-                </span>
-              )}
             </dd>
           </div>
         </dl>
@@ -421,8 +389,6 @@ export default async function ProductDetailPage({
       </div>
 
       <ProductKnowledgePanel productId={p.id} />
-
-      <ProductTrendsPanel productId={p.id} locale={locale} />
     </section>
   );
 }

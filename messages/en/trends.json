@@ -25,5 +25,9 @@
   },
   "errors": {
     "generic": "Something went wrong. Try again."
+  },
+  "disabled": {
+    "title": "Market intelligence is turned off",
+    "body": "Trend scanning is disabled, so no new items are being collected and nothing is being checked. Previously collected trends are kept and nothing has been deleted. An admin can switch the pipeline back on."
   }
 }
