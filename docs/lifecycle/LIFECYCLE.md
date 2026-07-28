@@ -25,7 +25,7 @@ _No artifacts filed._
 
 ### Requirements
 
-- **prd** — this is the project specs _(knowledge base item — not mirrored)_
+- **prd** — this is the project specs → [`SPECIFICATION.md`](02-requirements/prd-this-is-the-project-specs-8094d6f6.md)
 
 ### Plan
 
