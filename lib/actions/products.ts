@@ -41,6 +41,14 @@ export type Product = {
   logo_key: string | null;
   // Set by admins only (products_guard_risk_tier); drives the lifecycle gates.
   risk_tier: RiskTier;
+  // Written exclusively by the github-sync edge function after it confirms the
+  // repository is private and owned by the org — no client holds an INSERT or
+  // UPDATE grant on these columns.
+  github_repo: string | null;
+  github_repo_id: number | null;
+  github_default_branch: string | null;
+  github_linked_by: string | null;
+  github_linked_at: string | null;
   created_at: string;
 };
 

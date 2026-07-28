@@ -1,9 +1,11 @@
 import {ShieldAlert} from 'lucide-react';
 import {getTranslations} from 'next-intl/server';
 
+import GithubSettingsPanel from '@/components/admin/GithubSettingsPanel';
 import MembersTable, {type MemberRow} from '@/components/admin/MembersTable';
 import ScanRunsPanel, {type ScanRunRow} from '@/components/admin/ScanRunsPanel';
 import {requireActiveMember} from '@/lib/auth';
+import type {GithubConnectionStatus} from '@/lib/github';
 import {createInsForgeServerClient} from '@/lib/insforge/server';
 
 // Admin console: team roster management + trend-scan observability.
@@ -32,19 +34,24 @@ export default async function AdminPage() {
   }
 
   const insforge = await createInsForgeServerClient();
-  const [{data: members}, {data: runs}] = await Promise.all([
-    insforge.database
-      .from('team_members')
-      .select('user_id, display_name, role, is_active, created_at')
-      .order('created_at', {ascending: true}),
-    insforge.database
-      .from('scan_runs')
-      .select(
-        'id, status, products_scanned, items_inserted, items_linked, details, started_at, finished_at'
-      )
-      .order('started_at', {ascending: false})
-      .limit(20)
-  ]);
+  const [{data: members}, {data: runs}, {data: githubStatus}] =
+    await Promise.all([
+      insforge.database
+        .from('team_members')
+        .select('user_id, display_name, role, is_active, created_at')
+        .order('created_at', {ascending: true}),
+      insforge.database
+        .from('scan_runs')
+        .select(
+          'id, status, products_scanned, items_inserted, items_linked, details, started_at, finished_at'
+        )
+        .order('started_at', {ascending: false})
+        .limit(20),
+      // SECURITY DEFINER function, not a table read: it returns every column of
+      // github_connection EXCEPT the encrypted token, and no rows at all to a
+      // non-admin.
+      insforge.database.rpc('github_connection_status')
+    ]);
 
   return (
     <section className="space-y-8">
@@ -56,6 +63,13 @@ export default async function AdminPage() {
       <MembersTable
         members={(members ?? []) as MemberRow[]}
         currentUserId={user.id}
+      />
+      <GithubSettingsPanel
+        status={
+          ((Array.isArray(githubStatus)
+            ? githubStatus[0]
+            : githubStatus) as GithubConnectionStatus | undefined) ?? null
+        }
       />
       <ScanRunsPanel runs={(runs ?? []) as ScanRunRow[]} />
     </section>

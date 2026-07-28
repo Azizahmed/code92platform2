@@ -4,6 +4,7 @@ import {revalidatePath} from 'next/cache';
 import {z} from 'zod';
 
 import {getOwnMembership, getSessionUser} from '@/lib/auth';
+import type {SyncState} from '@/lib/github';
 import {createInsForgeServerClient} from '@/lib/insforge/server';
 import {
   MAX_KNOWLEDGE_FILE_BYTES,
@@ -48,6 +49,12 @@ export type PhaseArtifact = {
   notes: string | null;
   generated_by: 'human' | 'agent';
   uploader_id: string;
+  // Mirror state, written only by the github-sync edge function.
+  github_path: string | null;
+  github_commit_sha: string | null;
+  github_synced_at: string | null;
+  github_sync_error: string | null;
+  github_sync_state: SyncState;
   created_at: string;
 };
 

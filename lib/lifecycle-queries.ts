@@ -14,7 +14,7 @@ const PHASE_COLUMNS =
   'id, product_id, cycle, phase, state, owner_id, notes, entered_at, completed_at, updated_at';
 
 const ARTIFACT_COLUMNS =
-  'id, phase_id, artifact_type, title, storage_url, storage_key, file_name, mime_type, size_bytes, url, knowledge_item_id, notes, generated_by, uploader_id, created_at';
+  'id, phase_id, artifact_type, title, storage_url, storage_key, file_name, mime_type, size_bytes, url, knowledge_item_id, notes, generated_by, uploader_id, github_path, github_commit_sha, github_synced_at, github_sync_error, github_sync_state, created_at';
 
 const TRANSITION_COLUMNS =
   'id, product_id, cycle, phase, from_state, to_state, actor_id, risk_tier_at_time, missing_artifacts, waiver_reason, self_approved, created_at';

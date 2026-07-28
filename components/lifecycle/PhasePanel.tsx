@@ -5,11 +5,16 @@ import {useState, useTransition} from 'react';
 import {useTranslations} from 'next-intl';
 
 import ArtifactLink from '@/components/lifecycle/ArtifactLink';
+import ArtifactSyncBadge from '@/components/lifecycle/ArtifactSyncBadge';
 import AdvanceGateDialog from '@/components/lifecycle/AdvanceGateDialog';
 import PhaseArtifactForm, {
   type KnowledgeOption
 } from '@/components/lifecycle/PhaseArtifactForm';
 import RelativeTime from '@/components/RelativeTime';
+import {
+  deleteArtifactFromRepoAction,
+  pushManifestAction
+} from '@/lib/actions/github';
 import {
   advanceLifecyclePhaseAction,
   deletePhaseArtifactAction,
@@ -39,7 +44,9 @@ export default function PhasePanel({
   riskTier,
   canEdit,
   knowledgeOptions,
-  memberNames
+  memberNames,
+  repo,
+  repoBranch
 }: {
   row: LifecyclePhaseRow;
   artifacts: PhaseArtifact[];
@@ -47,6 +54,8 @@ export default function PhasePanel({
   canEdit: boolean;
   knowledgeOptions: KnowledgeOption[];
   memberNames: Record<string, string>;
+  repo: string | null;
+  repoBranch: string | null;
 }) {
   const t = useTranslations('lifecycle');
   const [adding, setAdding] = useState(false);
@@ -73,6 +82,10 @@ export default function PhasePanel({
         return;
       }
       setGateOpen(false);
+      // Keep LIFECYCLE.md in the repo honest about the new state. Best effort:
+      // the transition is already recorded, and a mirror failure must not make
+      // a successful advance look failed.
+      if (repo) await pushManifestAction(row.product_id);
     });
   }
 
@@ -100,6 +113,10 @@ export default function PhasePanel({
 
   function handleDeleteArtifact(artifact: PhaseArtifact) {
     setErrorKey(null);
+    // Captured before the row is deleted — afterwards there is nothing left to
+    // read the mirrored path from.
+    const mirroredPath = artifact.github_path;
+
     startTransition(async () => {
       const result = await deletePhaseArtifactAction(artifact.id);
       if (!result.ok) {
@@ -108,6 +125,12 @@ export default function PhasePanel({
       }
       // Row is gone; drop the storage object it referenced.
       if (result.storageKey) await removeArtifactFile(result.storageKey);
+      if (repo && mirroredPath) {
+        await deleteArtifactFromRepoAction({
+          productId: row.product_id,
+          path: mirroredPath
+        });
+      }
     });
   }
 
@@ -236,6 +259,15 @@ export default function PhasePanel({
                     })}{' '}
                     · <RelativeTime date={artifact.created_at} />
                   </p>
+                  <ArtifactSyncBadge
+                    artifactId={artifact.id}
+                    state={artifact.github_sync_state}
+                    path={artifact.github_path}
+                    error={artifact.github_sync_error}
+                    repo={repo}
+                    branch={repoBranch}
+                    canEdit={canEdit}
+                  />
                 </div>
                 {canEdit ? (
                   <button
@@ -259,6 +291,7 @@ export default function PhasePanel({
             phaseId={row.id}
             phase={row.phase}
             knowledgeOptions={knowledgeOptions}
+            repoLinked={Boolean(repo)}
             onDone={() => setAdding(false)}
           />
         ) : null}

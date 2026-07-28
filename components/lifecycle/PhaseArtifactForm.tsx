@@ -4,6 +4,7 @@ import {Paperclip} from 'lucide-react';
 import {useRef, useState, useTransition} from 'react';
 import {useTranslations} from 'next-intl';
 
+import {pushArtifactAction} from '@/lib/actions/github';
 import {addPhaseArtifactAction} from '@/lib/actions/lifecycle';
 import {
   removeArtifactFile,
@@ -29,11 +30,13 @@ export default function PhaseArtifactForm({
   phaseId,
   phase,
   knowledgeOptions,
+  repoLinked,
   onDone
 }: {
   phaseId: string;
   phase: LifecyclePhase;
   knowledgeOptions: KnowledgeOption[];
+  repoLinked: boolean;
   onDone: () => void;
 }) {
   const t = useTranslations('lifecycle');
@@ -84,6 +87,14 @@ export default function PhaseArtifactForm({
           if (uploadedKey) await removeArtifactFile(uploadedKey);
           setErrorKey(result.error);
           return;
+        }
+
+        // Mirror as a SECOND round trip, after the row exists. A GitHub commit
+        // takes seconds, and the artifact is already safely saved — so a failure
+        // here surfaces on the badge as retryable rather than failing the upload
+        // or blocking the lifecycle.
+        if (repoLinked && result.artifactId) {
+          await pushArtifactAction(result.artifactId);
         }
 
         setTitle('');

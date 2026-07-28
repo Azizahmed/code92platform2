@@ -39,7 +39,9 @@ export default function LifecycleSection({
   phases,
   artifacts,
   knowledgeOptions,
-  memberNames
+  memberNames,
+  repo,
+  repoBranch
 }: {
   productId: string;
   riskTier: RiskTier;
@@ -49,6 +51,8 @@ export default function LifecycleSection({
   artifacts: Record<string, PhaseArtifact[]>;
   knowledgeOptions: KnowledgeOption[];
   memberNames: Record<string, string>;
+  repo: string | null;
+  repoBranch: string | null;
 }) {
   const t = useTranslations('lifecycle');
   const [selected, setSelected] = useState<LifecyclePhase>(() =>
@@ -134,6 +138,8 @@ export default function LifecycleSection({
           canEdit={canEdit}
           knowledgeOptions={knowledgeOptions}
           memberNames={memberNames}
+          repo={repo}
+          repoBranch={repoBranch}
         />
       ) : null}
     </section>

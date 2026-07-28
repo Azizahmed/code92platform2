@@ -13,6 +13,7 @@ import StatusTimeline, {
   type TimelineEntry
 } from '@/components/products/StatusTimeline';
 import LifecycleSection from '@/components/lifecycle/LifecycleSection';
+import RepoConnectCard from '@/components/lifecycle/RepoConnectCard';
 import RiskTierChip from '@/components/lifecycle/RiskTierChip';
 import ProductKnowledgePanel from '@/components/products/ProductKnowledgePanel';
 import ProductTasksPanel, {
@@ -91,6 +92,12 @@ export default async function ProductDetailPage({
       .is('archived_at', null)
       .order('title')
   ]);
+
+  // One bit — whether a credential exists at all — so a product owner who is not
+  // an admin can be told to ask for setup instead of hitting an error.
+  const {data: githubConfigured} = await insforge.database.rpc(
+    'github_is_configured'
+  );
 
   const taskIds = (tasks ?? []).map((task) => task.id as string);
   const updateIds = (updates ?? []).map((update) => update.id as string);
@@ -356,6 +363,19 @@ export default async function ProductDetailPage({
         </p>
       ) : null}
 
+      <RepoConnectCard
+        productId={p.id}
+        link={{
+          github_repo: p.github_repo,
+          github_repo_id: p.github_repo_id,
+          github_default_branch: p.github_default_branch,
+          github_linked_by: p.github_linked_by,
+          github_linked_at: p.github_linked_at
+        }}
+        canEdit={!p.archived_at && (isOwner || isAdmin)}
+        githubConfigured={Boolean(githubConfigured)}
+      />
+
       <LifecycleSection
         productId={p.id}
         riskTier={p.risk_tier}
@@ -372,6 +392,8 @@ export default async function ProductDetailPage({
           title: item.title as string
         }))}
         memberNames={authorNames}
+        repo={p.github_repo}
+        repoBranch={p.github_default_branch}
       />
 
       <ProductTasksPanel
