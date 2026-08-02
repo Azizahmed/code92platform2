@@ -1,10 +1,14 @@
 'use client';
 
+import {
+  isAllowedAttachmentType,
+  resolveFileType,
+  storedFileType
+} from '@/lib/attachments';
 import {insforge} from '@/lib/insforge/client';
 import {
   KNOWLEDGE_FILE_BUCKET,
-  MAX_KNOWLEDGE_FILE_BYTES,
-  isAllowedKnowledgeFileType
+  MAX_KNOWLEDGE_FILE_BYTES
 } from '@/lib/knowledge';
 
 export type StoredFile = {
@@ -23,7 +27,8 @@ function safeFileName(name: string): string {
 
 export function validateKnowledgeFile(file: File): string | null {
   if (file.size <= 0 || file.size > MAX_KNOWLEDGE_FILE_BYTES) return 'fileSize';
-  if (!isAllowedKnowledgeFileType(file.type)) return 'fileType';
+  // The resolved type, so a .md file with no browser-declared type passes.
+  if (!isAllowedAttachmentType(resolveFileType(file))) return 'fileType';
   return null;
 }
 
@@ -41,7 +46,7 @@ export async function uploadKnowledgeFile(file: File): Promise<StoredFile> {
     url: data.url,
     key: data.key,
     fileName: file.name,
-    mimeType: data.mimeType || file.type || 'application/octet-stream',
+    mimeType: storedFileType(file, data.mimeType),
     sizeBytes: data.size || file.size
   };
 }

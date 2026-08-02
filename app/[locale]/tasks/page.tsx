@@ -27,7 +27,7 @@ export default async function AllTasksPage({
       insforge.database
         .from('product_tasks')
         .select(
-          'id, product_id, parent_task_id, title, notes, due_date, assignee_id, status, position, created_by, completed_at, created_at, updated_at'
+          'id, product_id, parent_task_id, title, notes, due_date, assignee_id, status, position, created_by, completed_at, created_at, updated_at, release_id'
         )
         .order('due_date', {ascending: true, nullsFirst: false})
         .order('created_at', {ascending: false}),
@@ -44,19 +44,26 @@ export default async function AllTasksPage({
 
   const taskRows = (tasks ?? []) as unknown as Omit<
     ProductTask,
-    'attachments'
+    'attachments' | 'is_watching'
   >[];
   const taskIds = taskRows.map((task) => task.id);
-  const {data: attachments} =
+  const [{data: attachments}, {data: watched}] =
     taskIds.length > 0
-      ? await insforge.database
-          .from('task_attachments')
-          .select(
-            'id, task_id, storage_url, storage_key, file_name, mime_type, size_bytes, created_at'
-          )
-          .in('task_id', taskIds)
-          .order('created_at', {ascending: true})
-      : {data: []};
+      ? await Promise.all([
+          insforge.database
+            .from('task_attachments')
+            .select(
+              'id, task_id, storage_url, storage_key, file_name, mime_type, size_bytes, created_at'
+            )
+            .in('task_id', taskIds)
+            .order('created_at', {ascending: true}),
+          insforge.database
+            .from('task_watchers')
+            .select('task_id')
+            .eq('user_id', user.id)
+            .in('task_id', taskIds)
+        ])
+      : [{data: []}, {data: []}];
 
   const attachmentsByTask = new Map<string, TaskAttachment[]>();
   for (const attachment of (attachments ??
@@ -66,6 +73,9 @@ export default async function AllTasksPage({
     attachmentsByTask.set(attachment.task_id, list);
   }
 
+  const watchedTaskIds = new Set(
+    (watched ?? []).map((row) => row.task_id as string)
+  );
   const productMap = new Map(
     (products ?? []).map((product) => [
       product.id as string,
@@ -93,6 +103,7 @@ export default async function AllTasksPage({
       return {
         ...task,
         attachments: attachmentsByTask.get(task.id) ?? [],
+        is_watching: watchedTaskIds.has(task.id),
         product_name: product.name,
         product_logo_url: product.logoUrl,
         product_archived_at: product.archivedAt,

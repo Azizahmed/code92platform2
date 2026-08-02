@@ -6,16 +6,18 @@ import {
   CheckCircle2,
   Circle,
   CornerDownRight,
-  ImageIcon,
   ListFilter,
   ListTodo,
+  Paperclip,
   Search,
   UserRound
 } from 'lucide-react';
 import {useTranslations} from 'next-intl';
 import {useMemo, useOptimistic, useState, useTransition} from 'react';
 
+import TaskWatchToggle from '@/components/tasks/TaskWatchToggle';
 import {Link} from '@/i18n/navigation';
+import {drainNotificationEmailsAction} from '@/lib/actions/notifications';
 import type {ProductTask, TaskStatus} from '@/lib/actions/tasks';
 import {updateTaskAction} from '@/lib/actions/tasks';
 
@@ -152,7 +154,13 @@ export default function AllTasksBoard({
         status
       });
       // On failure React rolls the optimistic flip back for us.
-      if (!result.ok) setError(result.error);
+      if (!result.ok) {
+        setError(result.error);
+      } else {
+        // Pushes the notifications the trigger just queued for email. Not
+        // awaited into the error path — a mail problem is not a task problem.
+        void drainNotificationEmailsAction();
+      }
       setPendingTaskId(null);
     });
   }
@@ -368,8 +376,8 @@ export default function AllTasksBoard({
                         ) : null}
                         {task.attachments.length > 0 ? (
                           <span className="inline-flex items-center gap-1">
-                            <ImageIcon className="h-3 w-3" strokeWidth={1.75} />
-                            {t('media.imageCount', {
+                            <Paperclip className="h-3 w-3" strokeWidth={1.75} />
+                            {t('media.fileCount', {
                               count: task.attachments.length
                             })}
                           </span>
@@ -402,21 +410,28 @@ export default function AllTasksBoard({
                     {formattedDate ?? t('all.noDueDate')}
                   </div>
 
-                  <span
-                    className={`rounded border px-2 py-1 text-[10px] uppercase tracking-wider ${
-                      completed
-                        ? 'border-accent/20 bg-accent/10 text-accent'
+                  <div className="flex items-center gap-1">
+                    <span
+                      className={`rounded border px-2 py-1 text-[10px] uppercase tracking-wider ${
+                        completed
+                          ? 'border-accent/20 bg-accent/10 text-accent'
+                          : overdue
+                            ? 'border-amber/30 bg-amber/10 text-amber'
+                            : 'border-hairline bg-raised text-muted'
+                      }`}
+                    >
+                      {completed
+                        ? t('all.status.completed')
                         : overdue
-                          ? 'border-amber/30 bg-amber/10 text-amber'
-                          : 'border-hairline bg-raised text-muted'
-                    }`}
-                  >
-                    {completed
-                      ? t('all.status.completed')
-                      : overdue
-                        ? t('all.status.overdue')
-                        : t('all.status.open')}
-                  </span>
+                          ? t('all.status.overdue')
+                          : t('all.status.open')}
+                    </span>
+                    <TaskWatchToggle
+                      taskId={task.id}
+                      watching={task.is_watching}
+                      compact
+                    />
+                  </div>
                 </li>
               );
             })}

@@ -25,14 +25,16 @@
     "creating": "Creating…",
     "save": "Save changes",
     "saving": "Saving…",
-    "cancel": "Cancel"
+    "cancel": "Cancel",
+    "attachments": "Attachments",
+    "attachmentsHint": "Markdown, PDF, Office documents, or images. Up to 8 files, 25 MB each."
   },
   "task": {
     "subtasks": "{count, plural, =1 {1 subtask} other {# subtasks}}",
     "addSubtask": "Add subtask",
     "edit": "Edit",
     "delete": "Delete",
-    "deleteConfirm": "Delete this task and all its subtasks and images?",
+    "deleteConfirm": "Delete this task and all its subtasks and attachments?",
     "complete": "Mark complete",
     "reopen": "Reopen task",
     "addImages": "Add images",
@@ -41,7 +43,8 @@
     "overdue": "Overdue",
     "assignedTo": "Assigned to {name}",
     "unassigned": "Unassigned",
-    "noNotes": "No notes"
+    "noNotes": "No notes",
+    "addFiles": "Attach files"
   },
   "logo": {
     "label": "Product logo",
@@ -56,7 +59,9 @@
     "chooseImages": "Choose images",
     "selected": "{count, plural, =1 {1 image selected} other {# images selected}}",
     "attachmentAlt": "Attached image: {name}",
-    "imageCount": "{count, plural, =1 {1 image} other {# images}}"
+    "imageCount": "{count, plural, =1 {1 image} other {# images}}",
+    "selectedFiles": "{count, plural, =1 {1 file selected} other {# files selected}}",
+    "fileCount": "{count, plural, =1 {1 attachment} other {# attachments}}"
   },
   "all": {
     "title": "All tasks",
@@ -98,6 +103,16 @@
     "imageType": "Only image files can be uploaded.",
     "imageSize": "Each image must be smaller than 10 MB.",
     "tooManyImages": "You can upload up to 8 images at a time.",
-    "uploadFailed": "The image upload failed. Please try again."
+    "uploadFailed": "The image upload failed. Please try again.",
+    "fileType": "That file type cannot be attached.",
+    "fileSize": "Each file must be smaller than 25 MB.",
+    "tooManyFiles": "You can attach up to 8 files at a time."
+  },
+  "attachments": {
+    "preview": "Read this file",
+    "openFile": "Open the file",
+    "closePreview": "Close preview",
+    "loading": "Loading the file…",
+    "previewFailed": "The file could not be read here. Open it directly instead."
   }
 }

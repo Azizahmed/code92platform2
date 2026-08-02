@@ -4,6 +4,12 @@
 // due products, asks a web-search-capable OpenRouter model for recent trend
 // items, dedups by normalized URL, and links items to products.
 
+// The SDK arrives through Deno's npm: specifier and this directory is excluded
+// from tsconfig.json, so no local types exist for these clients. `any` is an
+// accurate description of what is knowable here, not a shortcut — the same
+// justification as functions/github-sync.ts.
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 import { createClient, createAdminClient } from 'npm:@insforge/sdk';
 import { z } from 'npm:zod';
 

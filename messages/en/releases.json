@@ -1,0 +1,146 @@
+{
+  "title": "Releases",
+  "subtitle": "Every cycle in flight, what it still needs, and what it took to ship the last one.",
+  "newRelease": "New release",
+  "searchPlaceholder": "Search versions, products, or owners…",
+  "allProducts": "All products",
+  "noTargetDate": "No date",
+  "overdue": "Overdue",
+  "releasedAt": "Released",
+  "backToReleases": "All releases",
+  "edit": "Edit release",
+  "delete": "Delete release",
+  "deleteConfirm": "Delete release {version}? Its checklist and history go with it. Tasks scoped into it are kept and unscoped.",
+  "emptyTitle": "No releases match this view",
+  "emptyBody": "Adjust the filters, or plan the next cycle from a product page.",
+  "openOfTotal": "{open} open of {total}",
+  "scope": {
+    "active": "In flight",
+    "all": "All",
+    "released": "Shipped",
+    "title": "Scope",
+    "progress": "{open} open of {total}",
+    "empty": "Nothing is scoped into this release yet. Add the work it is meant to deliver so \"ready\" means something.",
+    "add": "Add work",
+    "addTitle": "Add unscoped tasks",
+    "remove": "Remove from release",
+    "noneAvailable": "Every open task on this product is already in a release.",
+    "unassigned": "Unassigned"
+  },
+  "stats": {
+    "active": "In flight",
+    "overdue": "Past target",
+    "openWork": "Open work",
+    "released": "Shipped"
+  },
+  "status": {
+    "planned": "Planned",
+    "in_progress": "In progress",
+    "ready": "Ready",
+    "released": "Released",
+    "rolled_back": "Rolled back",
+    "cancelled": "Cancelled"
+  },
+  "panel": {
+    "title": "Releases",
+    "subtitle": "The cycles this product ships in.",
+    "empty": "No releases yet. Plan one to give the next batch of work a date and a checklist."
+  },
+  "form": {
+    "newTitle": "New release",
+    "editTitle": "Edit release",
+    "product": "Product",
+    "version": "Version",
+    "versionPlaceholder": "1.4.0",
+    "name": "Name",
+    "namePlaceholder": "What this release is about…",
+    "notes": "Release notes",
+    "notesPlaceholder": "What changed, what to watch, what to tell users…",
+    "targetDate": "Target date",
+    "owner": "Release owner",
+    "noOwner": "No owner",
+    "create": "Create release",
+    "creating": "Creating…",
+    "save": "Save changes",
+    "saving": "Saving…",
+    "cancel": "Cancel"
+  },
+  "checklist": {
+    "title": "Checklist",
+    "progress": "{done}/{total} done",
+    "empty": "This release has no required checks.",
+    "closed": "The checklist is closed: this release has already shipped or been cancelled.",
+    "readOnly": "Only the product owner or an admin can complete these."
+  },
+  "checks": {
+    "release_notes": {
+      "label": "Release notes written",
+      "hint": "What changed, in language the people affected can read."
+    },
+    "qa_signoff": {
+      "label": "QA sign-off",
+      "hint": "Someone other than the author has exercised the change."
+    },
+    "rollback_plan": {
+      "label": "Rollback plan",
+      "hint": "How this gets undone, written down before it is needed."
+    },
+    "security_signoff": {
+      "label": "Security sign-off",
+      "hint": "Required for high-risk products. The review is recorded in the lifecycle."
+    },
+    "change_approval": {
+      "label": "Change approval",
+      "hint": "Required for high-risk products. Who agreed this goes out, and when."
+    }
+  },
+  "advance": {
+    "title": "Move this release",
+    "working": "Working…",
+    "gapsTitle": "Still outstanding",
+    "gapsRecorded": "This is recorded against the release rather than blocking it.",
+    "waiverRequired": "A high-risk release cannot ship with gaps unless you write down why.",
+    "waiver": "Waiver reason",
+    "waiverPlaceholder": "Why this ships with the gaps above, and what covers the risk…",
+    "openTasks": "{count, plural, =1 {1 task still open} other {# tasks still open}}",
+    "to": {
+      "planned": "Back to planned",
+      "in_progress": "Start work",
+      "ready": "Mark ready",
+      "released": "Mark released",
+      "rolled_back": "Roll back",
+      "cancelled": "Cancel release"
+    },
+    "confirm": {
+      "planned": "Send this release back to planning.",
+      "in_progress": "Work on this release is under way.",
+      "ready": "Everything is in place and this is ready to go out.",
+      "released": "This is going out. The checklist and any gaps are recorded against it permanently.",
+      "rolled_back": "This release was pulled back after going out. The record of it shipping is kept.",
+      "cancelled": "This release is not happening."
+    }
+  },
+  "history": {
+    "title": "History",
+    "empty": "Nothing has moved yet.",
+    "moved": "{from} → {to}",
+    "someone": "Someone",
+    "selfApproved": "Self-approved",
+    "waiver": "Waiver:",
+    "gaps": "Shipped with: {gaps}",
+    "openTasksGap": "open tasks"
+  },
+  "errors": {
+    "generic": "Something went wrong. Please try again.",
+    "invalid": "Check the release details and try again.",
+    "forbidden": "Only the product owner or an admin can do that.",
+    "adminRequired": "High-risk products need an admin for this.",
+    "archived": "This product is archived.",
+    "notFound": "The release could not be found.",
+    "duplicateVersion": "That version already exists for this product.",
+    "invalidTransition": "A release cannot move straight to that status.",
+    "checklistClosed": "This release has shipped or been cancelled; its checklist is closed.",
+    "releasedImmutable": "A released version cannot be deleted.",
+    "waiverRequired": "Write down why this ships with gaps."
+  }
+}

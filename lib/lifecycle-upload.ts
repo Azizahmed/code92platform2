@@ -1,7 +1,11 @@
 'use client';
 
+import {
+  isAllowedAttachmentType,
+  resolveFileType,
+  storedFileType
+} from '@/lib/attachments';
 import {insforge} from '@/lib/insforge/client';
-import {isAllowedKnowledgeFileType} from '@/lib/knowledge';
 import {
   LIFECYCLE_FILE_BUCKET,
   MAX_LIFECYCLE_FILE_BYTES,
@@ -23,10 +27,12 @@ function safeFileName(name: string): string {
 }
 
 // Same allowlist the knowledge base uses — markdown and plain text via the
-// text/ prefix, plus PDF and the Office formats.
+// text/ prefix, plus PDF and the Office formats. Validated against the RESOLVED
+// type, not File.type: a .md file arrives with an empty type on most desktops,
+// and rejecting it was never intentional.
 export function validateArtifactFile(file: File): string | null {
   if (file.size <= 0 || file.size > MAX_LIFECYCLE_FILE_BYTES) return 'fileSize';
-  if (!isAllowedKnowledgeFileType(file.type)) return 'fileType';
+  if (!isAllowedAttachmentType(resolveFileType(file))) return 'fileType';
   return null;
 }
 
@@ -47,7 +53,7 @@ export async function uploadArtifactFile(
     url: data.url,
     key: data.key,
     fileName: file.name,
-    mimeType: data.mimeType || file.type || 'application/octet-stream',
+    mimeType: storedFileType(file, data.mimeType),
     sizeBytes: data.size || file.size
   };
 }

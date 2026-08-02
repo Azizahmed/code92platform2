@@ -14,7 +14,8 @@
     "closePreferences": "إغلاق التفضيلات",
     "section": "التنقل",
     "controlPanel": "لوحة التحكم",
-    "settings": "الإعدادات"
+    "settings": "الإعدادات",
+    "releases": "الإصدارات"
   },
   "actions": {
     "signOut": "تسجيل الخروج",

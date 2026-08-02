@@ -1,0 +1,37 @@
+{
+  "title": "Notifications",
+  "close": "Close notifications",
+  "loading": "Loading…",
+  "dismiss": "Dismiss",
+  "markAllRead": "Mark all read",
+  "allRead": "Nothing unread",
+  "unreadCount": "{count, plural, =1 {1 unread} other {# unread}}",
+  "managePreferences": "Notification settings",
+  "emptyTitle": "Nothing yet",
+  "emptyBody": "You'll hear about tasks assigned to you, and about anything you choose to follow.",
+  "bell": {
+    "label": "Notifications",
+    "labelWithCount": "Notifications, {count} unread"
+  },
+  "watch": {
+    "start": "Follow this task",
+    "stop": "Following"
+  },
+  "preferences": {
+    "title": "Notifications",
+    "intro": "Everything shows up in the bell. Email is optional, and off until you switch it on.",
+    "emailEnabled": "Email me",
+    "emailEnabledHint": "Send notifications to your account email as well as showing them here.",
+    "onAssign": "When a task is assigned to me",
+    "onAssignHint": "Someone puts a task in your name.",
+    "onUpdate": "When a task I follow changes",
+    "onUpdateHint": "A followed task is edited, completed, or reopened. Batched into one message per burst.",
+    "saving": "Saving…",
+    "saved": "Saved"
+  },
+  "errors": {
+    "generic": "Something went wrong. Please try again.",
+    "invalid": "That request wasn't valid.",
+    "forbidden": "You don't have permission to do that."
+  }
+}

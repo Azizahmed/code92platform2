@@ -3,7 +3,9 @@ import {getTranslations} from 'next-intl/server';
 
 import GithubSettingsPanel from '@/components/admin/GithubSettingsPanel';
 import MembersTable, {type MemberRow} from '@/components/admin/MembersTable';
+import NotificationPreferencesPanel from '@/components/settings/NotificationPreferencesPanel';
 import SettingsPreferences from '@/components/settings/SettingsPreferences';
+import {getNotificationPreferencesAction} from '@/lib/actions/notifications';
 import {requireActiveMember} from '@/lib/auth';
 import type {GithubConnectionStatus} from '@/lib/github';
 import {createInsForgeServerClient} from '@/lib/insforge/server';
@@ -23,6 +25,7 @@ export default async function SettingsPage() {
   ]);
 
   const isAdmin = member.role === 'admin';
+  const notificationPreferences = await getNotificationPreferencesAction();
 
   let members: MemberRow[] = [];
   let githubStatus: GithubConnectionStatus | null = null;
@@ -51,6 +54,8 @@ export default async function SettingsPage() {
       </header>
 
       <SettingsPreferences />
+
+      <NotificationPreferencesPanel preferences={notificationPreferences} />
 
       <section className="space-y-3">
         <h2 className="text-sm font-medium">{t('account.title')}</h2>

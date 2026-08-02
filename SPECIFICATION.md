@@ -141,6 +141,14 @@ sub-tasks via `parent_task_id`, assignee, due date, manual ordering via
 `position`, and attachments. Parent/child rules a CHECK cannot reach are enforced
 by `validate_product_task()`. A cross-product `/tasks` view aggregates them.
 
+**Attachments** take documents as well as images: markdown, plain text, PDF and
+the Office formats, up to 25 MB each. The allowlist is defined once in
+`public.is_allowed_attachment_type()` and mirrored in `lib/attachments.ts`.
+Markdown attachments are read in place rather than downloaded. A `.md` file
+arrives from most desktops with an empty `File.type`, so the resolved type — the
+browser's answer, or the extension when it has none — is what is validated and
+stored.
+
 ### 4.4 Knowledge base
 
 Three kinds with **per-kind status vocabularies**, enforced by CHECK and
@@ -254,7 +262,61 @@ SELECT-only to clients.
 - **Waiver register** — every gate passed with a written reason.
 - **Gate log** — the full transition history, self-approvals flagged.
 
-### 4.8 GitHub integration
+### 4.8 Release management
+
+The lifecycle says where a product is in the delivery process; a **release** says
+what is going out, when, and what had to be true first. They are separate axes: a
+product sits in `monitor` for a year while shipping a release a fortnight.
+
+A release belongs to one product, carries a `version` unique within that product,
+an optional name, notes, target date and owner, and moves through
+`planned → in_progress → ready → released`, with `rolled_back` and `cancelled`
+as recorded outcomes rather than dead ends. `release_status_can_follow()` defines
+the legal moves; `advance_release_status()` is the only write path to `status`.
+
+- **Scope** — tasks join a release via `product_tasks.release_id`, and only from
+  the same product. That is what makes "ready" answerable from evidence.
+- **Checklist** — `release_checks` is seeded at creation from the product's risk
+  tier: release notes for everything, plus QA sign-off and a rollback plan at
+  medium, plus security sign-off and change approval at high. The seeded list is
+  **not** rewritten when the tier changes later — the checklist a release was
+  held to is part of its record.
+- **The gate** — bites only on `released`. Unmet checks and still-open scoped
+  tasks (recorded as the pseudo-entry `open_tasks`) are gaps. Low and medium ship
+  with the gaps recorded; high-risk requires a written waiver, exactly as the
+  lifecycle gate does.
+- **Audit** — `release_transitions` is append-only, records the risk tier at the
+  time, the gaps, the waiver, and flags self-approval.
+
+### 4.9 Notifications
+
+Task activity reaches people two ways, and the database decides both.
+
+`product_tasks_notify()` is an `AFTER INSERT OR UPDATE` trigger and the **only**
+writer of `public.notifications` — no client role holds `INSERT`. Doing the
+fan-out in the database rather than in server actions means a task changed from
+anywhere still notifies the people following it.
+
+- **Watching** — `task_watchers` is the opt-in. The author and the assignee are
+  subscribed automatically; anyone else presses the bell on the task. Only you
+  can add or remove yourself.
+- **Events** — assignment and reassignment go to the person named; completion,
+  reopening, and content edits go to watchers. Content edits collapse into one
+  notification naming the fields that moved. Nobody is told about their own
+  action.
+- **In-app** — the bell in the shell, polling while the tab is visible. Reading
+  is `read_at` only: the recipient's `UPDATE` grant covers that column and
+  nothing else, so a notification cannot be rewritten or re-queued for mail.
+- **Email** — opt-in per person via `notification_preferences`, off by default.
+  The trigger only marks a row `pending`; `functions/notify-email.ts` drains the
+  queue out of band on a second round trip from the app, claims each row via a
+  `sending` state so overlapping drains cannot double-send, and batches one
+  message per person. A mail outage cannot fail a task update, and nothing
+  queued is lost — the next drain picks it up. Addresses are read through
+  `notification_email_targets()`, which only answers for users with mail already
+  queued, so it cannot double as a team directory.
+
+### 4.10 GitHub integration
 
 Each product links to **exactly one private repository** in the `code92-dev`
 organisation, and lifecycle evidence is mirrored into it.

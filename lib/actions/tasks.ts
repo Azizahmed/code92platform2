@@ -33,7 +33,14 @@ export type ProductTask = {
   completed_at: string | null;
   created_at: string;
   updated_at: string;
+  // The release this work is scoped into, if any. Written through
+  // setTaskReleaseAction rather than here, so the board can rescope without
+  // holding a whole task payload.
+  release_id: string | null;
   attachments: TaskAttachment[];
+  // Derived per viewer from task_watchers — not a column. Whoever is looking at
+  // the row needs to know whether THEY are following it.
+  is_watching: boolean;
 };
 
 export type TaskInput = {

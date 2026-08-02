@@ -1,14 +1,13 @@
 'use client';
 
-import Image from 'next/image';
 import {
   CalendarDays,
   Check,
   CheckCircle2,
   ChevronDown,
   Circle,
-  ImagePlus,
   ListTodo,
+  Paperclip,
   Pencil,
   Plus,
   Trash2,
@@ -18,6 +17,8 @@ import {
 import {useTranslations} from 'next-intl';
 import {useMemo, useOptimistic, useRef, useState, useTransition} from 'react';
 
+import TaskAttachments from '@/components/tasks/TaskAttachments';
+import TaskWatchToggle from '@/components/tasks/TaskWatchToggle';
 import {
   addTaskAttachmentsAction,
   type StoredImage
@@ -29,10 +30,12 @@ import {
   type TaskStatus,
   updateTaskAction
 } from '@/lib/actions/tasks';
+import {drainNotificationEmailsAction} from '@/lib/actions/notifications';
+import {DOCUMENT_ACCEPT} from '@/lib/attachments';
 import {
   removeStoredImages,
-  uploadImages,
-  validateImageFiles
+  uploadAttachments,
+  validateAttachmentFiles
 } from '@/lib/media-upload';
 
 export type TaskMemberOption = {
@@ -82,6 +85,9 @@ function errorKey(error: unknown): string {
     'imageType',
     'imageSize',
     'tooManyImages',
+    'fileType',
+    'fileSize',
+    'tooManyFiles',
     'uploadFailed'
   ].includes(error.message)
     ? error.message
@@ -113,7 +119,7 @@ function TaskEditor({
   const [pending, startTransition] = useTransition();
 
   function handleFiles(nextFiles: File[]) {
-    const invalid = validateImageFiles(nextFiles);
+    const invalid = validateAttachmentFiles(nextFiles);
     if (invalid) {
       onError(invalid);
       if (fileInput.current) fileInput.current.value = '';
@@ -148,10 +154,16 @@ function TaskEditor({
         return;
       }
 
+      // The database trigger has already written the notification rows; this
+      // only pushes the ones that asked to be emailed. Deliberately not
+      // awaited into the error path: a mail problem is not a task problem, and
+      // anything left pending is picked up by the next drain.
+      void drainNotificationEmailsAction();
+
       if (!task && files.length > 0) {
         let uploaded: StoredImage[] = [];
         try {
-          uploaded = await uploadImages(
+          uploaded = await uploadAttachments(
             files,
             `products/${productId}/tasks/${result.taskId}`
           );
@@ -251,11 +263,11 @@ function TaskEditor({
 
       {!task ? (
         <label className="block space-y-1.5">
-          <span className="text-xs text-muted">{t('form.images')}</span>
+          <span className="text-xs text-muted">{t('form.attachments')}</span>
           <input
             ref={fileInput}
             type="file"
-            accept="image/*"
+            accept={DOCUMENT_ACCEPT}
             multiple
             onChange={(event) =>
               handleFiles(Array.from(event.target.files ?? []))
@@ -264,8 +276,8 @@ function TaskEditor({
           />
           <span className="text-[11px] text-faint">
             {files.length > 0
-              ? t('media.selected', {count: files.length})
-              : t('form.imagesHint')}
+              ? t('media.selectedFiles', {count: files.length})
+              : t('form.attachmentsHint')}
           </span>
         </label>
       ) : null}
@@ -311,7 +323,7 @@ function TaskCard({
   onError,
   onToggle,
   onDelete,
-  onAddImages
+  onAddFiles
 }: {
   task: ProductTask;
   subtasks: ProductTask[];
@@ -327,7 +339,7 @@ function TaskCard({
   onError: (key: string) => void;
   onToggle: (task: ProductTask) => void;
   onDelete: (task: ProductTask) => void;
-  onAddImages: (task: ProductTask, files: File[]) => void;
+  onAddFiles: (task: ProductTask, files: File[]) => void;
 }) {
   const t = useTranslations('tasks');
   const memberName = members.find(
@@ -411,21 +423,27 @@ function TaskCard({
                     <Plus className="h-3.5 w-3.5" />
                   </button>
                 ) : null}
+                <TaskWatchToggle
+                  taskId={task.id}
+                  watching={task.is_watching}
+                  compact
+                />
                 <label
                   className="cursor-pointer rounded p-1.5 text-faint transition-colors hover:bg-raised hover:text-ink"
-                  aria-label={t('task.addImages')}
+                  aria-label={t('task.addFiles')}
+                  title={t('task.addFiles')}
                 >
-                  <ImagePlus className="h-3.5 w-3.5" />
+                  <Paperclip className="h-3.5 w-3.5" />
                   <input
                     type="file"
-                    accept="image/*"
+                    accept={DOCUMENT_ACCEPT}
                     multiple
                     className="sr-only"
                     disabled={uploadingTaskId === task.id}
                     onChange={(event) => {
                       const files = Array.from(event.target.files ?? []);
                       event.target.value = '';
-                      if (files.length) onAddImages(task, files);
+                      if (files.length) onAddFiles(task, files);
                     }}
                   />
                 </label>
@@ -488,28 +506,8 @@ function TaskCard({
             </div>
 
             {task.attachments.length > 0 ? (
-              <div className="mt-3 flex flex-wrap gap-2">
-                {task.attachments.map((attachment) => (
-                  <a
-                    key={attachment.id}
-                    href={attachment.storage_url}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="relative h-16 w-20 overflow-hidden rounded-md border border-hairline bg-bg transition-colors hover:border-accent/40"
-                    title={attachment.file_name}
-                  >
-                    <Image
-                      src={attachment.storage_url}
-                      alt={t('media.attachmentAlt', {
-                        name: attachment.file_name
-                      })}
-                      fill
-                      unoptimized
-                      sizes="80px"
-                      className="object-cover"
-                    />
-                  </a>
-                ))}
+              <div className="mt-3">
+                <TaskAttachments attachments={task.attachments} />
               </div>
             ) : null}
           </div>
@@ -535,7 +533,7 @@ function TaskCard({
               onError={onError}
               onToggle={onToggle}
               onDelete={onDelete}
-              onAddImages={onAddImages}
+              onAddFiles={onAddFiles}
             />
           ))}
           {addingUnderId === task.id ? (
@@ -618,7 +616,11 @@ export default function ProductTasksPanel({
         status
       });
       // On failure React rolls the optimistic flip back for us.
-      if (!result.ok) setError(result.error);
+      if (!result.ok) {
+        setError(result.error);
+        return;
+      }
+      void drainNotificationEmailsAction();
     });
   }
 
@@ -638,8 +640,8 @@ export default function ProductTasksPanel({
     });
   }
 
-  async function addImages(task: ProductTask, files: File[]) {
-    const invalid = validateImageFiles(files);
+  async function addFiles(task: ProductTask, files: File[]) {
+    const invalid = validateAttachmentFiles(files);
     if (invalid) {
       setError(invalid);
       return;
@@ -649,7 +651,7 @@ export default function ProductTasksPanel({
     setUploadingTaskId(task.id);
     let uploaded: StoredImage[] = [];
     try {
-      uploaded = await uploadImages(
+      uploaded = await uploadAttachments(
         files,
         `products/${productId}/tasks/${task.id}`
       );
@@ -750,7 +752,7 @@ export default function ProductTasksPanel({
               onError={(key) => setError(key || null)}
               onToggle={toggle}
               onDelete={removeTask}
-              onAddImages={addImages}
+              onAddFiles={addFiles}
             />
           ))}
         </div>

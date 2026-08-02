@@ -39,23 +39,8 @@ export const KNOWLEDGE_FILE_BUCKET = 'knowledge-files';
 export const MAX_KNOWLEDGE_FILE_BYTES = 25 * 1024 * 1024;
 export const SIGNED_FILE_URL_TTL_SECONDS = 300;
 
-const ALLOWED_FILE_TYPE_PREFIXES = ['image/', 'text/'];
-const ALLOWED_FILE_TYPES = new Set([
-  'application/pdf',
-  'application/json',
-  'application/rtf',
-  'application/msword',
-  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-  'application/vnd.ms-excel',
-  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-  'application/vnd.ms-powerpoint',
-  'application/vnd.openxmlformats-officedocument.presentationml.presentation'
-]);
-
-export function isAllowedKnowledgeFileType(mimeType: string): boolean {
-  const type = mimeType.toLowerCase();
-  return (
-    ALLOWED_FILE_TYPES.has(type) ||
-    ALLOWED_FILE_TYPE_PREFIXES.some((prefix) => type.startsWith(prefix))
-  );
-}
+// The allowlist moved to lib/attachments.ts when task attachments started
+// taking documents too — three surfaces, one definition, and one place that
+// mirrors the SQL CHECK. Re-exported under the old name so existing callers
+// read unchanged.
+export {isAllowedAttachmentType as isAllowedKnowledgeFileType} from '@/lib/attachments';

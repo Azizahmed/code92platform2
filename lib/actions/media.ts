@@ -3,6 +3,7 @@
 import {revalidatePath} from 'next/cache';
 import {z} from 'zod';
 
+import {isAllowedAttachmentType} from '@/lib/attachments';
 import {getOwnMembership, getSessionUser} from '@/lib/auth';
 import {createInsForgeServerClient} from '@/lib/insforge/server';
 
@@ -27,6 +28,24 @@ const storedImageSchema = z.object({
 });
 
 const imageListSchema = z.array(storedImageSchema).min(1).max(8);
+
+// Task attachments are documents as well as screenshots. Same shape, wider
+// type rule and the 25 MB document ceiling. The client is not trusted for
+// either: it reports the mime type it stored, and this re-checks it against
+// the same allowlist the database CHECK enforces.
+const storedFileSchema = storedImageSchema.extend({
+  mimeType: z
+    .string()
+    .max(255)
+    .refine(isAllowedAttachmentType, {message: 'unsupported file type'}),
+  sizeBytes: z
+    .number()
+    .int()
+    .positive()
+    .max(25 * 1024 * 1024)
+});
+
+const fileListSchema = z.array(storedFileSchema).min(1).max(8);
 
 async function requireActiveCaller() {
   const [user, member] = await Promise.all([
@@ -85,7 +104,7 @@ export async function addTaskAttachmentsAction(
   taskId: string,
   images: StoredImage[]
 ): Promise<MediaActionResult> {
-  const parsedImages = imageListSchema.safeParse(images);
+  const parsedImages = fileListSchema.safeParse(images);
   if (
     !z.string().uuid().safeParse(taskId).success ||
     !parsedImages.success

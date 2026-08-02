@@ -7,6 +7,7 @@ import {
   ListTodo,
   LogOut,
   Package,
+  Rocket,
   Scale,
   Settings2
 } from 'lucide-react';
@@ -15,6 +16,7 @@ import {useTranslations} from 'next-intl';
 import {Link, usePathname, useRouter} from '@/i18n/navigation';
 import {signOutAction} from '@/lib/actions/auth';
 import ControlPanel from '@/components/ControlPanel';
+import NotificationBell from '@/components/notifications/NotificationBell';
 
 type Props = {
   userName: string | null;
@@ -31,6 +33,7 @@ const NAV_ITEMS = [
   {href: '/', key: 'dashboard', icon: LayoutDashboard},
   {href: '/tasks', key: 'tasks', icon: ListTodo},
   {href: '/products', key: 'products', icon: Package},
+  {href: '/releases', key: 'releases', icon: Rocket},
   {href: '/knowledge', key: 'knowledge', icon: BookOpen},
   {href: '/governance', key: 'governance', icon: Scale}
 ] as const;
@@ -117,6 +120,7 @@ export default function AppShell({userName, userEmail, isAdmin, children}: Props
               ) : null}
             </div>
             <div className="flex shrink-0 items-center gap-1">
+              <NotificationBell />
               <button
                 type="button"
                 onClick={() => setControlPanelOpen(true)}
@@ -163,15 +167,18 @@ export default function AppShell({userName, userEmail, isAdmin, children}: Props
               </div>
             </div>
           </div>
-          <button
-            type="button"
-            onClick={() => setControlPanelOpen(true)}
-            aria-label={t('nav.preferences')}
-            aria-expanded={controlPanelOpen}
-            className="flex h-10 w-10 items-center justify-center rounded-lg border border-hairline bg-bg/50 text-muted transition-colors active:bg-raised active:text-ink"
-          >
-            <Settings2 className="h-4 w-4" strokeWidth={1.75} />
-          </button>
+          <div className="flex shrink-0 items-center gap-1.5">
+            <NotificationBell />
+            <button
+              type="button"
+              onClick={() => setControlPanelOpen(true)}
+              aria-label={t('nav.preferences')}
+              aria-expanded={controlPanelOpen}
+              className="flex h-10 w-10 items-center justify-center rounded-lg border border-hairline bg-bg/50 text-muted transition-colors active:bg-raised active:text-ink"
+            >
+              <Settings2 className="h-4 w-4" strokeWidth={1.75} />
+            </button>
+          </div>
         </header>
 
         <main className="min-w-0 px-4 py-5 pb-28 sm:px-6 md:px-8 md:py-8 md:pb-8">

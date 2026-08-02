@@ -237,6 +237,36 @@ work, pushed as `main`, `origin` repointed.
 
 ---
 
+### M12 — Attachments, releases, notifications · `20260803090000_…` → `20260803094500_…`
+
+Three features, five migrations, one new edge function.
+
+- **Document attachments.** `task_attachments` was image-only by CHECK. The
+  allowlist moved into `public.is_allowed_attachment_type()` and the cap to
+  25 MB, matching the knowledge base and lifecycle artifacts. The real defect was
+  upstream of the constraint: browsers report an empty `File.type` for `.md`, so
+  every markdown upload — artifact, source, or attachment — was rejected as an
+  unsupported type. `lib/attachments.ts` resolves the type from the extension
+  when the browser has nothing to say, and `DOCUMENT_ACCEPT` lists extensions
+  alongside MIME types so the picker does not grey the file out.
+- **Releases.** `product_releases`, `release_checks`, `release_transitions`, and
+  `product_tasks.release_id`, with `advance_release_status()` as the only status
+  write path. The governance shape deliberately mirrors the lifecycle migration
+  rather than inventing a second vocabulary. `/releases`, `/releases/[id]`, and a
+  panel on the product page.
+- **Notifications.** `notifications`, `task_watchers`,
+  `notification_preferences`, and a trigger that is the sole author of
+  notification rows. Email is opt-in and drained by `functions/notify-email.ts`
+  on a second round trip, following the same "never block the primary action"
+  pattern as the GitHub mirror.
+
+One bug found in verification and fixed in `20260803094500_…`: the trigger built
+its changed-field list with `changed || 'title'`, which Postgres resolves to
+array-concatenation and fails on at runtime — so every task content edit aborted
+with "malformed array literal". `array_append()` has one meaning.
+
+---
+
 ## 4. Outstanding work
 
 ### Blocked on a credential
@@ -301,6 +331,9 @@ Carried from M9 and still open:
 | `middleware.ts` | Locale routing + session refresh + auth gate, in one pass |
 | `app/[locale]/layout.tsx` | The single RTL switch, fonts, next-intl provider |
 | `lib/insforge/server.ts` | The per-user server client everything depends on |
+| `functions/notify-email.ts` | The email drain; claims rows before sending so overlapping runs cannot double-send |
 | `lib/lifecycle.ts` | Mirrors the SQL gate matrix — change both together |
+| `lib/releases.ts` | Mirrors the SQL release gate and transition map — change both together |
+| `lib/attachments.ts` | Mirrors `is_allowed_attachment_type()`; resolves the empty `File.type` browsers report for `.md` |
 | `lib/github.ts` | Error codes mirroring the edge function — change both together |
 | `i18n/request.ts` | Namespace registry; both locales required |

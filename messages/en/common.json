@@ -14,7 +14,8 @@
     "closePreferences": "Close preferences",
     "section": "Navigate",
     "controlPanel": "Control panel",
-    "settings": "Settings"
+    "settings": "Settings",
+    "releases": "Releases"
   },
   "actions": {
     "signOut": "Sign out",

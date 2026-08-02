@@ -15,6 +15,7 @@ import LifecycleSection from '@/components/lifecycle/LifecycleSection';
 import RepoConnectCard from '@/components/lifecycle/RepoConnectCard';
 import RiskTierChip from '@/components/lifecycle/RiskTierChip';
 import ProductKnowledgePanel from '@/components/products/ProductKnowledgePanel';
+import ProductReleasesPanel from '@/components/products/ProductReleasesPanel';
 import ProductTasksPanel, {
   type TaskMemberOption
 } from '@/components/products/ProductTasksPanel';
@@ -27,6 +28,7 @@ import type {
 } from '@/lib/actions/tasks';
 import {createInsForgeServerClient} from '@/lib/insforge/server';
 import {loadProductLifecycle} from '@/lib/lifecycle-queries';
+import type {ReleaseOverview} from '@/lib/releases';
 
 export default async function ProductDetailPage({
   params
@@ -76,7 +78,7 @@ export default async function ProductDetailPage({
     insforge.database
       .from('product_tasks')
       .select(
-        'id, product_id, parent_task_id, title, notes, due_date, assignee_id, status, position, created_by, completed_at, created_at, updated_at'
+        'id, product_id, parent_task_id, title, notes, due_date, assignee_id, status, position, created_by, completed_at, created_at, updated_at, release_id'
       )
       .eq('product_id', id)
       .order('position', {ascending: true})
@@ -93,13 +95,19 @@ export default async function ProductDetailPage({
 
   // One bit — whether a credential exists at all — so a product owner who is not
   // an admin can be told to ask for setup instead of hitting an error.
-  const {data: githubConfigured} = await insforge.database.rpc(
-    'github_is_configured'
-  );
+  const [{data: githubConfigured}, {data: releases}] = await Promise.all([
+    insforge.database.rpc('github_is_configured'),
+    insforge.database
+      .from('release_overview')
+      .select('*')
+      .eq('product_id', id)
+      .order('target_date', {ascending: true, nullsFirst: false})
+      .order('created_at', {ascending: false})
+  ]);
 
   const taskIds = (tasks ?? []).map((task) => task.id as string);
   const updateIds = (updates ?? []).map((update) => update.id as string);
-  const [{data: taskAttachments}, {data: updateAttachments}] =
+  const [{data: taskAttachments}, {data: updateAttachments}, {data: watched}] =
     await Promise.all([
       taskIds.length > 0
         ? insforge.database
@@ -118,6 +126,15 @@ export default async function ProductDetailPage({
             )
             .in('status_update_id', updateIds)
             .order('created_at', {ascending: true})
+        : Promise.resolve({data: []}),
+      // Which of these the CURRENT viewer is following. RLS lets any member
+      // read the watcher table, so this is filtered to the caller explicitly.
+      taskIds.length > 0
+        ? insforge.database
+            .from('task_watchers')
+            .select('task_id')
+            .eq('user_id', user.id)
+            .in('task_id', taskIds)
         : Promise.resolve({data: []})
     ]);
 
@@ -130,11 +147,18 @@ export default async function ProductDetailPage({
     list.push(attachment);
     taskAttachmentMap.set(attachment.task_id, list);
   }
+  const watchedTaskIds = new Set(
+    (watched ?? []).map((row) => row.task_id as string)
+  );
   const workItems: ProductTask[] = (
-    (tasks ?? []) as unknown as Omit<ProductTask, 'attachments'>[]
+    (tasks ?? []) as unknown as Omit<
+      ProductTask,
+      'attachments' | 'is_watching'
+    >[]
   ).map((task) => ({
     ...task,
-    attachments: taskAttachmentMap.get(task.id) ?? []
+    attachments: taskAttachmentMap.get(task.id) ?? [],
+    is_watching: watchedTaskIds.has(task.id)
   }));
 
   const updateAttachmentMap = new Map<string, StatusUpdateAttachment[]>();
@@ -362,6 +386,21 @@ export default async function ProductDetailPage({
         memberNames={authorNames}
         repo={p.github_repo}
         repoBranch={p.github_default_branch}
+      />
+
+      <ProductReleasesPanel
+        productId={p.id}
+        releases={(releases ?? []) as unknown as ReleaseOverview[]}
+        members={memberOptions.map((option) => ({
+          userId: option.userId,
+          displayName: option.displayName
+        }))}
+        locale={locale}
+        canManage={
+          !p.archived_at &&
+          (isOwner || isAdmin) &&
+          (p.risk_tier !== 'high' || isAdmin)
+        }
       />
 
       <ProductTasksPanel
