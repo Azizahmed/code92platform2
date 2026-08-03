@@ -34,7 +34,11 @@
     "product": "Product",
     "allProducts": "All products",
     "includeArchived": "Include archived",
-    "apply": "Apply"
+    "apply": "Apply",
+    "origin": "Origin",
+    "allOrigins": "Any origin",
+    "phase": "Lifecycle phase",
+    "allPhases": "Any phase"
   },
   "empty": {
     "title": "The knowledge base is empty",
@@ -112,7 +116,8 @@
     "delete": "Delete",
     "archiveConfirm": "Archive this item?",
     "unarchiveConfirm": "Restore this item from the archive?",
-    "deleteConfirm": "Permanently delete this item? This cannot be undone."
+    "deleteConfirm": "Permanently delete this item? This cannot be undone.",
+    "lifecycleBody": "This item mirrors a lifecycle artifact, so it cannot be deleted here — remove the artifact from the product phase and this goes with it. Archiving hides it without breaking the link."
   },
   "errors": {
     "invalid": "Check the fields and try again.",
@@ -126,5 +131,20 @@
     "fileType": "That file type is not supported.",
     "fileSize": "That file is larger than 25 MB.",
     "uploadFailed": "The upload failed. Try again."
+  },
+  "origins": {
+    "manual": "Written here",
+    "lifecycle": "From the lifecycle"
+  },
+  "provenance": {
+    "chip": "{product} · {phase}",
+    "tooltip": "Filed as lifecycle evidence ({type}). Open the product lifecycle.",
+    "title": "Where this came from",
+    "body": "This was filed as evidence against a lifecycle phase. It is the same document, not a copy — the knowledge base and the product lifecycle read the same file.",
+    "product": "Product",
+    "phase": "Phase",
+    "artifactType": "Artifact type",
+    "filedBy": "Filed by",
+    "agent": "Agent"
   }
 }

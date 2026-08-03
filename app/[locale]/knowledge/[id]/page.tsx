@@ -1,4 +1,10 @@
-import {ChevronLeft, ExternalLink, Package, Pencil} from 'lucide-react';
+import {
+  ChevronLeft,
+  ExternalLink,
+  GitBranch,
+  Package,
+  Pencil
+} from 'lucide-react';
 import {notFound} from 'next/navigation';
 import {getFormatter, getTranslations} from 'next-intl/server';
 
@@ -9,7 +15,10 @@ import SourceFileLink from '@/components/knowledge/SourceFileLink';
 import StatusChip from '@/components/knowledge/StatusChip';
 import RelativeTime from '@/components/RelativeTime';
 import {Link} from '@/i18n/navigation';
-import type {KnowledgeItem} from '@/lib/actions/knowledge';
+import type {
+  KnowledgeItem,
+  KnowledgeProvenance
+} from '@/lib/actions/knowledge';
 import {requireActiveMember} from '@/lib/auth';
 import {createInsForgeServerClient} from '@/lib/insforge/server';
 
@@ -23,8 +32,9 @@ export default async function KnowledgeItemPage({
 }) {
   const {id} = await params;
   const {user, member} = await requireActiveMember();
-  const [t, format] = await Promise.all([
+  const [t, tl, format] = await Promise.all([
     getTranslations('knowledge'),
+    getTranslations('lifecycle'),
     getFormatter()
   ]);
 
@@ -38,8 +48,12 @@ export default async function KnowledgeItemPage({
   if (!row) notFound();
   const item = row as unknown as KnowledgeItem;
 
-  const [{data: tagLinks}, {data: productLinks}, {data: author}] =
-    await Promise.all([
+  const [
+    {data: tagLinks},
+    {data: productLinks},
+    {data: author},
+    {data: provenanceRow}
+  ] = await Promise.all([
       insforge.database
         .from('knowledge_item_tags')
         .select('tags(name)')
@@ -52,8 +66,19 @@ export default async function KnowledgeItemPage({
         .from('team_members')
         .select('display_name')
         .eq('user_id', item.author_id)
-        .maybeSingle()
+        .maybeSingle(),
+      // Empty for anything written by hand. The view only has rows for items
+      // the mirror trigger created.
+      item.origin === 'lifecycle'
+        ? insforge.database
+            .from('knowledge_provenance')
+            .select('*')
+            .eq('item_id', id)
+            .maybeSingle()
+        : Promise.resolve({data: null})
     ]);
+
+  const provenance = provenanceRow as unknown as KnowledgeProvenance | null;
 
   const tagNames = ((tagLinks ?? []) as unknown as TagLink[])
     .map((link) => link.tags?.name)
@@ -157,6 +182,62 @@ export default async function KnowledgeItemPage({
         </dl>
       </header>
 
+      {provenance ? (
+        <div className="space-y-3 rounded-lg border border-accent/25 bg-accent/[0.04] p-4 sm:p-6">
+          <div className="flex items-center gap-2">
+            <GitBranch className="h-4 w-4 text-accent" strokeWidth={1.75} />
+            <h2 className="text-sm font-medium">{t('provenance.title')}</h2>
+          </div>
+          <p className="text-xs leading-relaxed text-muted">
+            {t('provenance.body')}
+          </p>
+          <dl className="grid grid-cols-2 gap-x-6 gap-y-4 sm:grid-cols-4">
+            <div>
+              <dt className="text-[10px] uppercase tracking-widest text-faint">
+                {t('provenance.product')}
+              </dt>
+              <dd className="mt-1 text-sm">
+                <Link
+                  href={`/products/${provenance.product_id}#lifecycle`}
+                  className="text-accent transition-opacity hover:opacity-80"
+                >
+                  {provenance.product_name}
+                </Link>
+              </dd>
+            </div>
+            <div>
+              <dt className="text-[10px] uppercase tracking-widest text-faint">
+                {t('provenance.phase')}
+              </dt>
+              <dd className="mt-1 text-sm">
+                {tl(`phases.${provenance.phase}`)}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-[10px] uppercase tracking-widest text-faint">
+                {t('provenance.artifactType')}
+              </dt>
+              <dd className="mt-1 text-sm">
+                {tl(`artifacts.types.${provenance.artifact_type}`)}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-[10px] uppercase tracking-widest text-faint">
+                {t('provenance.filedBy')}
+              </dt>
+              <dd className="mt-1 text-sm">
+                {provenance.uploader_name ?? '—'}
+                {provenance.generated_by === 'agent' ? (
+                  <span className="ms-1.5 rounded border border-hairline bg-raised px-1.5 py-0.5 font-mono text-[10px] uppercase tracking-wider text-faint">
+                    {t('provenance.agent')}
+                  </span>
+                ) : null}
+              </dd>
+            </div>
+          </dl>
+        </div>
+      ) : null}
+
       {item.url || item.file_key ? (
         <div className="space-y-3 rounded-lg border border-hairline bg-panel p-4 sm:p-6">
           <h2 className="text-sm font-medium">{t('detail.sourceTitle')}</h2>
@@ -210,6 +291,7 @@ export default async function KnowledgeItemPage({
         <KnowledgeItemActions
           itemId={item.id}
           archived={Boolean(item.archived_at)}
+          deletable={item.origin === 'manual'}
         />
       ) : null}
     </section>

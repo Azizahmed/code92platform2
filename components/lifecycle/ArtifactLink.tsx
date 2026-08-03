@@ -34,19 +34,36 @@ export default function ArtifactLink({artifact}: {artifact: PhaseArtifact}) {
     );
   }
 
+  // Every mirrored artifact carries a way through to its knowledge entry, so
+  // the link between the two surfaces is walkable in both directions rather
+  // than only from the knowledge side.
+  const mirrorLink = artifact.knowledge_mirror_id ? (
+    <Link
+      href={`/knowledge/${artifact.knowledge_mirror_id}`}
+      title={t('artifacts.inKnowledge')}
+      aria-label={t('artifacts.inKnowledge')}
+      className="inline-flex shrink-0 items-center rounded-md border border-hairline bg-raised p-1.5 text-faint transition-colors hover:border-accent/40 hover:text-accent"
+    >
+      <BookOpen className="h-3.5 w-3.5" strokeWidth={1.75} />
+    </Link>
+  ) : null;
+
   if (artifact.url) {
     return (
-      <a
-        href={artifact.url}
-        target="_blank"
-        rel="noreferrer"
-        className={BASE_CLASS}
-      >
-        <ExternalLink className="h-3.5 w-3.5 shrink-0" strokeWidth={1.75} />
-        <span dir="auto" className="truncate">
-          {artifact.title}
-        </span>
-      </a>
+      <span className="inline-flex max-w-full items-center gap-1.5">
+        <a
+          href={artifact.url}
+          target="_blank"
+          rel="noreferrer"
+          className={BASE_CLASS}
+        >
+          <ExternalLink className="h-3.5 w-3.5 shrink-0" strokeWidth={1.75} />
+          <span dir="auto" className="truncate">
+            {artifact.title}
+          </span>
+        </a>
+        {mirrorLink}
+      </span>
     );
   }
 
@@ -76,22 +93,25 @@ export default function ArtifactLink({artifact}: {artifact: PhaseArtifact}) {
 
   return (
     <span className="inline-flex max-w-full flex-col gap-1">
-      <button
-        type="button"
-        onClick={handleClick}
-        disabled={pending}
-        className={`${BASE_CLASS} disabled:opacity-50`}
-      >
-        <Download className="h-3.5 w-3.5 shrink-0" strokeWidth={1.75} />
-        <span dir="auto" className="truncate">
-          {pending ? t('artifacts.openFile') : artifact.title}
-        </span>
-        {sizeLabel ? (
-          <span className="shrink-0 font-mono text-[10px] text-faint">
-            {sizeLabel}
+      <span className="inline-flex max-w-full items-center gap-1.5">
+        <button
+          type="button"
+          onClick={handleClick}
+          disabled={pending}
+          className={`${BASE_CLASS} disabled:opacity-50`}
+        >
+          <Download className="h-3.5 w-3.5 shrink-0" strokeWidth={1.75} />
+          <span dir="auto" className="truncate">
+            {pending ? t('artifacts.openFile') : artifact.title}
           </span>
-        ) : null}
-      </button>
+          {sizeLabel ? (
+            <span className="shrink-0 font-mono text-[10px] text-faint">
+              {sizeLabel}
+            </span>
+          ) : null}
+        </button>
+        {mirrorLink}
+      </span>
       {errorKey ? (
         <span className="text-[11px] text-danger">
           {t(`errors.${errorKey}`)}

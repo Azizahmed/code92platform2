@@ -12,9 +12,12 @@ import {
   MAX_KNOWLEDGE_FILE_BYTES,
   SIGNED_FILE_URL_TTL_SECONDS,
   isStatusForKind,
+  type KnowledgeFileBucket,
   type KnowledgeKind,
+  type KnowledgeOrigin,
   type KnowledgeStatus
 } from '@/lib/knowledge';
+import type {LifecyclePhase} from '@/lib/lifecycle';
 
 type ServerClient = Awaited<ReturnType<typeof createInsForgeServerClient>>;
 
@@ -34,6 +37,31 @@ export type KnowledgeItem = {
   archived_at: string | null;
   created_at: string;
   updated_at: string;
+  origin: KnowledgeOrigin;
+  // Set only when origin is 'lifecycle'. The database keeps the two in step
+  // via the knowledge_items_origin_matches_source constraint.
+  source_artifact_id: string | null;
+  file_bucket: KnowledgeFileBucket;
+};
+
+// Where a lifecycle-derived item came from, one row per item, from the
+// knowledge_provenance view.
+export type KnowledgeProvenance = {
+  item_id: string;
+  artifact_id: string;
+  artifact_type: string;
+  generated_by: 'human' | 'agent';
+  phase_id: string;
+  phase: LifecyclePhase;
+  cycle: number;
+  phase_state: string;
+  product_id: string;
+  product_name: string;
+  product_slug: string;
+  risk_tier: string;
+  uploader_id: string;
+  uploader_name: string | null;
+  filed_at: string;
 };
 
 // One row of the search_knowledge_items RPC — the list view's only read path.
@@ -53,6 +81,15 @@ export type KnowledgeSearchRow = {
   rank: number;
   tag_names: string[];
   product_names: string[];
+  origin: KnowledgeOrigin;
+  source_artifact_id: string | null;
+  // The four below are non-null exactly when origin is 'lifecycle'. Carried in
+  // the search row so the list can show provenance without a second query per
+  // card.
+  source_artifact_type: string | null;
+  source_phase: LifecyclePhase | null;
+  source_product_id: string | null;
+  source_product_name: string | null;
 };
 
 export type KnowledgeTag = {id: string; name: string};
@@ -415,15 +452,21 @@ export async function signKnowledgeFileAction(
   // RLS decides whether this member may see the item at all.
   const {data: item} = await insforge.database
     .from('knowledge_items')
-    .select('file_key')
+    .select('file_key, file_bucket')
     .eq('id', itemId)
     .maybeSingle();
 
   const key = (item?.file_key as string | null | undefined) ?? null;
   if (!key) return {ok: false, error: 'notFound'};
 
+  // A mirrored artifact's object lives in the lifecycle bucket, not the
+  // knowledge one — signing the wrong bucket is a 404, not a permission error,
+  // so it would have looked like a missing file.
+  const bucket = (item?.file_bucket as KnowledgeFileBucket | undefined) ??
+    KNOWLEDGE_FILE_BUCKET;
+
   const {data, error} = await insforge.storage
-    .from(KNOWLEDGE_FILE_BUCKET)
+    .from(bucket)
     .createSignedUrl(key, SIGNED_FILE_URL_TTL_SECONDS);
 
   if (error || !data?.signedUrl) return {ok: false, error: 'generic'};

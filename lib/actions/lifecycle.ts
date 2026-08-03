@@ -56,6 +56,10 @@ export type PhaseArtifact = {
   github_sync_error: string | null;
   github_sync_state: SyncState;
   created_at: string;
+  // The knowledge item this artifact was mirrored into, joined in by
+  // loadProductLifecycle rather than stored on the row. Null for artifacts that
+  // cite an existing knowledge item — those point the other way already.
+  knowledge_mirror_id?: string | null;
 };
 
 export type PhaseTransition = {

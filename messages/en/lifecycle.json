@@ -88,7 +88,8 @@
       "postmortem": "Post-mortem",
       "metrics_report": "Metrics report",
       "other": "Other"
-    }
+    },
+    "inKnowledge": "Open in the knowledge base"
   },
   "gate": {
     "required": "Required to complete",

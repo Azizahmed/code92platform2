@@ -2,6 +2,7 @@ import {ExternalLink, Paperclip} from 'lucide-react';
 import {useTranslations} from 'next-intl';
 
 import KindChip from '@/components/knowledge/KindChip';
+import ProvenanceChip from '@/components/knowledge/ProvenanceChip';
 import StatusChip from '@/components/knowledge/StatusChip';
 import RelativeTime from '@/components/RelativeTime';
 import {Link} from '@/i18n/navigation';
@@ -61,6 +62,24 @@ export default function KnowledgeCard({item}: {item: KnowledgeSearchRow}) {
           </span>
         ) : null}
       </div>
+
+      {/* Provenance sits on its own line, above the tags: it answers a
+          different question ("is this the governed document?") from the tags
+          and product chips, and burying it among them loses it. */}
+      {item.origin === 'lifecycle' &&
+      item.source_product_id &&
+      item.source_product_name &&
+      item.source_phase &&
+      item.source_artifact_type ? (
+        <div className="mt-3">
+          <ProvenanceChip
+            productId={item.source_product_id}
+            productName={item.source_product_name}
+            phase={item.source_phase}
+            artifactType={item.source_artifact_type}
+          />
+        </div>
+      ) : null}
 
       {item.tag_names.length > 0 || item.product_names.length > 0 ? (
         <div className="mt-3 flex flex-wrap items-center gap-1.5">

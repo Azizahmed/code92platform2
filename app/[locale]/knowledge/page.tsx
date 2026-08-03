@@ -7,7 +7,12 @@ import {Link} from '@/i18n/navigation';
 import type {KnowledgeSearchRow} from '@/lib/actions/knowledge';
 import {requireActiveMember} from '@/lib/auth';
 import {createInsForgeServerClient} from '@/lib/insforge/server';
-import {KNOWLEDGE_KINDS, KNOWLEDGE_STATUSES} from '@/lib/knowledge';
+import {
+  KNOWLEDGE_KINDS,
+  KNOWLEDGE_ORIGINS,
+  KNOWLEDGE_STATUSES
+} from '@/lib/knowledge';
+import {LIFECYCLE_PHASES} from '@/lib/lifecycle';
 
 const RESULT_LIMIT = 60;
 const UUID_PATTERN =
@@ -50,6 +55,13 @@ export default async function KnowledgePage({
   const status = readOneOf(params, 'status', KNOWLEDGE_STATUSES);
   const tag = readUuid(params, 'tag');
   const product = readUuid(params, 'product');
+  const phase = readOneOf(params, 'phase', LIFECYCLE_PHASES);
+  // A phase filter only ever matches lifecycle-derived items, so asking for one
+  // implies the other. Making that implicit keeps "Requirements" from silently
+  // returning nothing while Origin still says "All".
+  const origin = phase
+    ? 'lifecycle'
+    : readOneOf(params, 'origin', KNOWLEDGE_ORIGINS);
   const includeArchived = readParam(params, 'archived') === '1';
 
   const insforge = await createInsForgeServerClient();
@@ -61,7 +73,9 @@ export default async function KnowledgePage({
       p_tag: tag,
       p_product: product,
       p_include_archived: includeArchived,
-      p_limit: RESULT_LIMIT
+      p_limit: RESULT_LIMIT,
+      p_origin: origin,
+      p_phase: phase
     }),
     insforge.database.from('tags').select('id, name').order('name'),
     insforge.database
@@ -79,7 +93,14 @@ export default async function KnowledgePage({
     (row) => ({id: row.id, name: row.name})
   );
   const filtered =
-    Boolean(query) || kind || status || tag || product || includeArchived;
+    Boolean(query) ||
+    kind ||
+    status ||
+    tag ||
+    product ||
+    origin ||
+    phase ||
+    includeArchived;
 
   return (
     <section className="space-y-6">
@@ -100,7 +121,7 @@ export default async function KnowledgePage({
       <KnowledgeFilters
         tags={tagOptions}
         products={productOptions}
-        current={{query, kind, status, tag, product, includeArchived}}
+        current={{query, kind, status, tag, product, origin, phase, includeArchived}}
       />
 
       {items.length === 0 ? (

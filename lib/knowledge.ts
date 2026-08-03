@@ -33,6 +33,21 @@ export function isStatusForKind(
   return statusesForKind(kind).includes(status);
 }
 
+// Where an item came from. `lifecycle` items are mirrored from a phase
+// artifact by the mirror_artifact_to_knowledge() trigger — nobody writes one by
+// hand, and no client role can insert or forge the origin columns.
+export const KNOWLEDGE_ORIGINS = ['manual', 'lifecycle'] as const;
+export type KnowledgeOrigin = (typeof KNOWLEDGE_ORIGINS)[number];
+
+// A mirrored item points at the artifact's object in the lifecycle bucket
+// rather than a copy of it, so file_key alone is not enough to read a file —
+// the bucket has to come with it.
+export const KNOWLEDGE_FILE_BUCKETS = [
+  'knowledge-files',
+  'lifecycle-artifacts'
+] as const;
+export type KnowledgeFileBucket = (typeof KNOWLEDGE_FILE_BUCKETS)[number];
+
 // Sources may carry an uploaded document. The bucket is private: readers get
 // short-lived signed URLs, never a stored public link.
 export const KNOWLEDGE_FILE_BUCKET = 'knowledge-files';

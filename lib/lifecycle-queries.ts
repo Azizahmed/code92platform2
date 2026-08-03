@@ -70,8 +70,28 @@ export async function loadProductLifecycle(productId: string): Promise<{
     .in('phase_id', phaseIds)
     .order('created_at', {ascending: true});
 
-  for (const artifact of (artifactRows ?? []) as unknown as PhaseArtifact[]) {
-    (artifacts[artifact.phase_id] ??= []).push(artifact);
+  const artifactList = (artifactRows ?? []) as unknown as PhaseArtifact[];
+
+  // The knowledge item each artifact was mirrored into, so the phase panel can
+  // link forward the same way the knowledge card links back. One extra query
+  // for the whole product rather than one per artifact.
+  const artifactIds = artifactList.map((artifact) => artifact.id);
+  const mirrors = new Map<string, string>();
+  if (artifactIds.length > 0) {
+    const {data: mirrorRows} = await insforge.database
+      .from('knowledge_items')
+      .select('id, source_artifact_id')
+      .in('source_artifact_id', artifactIds);
+    for (const row of mirrorRows ?? []) {
+      mirrors.set(row.source_artifact_id as string, row.id as string);
+    }
+  }
+
+  for (const artifact of artifactList) {
+    (artifacts[artifact.phase_id] ??= []).push({
+      ...artifact,
+      knowledge_mirror_id: mirrors.get(artifact.id) ?? null
+    });
   }
 
   return {phases: rows, artifacts};

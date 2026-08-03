@@ -2,6 +2,7 @@ import {Search} from 'lucide-react';
 import {useTranslations} from 'next-intl';
 
 import {SOURCE_STATUSES, WRITING_STATUSES, KNOWLEDGE_KINDS} from '@/lib/knowledge';
+import {LIFECYCLE_PHASES} from '@/lib/lifecycle';
 
 type Props = {
   tags: {id: string; name: string}[];
@@ -12,6 +13,8 @@ type Props = {
     status: string | null;
     tag: string | null;
     product: string | null;
+    origin: string | null;
+    phase: string | null;
     includeArchived: boolean;
   };
 };
@@ -23,6 +26,7 @@ const CONTROL_CLASS =
 // and the server component re-runs search_knowledge_items.
 export default function KnowledgeFilters({tags, products, current}: Props) {
   const t = useTranslations('knowledge');
+  const tl = useTranslations('lifecycle');
 
   return (
     <form className="flex flex-wrap items-end gap-3">
@@ -122,6 +126,42 @@ export default function KnowledgeFilters({tags, products, current}: Props) {
           {products.map((product) => (
             <option key={product.id} value={product.id}>
               {product.name}
+            </option>
+          ))}
+        </select>
+      </label>
+
+      {/* Origin and phase are the "where did this come from" pair. Phase only
+          narrows lifecycle-derived items, so choosing one implies the other —
+          the server treats a phase filter as origin=lifecycle. */}
+      <label className="flex flex-col gap-1">
+        <span className="text-[11px] uppercase tracking-widest text-faint">
+          {t('filters.origin')}
+        </span>
+        <select
+          name="origin"
+          defaultValue={current.origin ?? ''}
+          className={CONTROL_CLASS}
+        >
+          <option value="">{t('filters.allOrigins')}</option>
+          <option value="manual">{t('origins.manual')}</option>
+          <option value="lifecycle">{t('origins.lifecycle')}</option>
+        </select>
+      </label>
+
+      <label className="flex flex-col gap-1">
+        <span className="text-[11px] uppercase tracking-widest text-faint">
+          {t('filters.phase')}
+        </span>
+        <select
+          name="phase"
+          defaultValue={current.phase ?? ''}
+          className={CONTROL_CLASS}
+        >
+          <option value="">{t('filters.allPhases')}</option>
+          {LIFECYCLE_PHASES.map((phase) => (
+            <option key={phase} value={phase}>
+              {tl(`phases.${phase}`)}
             </option>
           ))}
         </select>

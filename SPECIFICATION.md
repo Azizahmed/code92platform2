@@ -167,7 +167,35 @@ and link many-to-many to products — an unlinked item is company-wide knowledge
 configurations: `english` (stemming) and `simple` (verbatim tokens, which is what
 Arabic needs since Postgres ships no Arabic stemmer). `search_knowledge_items`
 ORs both parses, ranks with `ts_rank`, weights title above body, and carries the
-kind/status/tag/product/archived filters so the list view is one round trip.
+kind/status/tag/product/phase/origin/archived filters so the list view is one
+round trip.
+
+**Lifecycle artifacts appear here, with their origin attached.** Every file or
+link filed against a lifecycle phase is mirrored into the knowledge base as a
+`source` by the `mirror_artifact_to_knowledge()` trigger — so the PRD, the
+threat model and the runbook are findable by searching for them rather than by
+knowing which product and which of six phases they were filed under.
+
+- **No bytes are copied.** The mirrored item records the artifact's existing
+  storage key plus the *bucket* it lives in (`knowledge_items.file_bucket`), so
+  both surfaces read one object. Signing resolves the bucket from the row.
+- **No access widens.** `phase_artifacts` and `knowledge_items` are both
+  readable under `is_active_member()` — the same audience. This was checked
+  rather than assumed, because the artifacts include threat models and pentest
+  reports.
+- **Provenance is a record, not a claim.** `origin` and `source_artifact_id` are
+  absent from the client `INSERT` grant and frozen by the validate trigger, so
+  nothing can present itself as governed evidence when it is not. The
+  `knowledge_provenance` view resolves item → artifact → phase → product for the
+  UI, which shows it as a chip on each card and a panel on the item.
+- **Direction matters.** `phase_artifacts.knowledge_item_id` means "this
+  artifact *cites* a knowledge item" and predates this; `source_artifact_id`
+  means "this knowledge item *came from* an artifact". Opposite arrows. An
+  artifact that cites an item is never mirrored — it is already in there.
+- **Lifetime follows the artifact.** Removing the artifact removes the mirrored
+  item (`ON DELETE CASCADE`); the delete policy refuses to remove one directly,
+  so the two cannot fall out of step. Title, status and tags stay editable —
+  curating it is the point — while the source fields do not.
 
 ### 4.5 Market intelligence
 
