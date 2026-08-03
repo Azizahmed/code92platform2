@@ -114,5 +114,20 @@
     "closePreview": "Close preview",
     "loading": "Loading the file…",
     "previewFailed": "The file could not be read here. Open it directly instead."
+  },
+  "completion": {
+    "dialogTitle": "What was done?",
+    "prompt": "Describe what you did to complete this task",
+    "placeholder": "What changed, how you did it, anything the next person needs to know…",
+    "hint": "This is kept on the task and shown to anyone who opens it later. Watchers get the first part in their notification.",
+    "confirm": "Complete task",
+    "saving": "Saving…",
+    "skip": "Complete without a note",
+    "cancel": "Cancel",
+    "viewNote": "What was done",
+    "noNote": "No note recorded",
+    "noNoteBody": "This task was completed without a note.",
+    "by": "Completed by {name}",
+    "byUnknown": "Completed"
   }
 }

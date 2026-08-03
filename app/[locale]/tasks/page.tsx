@@ -27,7 +27,7 @@ export default async function AllTasksPage({
       insforge.database
         .from('product_tasks')
         .select(
-          'id, product_id, parent_task_id, title, notes, due_date, assignee_id, status, position, created_by, completed_at, created_at, updated_at, release_id'
+          'id, product_id, parent_task_id, title, notes, due_date, assignee_id, status, position, created_by, completed_at, created_at, updated_at, release_id, completion_note, completed_by'
         )
         .order('due_date', {ascending: true, nullsFirst: false})
         .order('created_at', {ascending: false}),
@@ -112,6 +112,9 @@ export default async function AllTasksPage({
           : null,
         parent_title: task.parent_task_id
           ? taskTitleMap.get(task.parent_task_id) ?? null
+          : null,
+        completed_by_name: task.completed_by
+          ? memberMap.get(task.completed_by) ?? null
           : null
       };
     });

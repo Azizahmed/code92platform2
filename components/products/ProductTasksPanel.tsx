@@ -18,6 +18,8 @@ import {useTranslations} from 'next-intl';
 import {useMemo, useOptimistic, useRef, useState, useTransition} from 'react';
 
 import TaskAttachments from '@/components/tasks/TaskAttachments';
+import TaskCompletionDialog from '@/components/tasks/TaskCompletionDialog';
+import TaskCompletionNote from '@/components/tasks/TaskCompletionNote';
 import TaskWatchToggle from '@/components/tasks/TaskWatchToggle';
 import {
   addTaskAttachmentsAction,
@@ -505,6 +507,20 @@ function TaskCard({
               ) : null}
             </div>
 
+            {isCompleted ? (
+              <TaskCompletionNote
+                note={task.completion_note}
+                completedBy={
+                  task.completed_by
+                    ? members.find(
+                        (option) => option.userId === task.completed_by
+                      )?.displayName ?? null
+                    : null
+                }
+                completedAt={task.completed_at}
+              />
+            ) : null}
+
             {task.attachments.length > 0 ? (
               <div className="mt-3">
                 <TaskAttachments attachments={task.attachments} />
@@ -569,7 +585,9 @@ export default function ProductTasksPanel({
   const [addingUnderId, setAddingUnderId] = useState<string | null>(null);
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
   const [uploadingTaskId, setUploadingTaskId] = useState<string | null>(null);
+  const [completingTask, setCompletingTask] = useState<ProductTask | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [savingCompletion, startCompletionTransition] = useTransition();
   const [, startTransition] = useTransition();
   const [optimisticTasks, applyOptimistic] = useOptimistic(
     tasks,
@@ -601,20 +619,35 @@ export default function ProductTasksPanel({
     setEditingTaskId(null);
   }
 
+  // Completing asks what was done; reopening does not ask anything.
   function toggle(task: ProductTask) {
     setError(null);
-    startTransition(async () => {
+    if (task.status !== 'completed') {
+      setCompletingTask(task);
+      return;
+    }
+    setStatus(task, 'pending');
+  }
+
+  function setStatus(
+    task: ProductTask,
+    status: TaskStatus,
+    completionNote?: string | null
+  ) {
+    // Its own transition, so the dialog's saving state is not shared with the
+    // delete and upload flows.
+    startCompletionTransition(async () => {
       // Flip the row first — the await below costs a full round trip.
       applyOptimistic({type: 'toggle', taskId: task.id});
-      const status: TaskStatus =
-        task.status === 'completed' ? 'pending' : 'completed';
       const result = await updateTaskAction(task.id, {
         title: task.title,
         notes: task.notes,
         dueDate: task.due_date,
         assigneeId: task.assignee_id,
-        status
+        status,
+        ...(completionNote !== undefined ? {completionNote} : {})
       });
+      setCompletingTask(null);
       // On failure React rolls the optimistic flip back for us.
       if (!result.ok) {
         setError(result.error);
@@ -703,6 +736,16 @@ export default function ProductTasksPanel({
         <p className="rounded-md border border-danger/30 bg-danger/10 px-3 py-2 text-xs text-danger">
           {t(`errors.${error}`)}
         </p>
+      ) : null}
+
+      {completingTask ? (
+        <TaskCompletionDialog
+          taskTitle={completingTask.title}
+          initialNote={completingTask.completion_note}
+          pending={savingCompletion}
+          onCancel={() => setCompletingTask(null)}
+          onConfirm={(note) => setStatus(completingTask, 'completed', note)}
+        />
       ) : null}
 
       {creatingRoot ? (

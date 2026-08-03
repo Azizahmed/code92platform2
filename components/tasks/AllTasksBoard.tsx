@@ -15,6 +15,8 @@ import {
 import {useTranslations} from 'next-intl';
 import {useMemo, useOptimistic, useState, useTransition} from 'react';
 
+import TaskCompletionDialog from '@/components/tasks/TaskCompletionDialog';
+import TaskCompletionNote from '@/components/tasks/TaskCompletionNote';
 import TaskWatchToggle from '@/components/tasks/TaskWatchToggle';
 import {Link} from '@/i18n/navigation';
 import {drainNotificationEmailsAction} from '@/lib/actions/notifications';
@@ -27,6 +29,7 @@ export type AllTaskItem = ProductTask & {
   product_archived_at: string | null;
   assignee_name: string | null;
   parent_title: string | null;
+  completed_by_name: string | null;
 };
 
 export type TaskProductOption = {
@@ -72,6 +75,7 @@ export default function AllTasksBoard({
   const [mineOnly, setMineOnly] = useState(false);
   const [query, setQuery] = useState('');
   const [pendingTaskId, setPendingTaskId] = useState<string | null>(null);
+  const [completingTask, setCompletingTask] = useState<AllTaskItem | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [, startTransition] = useTransition();
   const [optimisticTasks, applyOptimisticToggleFor] = useOptimistic(
@@ -138,21 +142,34 @@ export default function AllTasksBoard({
     scope
   ]);
 
+  // Completing asks what was done; reopening does not ask anything.
   function toggle(task: AllTaskItem) {
     setError(null);
+    if (task.status !== 'completed') {
+      setCompletingTask(task);
+      return;
+    }
+    setStatus(task, 'pending');
+  }
+
+  function setStatus(
+    task: AllTaskItem,
+    status: TaskStatus,
+    completionNote?: string | null
+  ) {
     setPendingTaskId(task.id);
     startTransition(async () => {
       // Flip the row first — the await below costs a full round trip.
       applyOptimisticToggleFor(task.id);
-      const status: TaskStatus =
-        task.status === 'completed' ? 'pending' : 'completed';
       const result = await updateTaskAction(task.id, {
         title: task.title,
         notes: task.notes,
         dueDate: task.due_date,
         assigneeId: task.assignee_id,
-        status
+        status,
+        ...(completionNote !== undefined ? {completionNote} : {})
       });
+      setCompletingTask(null);
       // On failure React rolls the optimistic flip back for us.
       if (!result.ok) {
         setError(result.error);
@@ -167,6 +184,16 @@ export default function AllTasksBoard({
 
   return (
     <div className="space-y-5">
+      {completingTask ? (
+        <TaskCompletionDialog
+          taskTitle={completingTask.title}
+          initialNote={completingTask.completion_note}
+          pending={pendingTaskId === completingTask.id}
+          onCancel={() => setCompletingTask(null)}
+          onConfirm={(note) => setStatus(completingTask, 'completed', note)}
+        />
+      ) : null}
+
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         {[
           {
@@ -383,6 +410,14 @@ export default function AllTasksBoard({
                           </span>
                         ) : null}
                       </div>
+
+                      {completed ? (
+                        <TaskCompletionNote
+                          note={task.completion_note}
+                          completedBy={task.completed_by_name}
+                          completedAt={task.completed_at}
+                        />
+                      ) : null}
                     </div>
                   </div>
 

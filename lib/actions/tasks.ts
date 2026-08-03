@@ -37,6 +37,12 @@ export type ProductTask = {
   // setTaskReleaseAction rather than here, so the board can rescope without
   // holding a whole task payload.
   release_id: string | null;
+  // What was done, written when the task was completed. Kept through a reopen
+  // so nobody loses what they wrote; only ever shown against a completed task.
+  completion_note: string | null;
+  // Stamped by the database from auth.uid() on the transition to completed, so
+  // it cannot be claimed on someone else's behalf.
+  completed_by: string | null;
   attachments: TaskAttachment[];
   // Derived per viewer from task_watchers — not a column. Whoever is looking at
   // the row needs to know whether THEY are following it.
@@ -76,7 +82,10 @@ const updateTaskSchema = z.object({
   notes: z.string().trim().max(5000).nullable(),
   dueDate: nullableDate,
   assigneeId: nullableUuid,
-  status: z.enum(['pending', 'completed'])
+  status: z.enum(['pending', 'completed']),
+  // Optional: the editor form does not carry it, only the completion dialog
+  // does. `undefined` means "leave whatever is there alone".
+  completionNote: z.string().trim().max(5000).nullable().optional()
 });
 
 async function requireActiveCaller() {
@@ -136,6 +145,7 @@ export async function updateTaskAction(
     dueDate: string | null;
     assigneeId: string | null;
     status: TaskStatus;
+    completionNote?: string | null;
   }
 ): Promise<TaskActionResult> {
   const parsed = updateTaskSchema.safeParse(input);
@@ -150,15 +160,24 @@ export async function updateTaskAction(
   if (!caller) return {ok: false, error: 'forbidden'};
 
   const insforge = await createInsForgeServerClient();
+  const patch: Record<string, unknown> = {
+    title: parsed.data.title,
+    notes: parsed.data.notes || null,
+    due_date: parsed.data.dueDate,
+    assignee_id: parsed.data.assigneeId,
+    status: parsed.data.status
+  };
+
+  // Only the completion dialog sends a note. Editing a completed task through
+  // the normal form leaves the existing note untouched rather than wiping it
+  // with the field the form never had.
+  if (parsed.data.completionNote !== undefined) {
+    patch.completion_note = parsed.data.completionNote || null;
+  }
+
   const {data, error} = await insforge.database
     .from('product_tasks')
-    .update({
-      title: parsed.data.title,
-      notes: parsed.data.notes || null,
-      due_date: parsed.data.dueDate,
-      assignee_id: parsed.data.assigneeId,
-      status: parsed.data.status
-    })
+    .update(patch)
     .eq('id', taskId)
     .select('id, product_id');
 
