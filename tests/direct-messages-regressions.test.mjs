@@ -14,7 +14,12 @@ test('direct messages are a first-class channel kind with viewer-specific labels
 });
 
 test('DM visibility follows the source channel across every related table', async () => {
-  const migration = await read('migrations/20260825098000_add-direct-messages.sql');
+  const migration = (
+    await Promise.all([
+      read('migrations/20260825098000_add-direct-messages.sql'),
+      read('migrations/20260825123000_harden-direct-message-privacy.sql')
+    ])
+  ).join('\n');
 
   for (const policy of [
     'active members read channels',
@@ -34,7 +39,9 @@ test('DM visibility follows the source channel across every related table', asyn
 });
 
 test('DM side effects cannot disclose a message to outsiders or agents', async () => {
-  const migration = await read('migrations/20260825098000_add-direct-messages.sql');
+  const migration = await read(
+    'migrations/20260825123000_harden-direct-message-privacy.sql'
+  );
 
   assert.match(migration, /CREATE TRIGGER notifications_guard_dm_recipient/);
   assert.match(migration, /NEW\.user_id IN \(c\.dm_user_a, c\.dm_user_b\)/);
