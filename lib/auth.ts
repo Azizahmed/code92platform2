@@ -1,4 +1,5 @@
 import {cache} from 'react';
+import {cookies} from 'next/headers';
 import {getLocale} from 'next-intl/server';
 
 import {redirect} from '@/i18n/navigation';
@@ -36,6 +37,14 @@ type MeRow = {
 // Cached per request, so layout, page, and any server action in the same
 // request all share the single call.
 const getMe = cache(async (): Promise<MeRow | null> => {
+  const cookieStore = await cookies();
+  if (
+    !cookieStore.has('insforge_access_token') &&
+    !cookieStore.has('insforge_refresh_token')
+  ) {
+    return null;
+  }
+
   const insforge = await createInsForgeServerClient();
   const {data, error} = await insforge.database.rpc('get_me');
   if (error) return null;

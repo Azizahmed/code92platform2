@@ -6,6 +6,7 @@ import {
   LayoutDashboard,
   ListTodo,
   LogOut,
+  MessagesSquare,
   Package,
   Rocket,
   Scale,
@@ -31,6 +32,7 @@ type Props = {
 // still resolves and explains itself for anyone holding a direct link.
 const NAV_ITEMS = [
   {href: '/', key: 'dashboard', icon: LayoutDashboard},
+  {href: '/channels', key: 'channels', icon: MessagesSquare},
   {href: '/tasks', key: 'tasks', icon: ListTodo},
   {href: '/products', key: 'products', icon: Package},
   {href: '/releases', key: 'releases', icon: Rocket},

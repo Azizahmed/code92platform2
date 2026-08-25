@@ -89,3 +89,59 @@ this stack cannot use it yet:
 Re-test when `typescript-eslint` ships TS 7 support. The only source change it
 needed was an ambient `declare module '*.css';` (TS 7 rejects side-effect
 imports of untyped modules with TS2882, which TS 5 permitted).
+
+## Collaboration layer — required secrets and the one schedule
+
+The channels and agents subsystem (`COLLABORATION.md`) needs three function
+secrets and exactly one InsForge schedule. Without them the UI renders and the
+channels work, but no agent can answer.
+
+### Secrets
+
+```bash
+# 32 bytes, base64. Encrypts the OpenRouter key at rest, and lives ONLY in the
+# function environment — never in the database, exactly as GITHUB_TOKEN_KEY does.
+npx @insforge/cli secrets set OPENROUTER_KEY_SECRET "$(openssl rand -base64 32)"
+
+# Shared bearer for agent-tick → thread-agent, and for the InsForge schedule
+# calling agent-tick. There is no user behind a scheduled run, so there is no
+# JWT to resolve.
+npx @insforge/cli secrets set AGENT_TICK_SECRET "$(openssl rand -hex 32)"
+```
+
+`INSFORGE_BASE_URL` and `API_KEY` are already set for the existing functions.
+
+### Functions
+
+```bash
+npx @insforge/cli functions deploy thread-agent --file functions/thread-agent.ts
+npx @insforge/cli functions deploy agent-tick  --file functions/agent-tick.ts
+```
+
+### The schedule
+
+One entry, provisioned once and never touched again. Everything else about
+scheduling lives in `public.agent_schedules`, which the app owns.
+
+| Name | Cron | Target | Header |
+|---|---|---|---|
+| `agent-tick` | `*/5 * * * *` | `POST /functions/agent-tick` | `Authorization: Bearer $AGENT_TICK_SECRET` |
+
+### The OpenRouter key
+
+Set in the app, not here: **Settings → OpenRouter**, admin only. Create a
+**limited test key** at `openrouter.ai/settings/keys` with a monthly spend limit
+on it. The key is validated against OpenRouter at save time, then encrypted with
+`OPENROUTER_KEY_SECRET` before storage.
+
+`public.openrouter_connection` has no grants to `anon` or `authenticated` in any
+role — read that as the security boundary, not an oversight. A key saved without
+a spend limit is accepted but the panel warns: an uncapped key held by an
+unattended schedule is the risk the "use a test key" guidance exists to prevent.
+
+### Realtime
+
+`insforge.toml` moves `realtime.retention_days` from `0` to `1`. Apply with
+`npx @insforge/cli config push`. Until it is applied the channel view still works
+— it polls every five seconds — so this is a latency improvement rather than a
+prerequisite.

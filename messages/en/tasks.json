@@ -68,6 +68,7 @@
     "subtitle": "One operational view of every task across every product.",
     "searchPlaceholder": "Search tasks, products, notes, or people…",
     "allProducts": "All products",
+    "general": "General task",
     "assignedToMe": "Assigned to me",
     "noDueDate": "No date",
     "emptyTitle": "No tasks match this view",

@@ -10,7 +10,15 @@ export const NOTIFICATION_TYPES = [
   'task_unassigned',
   'task_updated',
   'task_completed',
-  'task_reopened'
+  'task_reopened',
+  // Chat, added by 20260825090000_add-channels.sql and
+  // 20260825091000_add-agents.sql. Kept in one list so the bell renders every
+  // type the CHECK constraint allows — a type here and not there is a row with
+  // no icon.
+  'mention',
+  'channel_message',
+  'proposal_pending',
+  'proposal_decided'
 ] as const;
 export type NotificationType = (typeof NOTIFICATION_TYPES)[number];
 
@@ -22,6 +30,8 @@ export type AppNotification = {
   type: NotificationType;
   task_id: string | null;
   product_id: string | null;
+  message_id: string | null;
+  channel_id: string | null;
   actor_id: string | null;
   title: string;
   body: string | null;

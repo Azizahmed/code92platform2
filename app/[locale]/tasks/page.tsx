@@ -18,28 +18,30 @@ export default async function AllTasksPage({
   params: Promise<{locale: string}>;
 }) {
   const {locale} = await params;
-  const {user} = await requireActiveMember();
-  const t = await getTranslations('tasks');
   const insforge = await createInsForgeServerClient();
 
-  const [{data: tasks}, {data: products}, {data: members}] =
+  const [{user}, t, [{data: tasks}, {data: products}, {data: members}]] =
     await Promise.all([
-      insforge.database
-        .from('product_tasks')
-        .select(
-          'id, product_id, parent_task_id, title, notes, due_date, assignee_id, status, position, created_by, completed_at, created_at, updated_at, release_id, completion_note, completed_by'
-        )
-        .order('due_date', {ascending: true, nullsFirst: false})
-        .order('created_at', {ascending: false}),
-      insforge.database
-        .from('products')
-        .select('id, name, logo_url, archived_at')
-        .order('name'),
-      insforge.database
-        .from('team_members')
-        .select('user_id, display_name')
-        .eq('is_active', true)
-        .order('display_name')
+      requireActiveMember(),
+      getTranslations('tasks'),
+      Promise.all([
+        insforge.database
+          .from('product_tasks')
+          .select(
+            'id, product_id, parent_task_id, title, notes, due_date, assignee_id, status, position, created_by, completed_at, created_at, updated_at, release_id, completion_note, completed_by, lifecycle_phase'
+          )
+          .order('due_date', {ascending: true, nullsFirst: false})
+          .order('created_at', {ascending: false}),
+        insforge.database
+          .from('products')
+          .select('id, name, logo_url, archived_at')
+          .order('name'),
+        insforge.database
+          .from('team_members')
+          .select('user_id, display_name')
+          .eq('is_active', true)
+          .order('display_name')
+      ])
     ]);
 
   const taskRows = (tasks ?? []) as unknown as Omit<
@@ -96,17 +98,20 @@ export default async function AllTasksPage({
     taskRows.map((task) => [task.id, task.title])
   );
 
-  const allTasks: AllTaskItem[] = taskRows
-    .filter((task) => productMap.has(task.product_id))
-    .map((task) => {
-      const product = productMap.get(task.product_id)!;
+  // A general task has no product, and a product task whose product was hard
+  // deleted has none either. Both are kept: this is the only page that lists
+  // them, so filtering here would make them unreachable rather than tidy.
+  const allTasks: AllTaskItem[] = taskRows.map((task) => {
+      const product = task.product_id
+        ? productMap.get(task.product_id) ?? null
+        : null;
       return {
         ...task,
         attachments: attachmentsByTask.get(task.id) ?? [],
         is_watching: watchedTaskIds.has(task.id),
-        product_name: product.name,
-        product_logo_url: product.logoUrl,
-        product_archived_at: product.archivedAt,
+        product_name: product?.name ?? null,
+        product_logo_url: product?.logoUrl ?? null,
+        product_archived_at: product?.archivedAt ?? null,
         assignee_name: task.assignee_id
           ? memberMap.get(task.assignee_id) ?? null
           : null,

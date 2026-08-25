@@ -1,12 +1,15 @@
 'use client';
 
-import {useCallback, useEffect, useState, useTransition} from 'react';
+import {useCallback, useEffect, useRef, useState, useTransition} from 'react';
 import {
+  AtSign,
   Bell,
   CheckCheck,
   CircleCheck,
   CircleDot,
+  MessagesSquare,
   RotateCcw,
+  Sparkles,
   UserRoundPlus,
   UserRoundX,
   X
@@ -34,7 +37,11 @@ const TYPE_ICONS: Record<NotificationType, typeof Bell> = {
   task_unassigned: UserRoundX,
   task_updated: CircleDot,
   task_completed: CircleCheck,
-  task_reopened: RotateCcw
+  task_reopened: RotateCcw,
+  mention: AtSign,
+  channel_message: MessagesSquare,
+  proposal_pending: Sparkles,
+  proposal_decided: Sparkles
 };
 
 function NotificationRow({
@@ -83,9 +90,15 @@ function NotificationRow({
 
   return (
     <li className="group/row flex items-start gap-1">
-      {item.product_id && item.task_id ? (
+      {item.channel_id || (item.product_id && item.task_id) ? (
         <Link
-          href={`/products/${item.product_id}#task-${item.task_id}`}
+          href={
+            // Chat notifications point at the channel; task ones keep pointing
+            // at the task inside its product page.
+            item.channel_id
+              ? `/channels/${item.channel_id}`
+              : `/products/${item.product_id}#task-${item.task_id}`
+          }
           onClick={onNavigate}
           className="flex min-w-0 flex-1 items-start gap-2.5 rounded-lg px-2 py-2 transition-colors hover:bg-raised"
         >
@@ -117,6 +130,7 @@ export default function NotificationBell() {
   const [unread, setUnread] = useState(0);
   const [loaded, setLoaded] = useState(false);
   const [, startTransition] = useTransition();
+  const triggerRef = useRef<HTMLButtonElement>(null);
 
   const refresh = useCallback(async () => {
     const feed = await getNotificationFeedAction();
@@ -130,8 +144,15 @@ export default function NotificationBell() {
     const tick = () => {
       // Nothing to refresh into a tab nobody is looking at, and polling a
       // backgrounded tab for hours is how a quiet feature becomes an expensive
-      // one.
-      if (document.visibilityState !== 'visible') return;
+      // one. AppShell renders desktop and mobile bells together; CSS hides one,
+      // so only the visible instance should issue the request.
+      if (
+        document.visibilityState !== 'visible' ||
+        !triggerRef.current ||
+        triggerRef.current.getClientRects().length === 0
+      ) {
+        return;
+      }
       refresh().catch(() => {
         if (!cancelled) setLoaded(true);
       });
@@ -140,17 +161,13 @@ export default function NotificationBell() {
     tick();
     const timer = window.setInterval(tick, POLL_INTERVAL_MS);
     document.addEventListener('visibilitychange', tick);
+    window.addEventListener('resize', tick);
     return () => {
       cancelled = true;
       window.clearInterval(timer);
       document.removeEventListener('visibilitychange', tick);
+      window.removeEventListener('resize', tick);
     };
-  }, [refresh]);
-
-  // A navigation is a decent proxy for "the user did something"; picking up
-  // notifications produced by their own last action costs one query.
-  useEffect(() => {
-    refresh().catch(() => undefined);
   }, [pathname, refresh]);
 
   useEffect(() => {
@@ -190,6 +207,7 @@ export default function NotificationBell() {
   return (
     <>
       <button
+        ref={triggerRef}
         type="button"
         onClick={() => (open ? setOpen(false) : openPanel())}
         aria-expanded={open}

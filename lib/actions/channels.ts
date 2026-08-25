@@ -1,0 +1,384 @@
+'use server';
+
+import {revalidatePath} from 'next/cache';
+import {z} from 'zod';
+
+import {getOwnMembership, getSessionUser} from '@/lib/auth';
+import {createInsForgeServerClient} from '@/lib/insforge/server';
+import {
+  MAX_MESSAGE_LENGTH,
+  MESSAGE_PAGE_SIZE,
+  NOTIFICATION_LEVELS,
+  toChannelSlug,
+  type Channel,
+  type Message
+} from '@/lib/channels';
+import type {AgentProposal} from '@/lib/agents';
+
+export type ChannelActionResult =
+  | {ok: true; channelId?: string}
+  | {ok: false; error: string};
+
+const uuid = z.string().uuid();
+
+async function requireActiveCaller() {
+  const [user, member] = await Promise.all([
+    getSessionUser(),
+    getOwnMembership()
+  ]);
+  if (!user || !member?.is_active) return null;
+  return {user, member};
+}
+
+const CHANNEL_COLUMNS =
+  'id, slug, name, name_ar, topic, kind, product_id, is_primary, parent_id, archived_at, created_by, created_at';
+const MESSAGE_COLUMNS =
+  'id, channel_id, parent_id, author_id, body, kind, promoted_to_type, promoted_to_id, edited_at, deleted_at, created_at';
+const PROPOSAL_COLUMNS =
+  'id, message_id, channel_id, agent_id, run_id, product_id, action, payload, reasoning, status, decided_by, decided_at, decision_note, result_type, result_id, created_at';
+
+export async function getChannelsAction(): Promise<Channel[]> {
+  const caller = await requireActiveCaller();
+  if (!caller) return [];
+
+  const insforge = await createInsForgeServerClient();
+  const {data} = await insforge.database
+    .from('channels')
+    .select(CHANNEL_COLUMNS)
+    .is('archived_at', null)
+    .order('kind', {ascending: true})
+    .order('slug', {ascending: true});
+
+  return (data ?? []) as unknown as Channel[];
+}
+
+export type ChannelView = {
+  channel: Channel | null;
+  messages: Message[];
+  proposals: AgentProposal[];
+  membership: {notification_level: string; last_read_at: string} | null;
+};
+
+// One channel and everything needed to render it. Proposals come back alongside
+// the messages rather than being fetched per card: a channel with thirty
+// messages would otherwise be thirty round trips.
+export async function getChannelViewAction(
+  channelId: string
+): Promise<ChannelView> {
+  const caller = await requireActiveCaller();
+  const empty: ChannelView = {
+    channel: null,
+    messages: [],
+    proposals: [],
+    membership: null
+  };
+  if (!caller || !uuid.safeParse(channelId).success) return empty;
+
+  const insforge = await createInsForgeServerClient();
+
+  const [{data: channels}, {data: messages}, {data: proposals}, {data: membership}] =
+    await Promise.all([
+      insforge.database
+        .from('channels')
+        .select(CHANNEL_COLUMNS)
+        .eq('id', channelId)
+        .limit(1),
+      insforge.database
+        .from('messages')
+        .select(MESSAGE_COLUMNS)
+        .eq('channel_id', channelId)
+        .order('created_at', {ascending: false})
+        .limit(MESSAGE_PAGE_SIZE),
+      insforge.database
+        .from('agent_proposals')
+        .select(PROPOSAL_COLUMNS)
+        .eq('channel_id', channelId)
+        .order('created_at', {ascending: false})
+        .limit(MESSAGE_PAGE_SIZE),
+      insforge.database
+        .from('channel_members')
+        .select('notification_level, last_read_at')
+        .eq('channel_id', channelId)
+        .eq('user_id', caller.user.id)
+        .limit(1)
+    ]);
+
+  return {
+    channel: ((channels ?? [])[0] ?? null) as unknown as Channel | null,
+    // Fetched newest-first so the LIMIT takes the most recent page, then
+    // reversed for display: a chat reads oldest at the top.
+    messages: ((messages ?? []) as unknown as Message[]).slice().reverse(),
+    proposals: (proposals ?? []) as unknown as AgentProposal[],
+    membership: ((membership ?? [])[0] ?? null) as ChannelView['membership']
+  };
+}
+
+const postSchema = z.object({
+  channelId: uuid,
+  body: z.string().trim().min(1).max(MAX_MESSAGE_LENGTH),
+  parentId: uuid.nullable().optional()
+});
+
+export async function postMessageAction(
+  input: z.infer<typeof postSchema>
+): Promise<ChannelActionResult> {
+  const caller = await requireActiveCaller();
+  if (!caller) return {ok: false, error: 'forbidden'};
+
+  const parsed = postSchema.safeParse(input);
+  if (!parsed.success) return {ok: false, error: 'invalid'};
+
+  const insforge = await createInsForgeServerClient();
+  const {data, error} = await insforge.database
+    .from('messages')
+    .insert([
+      {
+        channel_id: parsed.data.channelId,
+        parent_id: parsed.data.parentId ?? null,
+        author_id: caller.user.id,
+        body: parsed.data.body,
+        kind: 'human'
+      }
+    ])
+    .select('id');
+
+  if (error) return {ok: false, error: error.message};
+
+  const messageId = data?.[0]?.id as string | undefined;
+  if (messageId) await pingQueuedAgentRuns(insforge, messageId);
+
+  revalidatePath('/channels');
+  return {ok: true};
+}
+
+// The insert trigger queues a pending agent_runs row for every agent mentioned.
+// This wakes the function immediately so a reply arrives in seconds rather than
+// on the next five-minute tick.
+//
+// The lookup is awaited but the invocations are NOT. Each invocation runs the
+// agent's entire OpenRouter call, and awaiting those held the post open until the
+// reply was ready — so the poster's own message did not appear until the answer
+// did, and the channel read as a form rather than a conversation. Letting them
+// run on means the message lands immediately and the reply arrives on a poll.
+//
+// The client is passed in rather than built here. Creating one reads cookies(),
+// which is only valid while the request is open; doing that after this function
+// returns would throw into the catch below and kill the ping silently, leaving
+// replies to wait for the five-minute tick with nothing to show why.
+//
+// Failures are deliberately swallowed: agent-tick drains the same queue, so a
+// failed ping costs latency, never the reply. Surfacing it would turn a
+// successful post into an error the poster cannot act on.
+async function pingQueuedAgentRuns(
+  insforge: Awaited<ReturnType<typeof createInsForgeServerClient>>,
+  messageId: string
+): Promise<void> {
+  try {
+    const {data: runs} = await insforge.database
+      .from('agent_runs')
+      .select('id')
+      .eq('trigger_message_id', messageId)
+      .eq('status', 'pending');
+
+    for (const run of (runs ?? []) as Array<{id: string}>) {
+      void insforge.functions
+        .invoke('thread-agent', {
+          method: 'POST',
+          body: {action: 'run', run_id: run.id}
+        })
+        // Nothing awaits this, so it must never reject.
+        .catch(() => undefined);
+    }
+  } catch {
+    // agent-tick will pick these up.
+  }
+}
+
+const createChannelSchema = z.object({
+  name: z.string().trim().min(1).max(80),
+  topic: z.string().trim().max(500).optional(),
+  // Present for a room opened against a product. The channel is bound but not
+  // primary: it shows under the product and gives an agent the product's
+  // context, while the auto-created channel stays the one that follows the
+  // product's name.
+  productId: uuid.optional(),
+  // Present for a subchannel. Binding is inherited from the parent by a trigger,
+  // so a subchannel never needs — and is never trusted with — a productId.
+  parentId: uuid.optional()
+});
+
+export async function createChannelAction(
+  input: z.infer<typeof createChannelSchema>
+): Promise<ChannelActionResult> {
+  const caller = await requireActiveCaller();
+  if (!caller) return {ok: false, error: 'forbidden'};
+
+  const parsed = createChannelSchema.safeParse(input);
+  if (!parsed.success) return {ok: false, error: 'invalid'};
+
+  const slug = toChannelSlug(parsed.data.name);
+  if (!slug) return {ok: false, error: 'invalid_slug'};
+
+  // A parent decides everything about binding, so productId is ignored when one
+  // is given. channels_inherit_from_parent() overwrites kind and product_id
+  // anyway; sending our guess as well would just be a second, wrong opinion.
+  const parentId = parsed.data.parentId;
+  const bound = parentId === undefined && parsed.data.productId !== undefined;
+
+  const insforge = await createInsForgeServerClient();
+  const {data, error} = await insforge.database
+    .from('channels')
+    .insert([
+      {
+        slug,
+        name: parsed.data.name,
+        topic: parsed.data.topic || null,
+        kind: bound ? 'product' : 'standing',
+        product_id: bound ? parsed.data.productId : null,
+        parent_id: parentId ?? null,
+        created_by: caller.user.id
+      }
+    ])
+    .select('id');
+
+  if (error) return {ok: false, error: mapChannelError(error)};
+
+  revalidatePath('/channels');
+  if (bound) revalidatePath('/products');
+  return {ok: true, channelId: data?.[0]?.id as string | undefined};
+}
+
+// The one failure a person can fix themselves is a name that normalises to a
+// slug already taken — every channel slug is unique across the whole workspace,
+// product rooms included.
+function mapChannelError(error: unknown): string {
+  const message =
+    typeof error === 'object' && error !== null && 'message' in error
+      ? String((error as {message: unknown}).message)
+      : String(error ?? '');
+  if (message.includes('channels_slug_key') || message.includes('duplicate key')) {
+    return 'duplicate_slug';
+  }
+  if (message.includes('row-level security')) return 'forbidden';
+  if (message.includes('archived channel')) return 'parent_archived';
+  if (message.includes('parent channel not found')) return 'parent_missing';
+  if (message.includes('primary channel cannot be removed')) return 'primary_locked';
+  if (message.includes('creator or an admin')) return 'not_yours';
+  if (message.includes('channel not found')) return 'parent_missing';
+  if (message.includes('only active members')) return 'forbidden';
+  return 'generic';
+}
+
+export type RemoveChannelResult =
+  | {ok: true; deleted: boolean}
+  | {ok: false; error: string};
+
+// Removing a channel goes through remove_channel(), never a bare delete: the
+// table still has no DELETE grant for any client role. The function decides
+// between deleting an empty channel and archiving one that holds a record, and
+// reports which it did so the rail can say so.
+export async function removeChannelAction(
+  channelId: string
+): Promise<RemoveChannelResult> {
+  const caller = await requireActiveCaller();
+  if (!caller || !uuid.safeParse(channelId).success) {
+    return {ok: false, error: 'forbidden'};
+  }
+
+  const insforge = await createInsForgeServerClient();
+  const {data, error} = await insforge.database.rpc('remove_channel', {
+    p_channel_id: channelId
+  });
+
+  if (error) return {ok: false, error: mapChannelError(error)};
+
+  const row = (Array.isArray(data) ? data[0] : data) as
+    | {deleted?: boolean}
+    | null;
+
+  revalidatePath('/channels');
+  revalidatePath('/products');
+  return {ok: true, deleted: row?.deleted === true};
+}
+
+export async function joinChannelAction(
+  channelId: string
+): Promise<ChannelActionResult> {
+  const caller = await requireActiveCaller();
+  if (!caller || !uuid.safeParse(channelId).success) {
+    return {ok: false, error: 'forbidden'};
+  }
+
+  const insforge = await createInsForgeServerClient();
+  const {error} = await insforge.database
+    .from('channel_members')
+    .insert([{channel_id: channelId, user_id: caller.user.id}]);
+
+  if (error) return {ok: false, error: error.message};
+  revalidatePath('/channels');
+  return {ok: true};
+}
+
+export async function leaveChannelAction(
+  channelId: string
+): Promise<ChannelActionResult> {
+  const caller = await requireActiveCaller();
+  if (!caller || !uuid.safeParse(channelId).success) {
+    return {ok: false, error: 'forbidden'};
+  }
+
+  const insforge = await createInsForgeServerClient();
+  const {error} = await insforge.database
+    .from('channel_members')
+    .delete()
+    .eq('channel_id', channelId)
+    .eq('user_id', caller.user.id);
+
+  if (error) return {ok: false, error: error.message};
+  revalidatePath('/channels');
+  return {ok: true};
+}
+
+const levelSchema = z.object({
+  channelId: uuid,
+  level: z.enum(NOTIFICATION_LEVELS)
+});
+
+export async function setChannelNotificationLevelAction(
+  input: z.infer<typeof levelSchema>
+): Promise<ChannelActionResult> {
+  const caller = await requireActiveCaller();
+  if (!caller) return {ok: false, error: 'forbidden'};
+
+  const parsed = levelSchema.safeParse(input);
+  if (!parsed.success) return {ok: false, error: 'invalid'};
+
+  const insforge = await createInsForgeServerClient();
+  const {error} = await insforge.database
+    .from('channel_members')
+    .update({notification_level: parsed.data.level})
+    .eq('channel_id', parsed.data.channelId)
+    .eq('user_id', caller.user.id);
+
+  if (error) return {ok: false, error: error.message};
+  revalidatePath('/channels');
+  return {ok: true};
+}
+
+export async function markChannelReadAction(
+  channelId: string
+): Promise<ChannelActionResult> {
+  const caller = await requireActiveCaller();
+  if (!caller || !uuid.safeParse(channelId).success) {
+    return {ok: false, error: 'forbidden'};
+  }
+
+  const insforge = await createInsForgeServerClient();
+  await insforge.database
+    .from('channel_members')
+    .update({last_read_at: new Date().toISOString()})
+    .eq('channel_id', channelId)
+    .eq('user_id', caller.user.id);
+
+  return {ok: true};
+}

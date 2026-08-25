@@ -24,7 +24,7 @@ import type {ProductTask, TaskStatus} from '@/lib/actions/tasks';
 import {updateTaskAction} from '@/lib/actions/tasks';
 
 export type AllTaskItem = ProductTask & {
-  product_name: string;
+  product_name: string | null;
   product_logo_url: string | null;
   product_archived_at: string | null;
   assignee_name: string | null;
@@ -120,7 +120,7 @@ export default function AllTasksBoard({
         ![
           task.title,
           task.notes ?? '',
-          task.product_name,
+          task.product_name ?? '',
           task.assignee_name ?? '',
           task.parent_title ?? ''
         ]
@@ -365,33 +365,47 @@ export default function AllTasksBoard({
                     </button>
 
                     <div className="min-w-0">
-                      <Link
-                        href={`/products/${task.product_id}#task-${task.id}`}
-                        className={`block truncate text-sm font-medium transition-colors hover:text-accent ${
-                          completed ? 'text-muted line-through' : 'text-ink'
-                        }`}
-                      >
-                        {task.title}
-                      </Link>
+                      {task.product_id ? (
+                        <Link
+                          href={`/products/${task.product_id}#task-${task.id}`}
+                          className={`block truncate text-sm font-medium transition-colors hover:text-accent ${
+                            completed ? 'text-muted line-through' : 'text-ink'
+                          }`}
+                        >
+                          {task.title}
+                        </Link>
+                      ) : (
+                        <span
+                          className={`block truncate text-sm font-medium ${
+                            completed ? 'text-muted line-through' : 'text-ink'
+                          }`}
+                        >
+                          {task.title}
+                        </span>
+                      )}
 
                       <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-faint">
-                        <span className="inline-flex items-center gap-1.5">
-                          <span className="relative flex h-4 w-4 shrink-0 items-center justify-center overflow-hidden rounded border border-hairline bg-raised font-mono text-[8px]">
-                            {task.product_logo_url ? (
-                              <Image
-                                src={task.product_logo_url}
-                                alt={task.product_name}
-                                fill
-                                unoptimized
-                                sizes="16px"
-                                className="object-cover"
-                              />
-                            ) : (
-                              task.product_name.slice(0, 1).toUpperCase()
-                            )}
+                        {task.product_name ? (
+                          <span className="inline-flex items-center gap-1.5">
+                            <span className="relative flex h-4 w-4 shrink-0 items-center justify-center overflow-hidden rounded border border-hairline bg-raised font-mono text-[8px]">
+                              {task.product_logo_url ? (
+                                <Image
+                                  src={task.product_logo_url}
+                                  alt={task.product_name}
+                                  fill
+                                  unoptimized
+                                  sizes="16px"
+                                  className="object-cover"
+                                />
+                              ) : (
+                                task.product_name.slice(0, 1).toUpperCase()
+                              )}
+                            </span>
+                            {task.product_name}
                           </span>
-                          {task.product_name}
-                        </span>
+                        ) : (
+                          <span>{t('all.general')}</span>
+                        )}
                         {task.parent_title ? (
                           <span className="inline-flex items-center gap-1">
                             <CornerDownRight

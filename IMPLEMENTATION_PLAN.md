@@ -267,6 +267,53 @@ with "malformed array literal". `array_append()` has one meaning.
 
 ---
 
+### M13 — Channels and agents · `20260825090000_…` → `20260825092000_…`
+
+A Slack-shaped collaboration layer inside the console, and a roster of OpenRouter
+agents that read the conversation and propose changes to the record. Full design
+in **[COLLABORATION.md](COLLABORATION.md)**.
+
+Key implementation choices:
+
+- **Propose-only, enforced in SQL.** An agent writes an `agent_proposals` row and
+  stops. `decide_agent_proposal` is the only path to a change, and because a
+  `SECURITY DEFINER` function does not enforce the target table's RLS, every
+  direct write in it repeats that table's INSERT policy by hand. Delegated RPCs
+  (`advance_lifecycle_phase`) are the opposite case: their permission logic is in
+  the body, and `auth.uid()` is a session setting `SECURITY DEFINER` does not
+  change, so calling them re-derives against the approver and must not be
+  second-guessed.
+- **The approver is the author.** `status_updates`' existing INSERT policy already
+  forces `author_id = auth.uid()` and `source_type = 'manual'`, so an approved
+  proposal is written as the approving human with agent provenance in the
+  `source_ref` column that was already there. **No migration to `status_updates`.**
+- **The waiver reason is a parameter, never payload.** An AI-drafted justification
+  for waiving a security gate, recorded in the register as an admin's own words,
+  would make `/governance` a liability rather than a control. Stripped in the
+  edge function and ignored in SQL — neither layer relies on the other.
+- **`allowed_actions` is per agent**, checked at approval time, so a prompt
+  injection that talks `@scout` into a lifecycle advance still produces a
+  rejected proposal.
+- **`agents.model` is free text**, a slug pasted verbatim from openrouter.ai.
+  A list we maintained would be stale the week after it shipped.
+- **The OpenRouter key follows `github_connection` exactly**: singleton table with
+  no grants in any role, AES-GCM under a function-environment secret, status
+  through a `SECURITY DEFINER` function that cannot return the ciphertext.
+- **Scheduling is ours, not InsForge's.** `schedules.jobs` is not writable by our
+  roles, so `agent_schedules` plus one `agent-tick` schedule carries it — which
+  also buys RLS, per-agent budgets and a per-job kill switch.
+- **`phase_artifacts.agent_run_id`**, reserved and unconstrained since M9, finally
+  gets its foreign key.
+
+*Verified:* migrations replay clean on Postgres 16 over the full existing chain;
+bound channels auto-create and follow renames and archiving; mention routing
+queues exactly one run per agent mention with no agent-to-agent loops; threads
+are one level deep; and every propose-only boundary refuses correctly — including
+a member being blocked from approving a lifecycle advance, and an agent-authored
+waiver never reaching the register. Cron parser passes 14 cases. See
+COLLABORATION.md §11 for the two defects this caught, and for what still needs the
+live backend.
+
 ## 4. Outstanding work
 
 ### Blocked on a credential
@@ -315,8 +362,8 @@ Carried from M9 and still open:
 - **Scheduled sync drain.** `github_sync_state` already supports `pending`, so a
   schedule that retries failed mirrors needs no migration.
 - **Automated PSR generation.** `phase_artifacts.generated_by` and `agent_run_id`
-  are reserved for an agent-produced Project Security Review; wiring it needs no
-  migration.
+  are reserved for an agent-produced Project Security Review. M13 wired the FK to
+  `agent_runs`; what remains is a `phase_artifact` proposal action.
 - **Automated status ingestion** via `status_updates.source_type`.
 
 ---

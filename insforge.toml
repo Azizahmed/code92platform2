@@ -24,8 +24,10 @@ min_interval_seconds = 60
 [storage]
 max_file_size_mb = 50
 
+# Channels subscribe to the open room. The notification bell keeps its 60s
+# poll — it is minutes-matter, and working code is not rewritten for symmetry.
 [realtime]
-retention_days = 0
+retention_days = 1
 
 [schedules]
 retention_days = 7

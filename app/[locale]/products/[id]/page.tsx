@@ -14,6 +14,7 @@ import StatusTimeline, {
 import LifecycleSection from '@/components/lifecycle/LifecycleSection';
 import RepoConnectCard from '@/components/lifecycle/RepoConnectCard';
 import RiskTierChip from '@/components/lifecycle/RiskTierChip';
+import ProductChannelsPanel from '@/components/products/ProductChannelsPanel';
 import ProductKnowledgePanel from '@/components/products/ProductKnowledgePanel';
 import ProductReleasesPanel from '@/components/products/ProductReleasesPanel';
 import ProductTasksPanel, {
@@ -36,18 +37,12 @@ export default async function ProductDetailPage({
   params: Promise<{locale: string; id: string}>;
 }) {
   const {locale, id} = await params;
-  const {user, member} = await requireActiveMember();
-  const [t, format] = await Promise.all([
-    getTranslations('products'),
-    getFormatter()
-  ]);
-
   const insforge = await createInsForgeServerClient();
-  const {data: product} = await insforge.database
-    .from('products')
-    .select('*')
-    .eq('id', id)
-    .maybeSingle();
+  const [{user, member}, [t, format], {data: product}] = await Promise.all([
+    requireActiveMember(),
+    Promise.all([getTranslations('products'), getFormatter()]),
+    insforge.database.from('products').select('*').eq('id', id).maybeSingle()
+  ]);
 
   if (!product) notFound();
 
@@ -63,7 +58,9 @@ export default async function ProductDetailPage({
     {data: updates},
     {data: tasks},
     lifecycle,
-    {data: knowledgeItems}
+    {data: knowledgeItems},
+    {data: githubConfigured},
+    {data: releases}
   ] = await Promise.all([
     insforge.database
       .from('team_members')
@@ -90,12 +87,9 @@ export default async function ProductDetailPage({
       .from('knowledge_items')
       .select('id, title')
       .is('archived_at', null)
-      .order('title')
-  ]);
-
-  // One bit — whether a credential exists at all — so a product owner who is not
-  // an admin can be told to ask for setup instead of hitting an error.
-  const [{data: githubConfigured}, {data: releases}] = await Promise.all([
+      .order('title'),
+    // One bit — whether a credential exists at all — so a product owner who is
+    // not an admin can be told to ask for setup instead of hitting an error.
     insforge.database.rpc('github_is_configured'),
     insforge.database
       .from('release_overview')
@@ -426,6 +420,8 @@ export default async function ProductDetailPage({
 
         <div>{p.archived_at ? null : <StatusUpdateForm productId={p.id} />}</div>
       </div>
+
+      <ProductChannelsPanel productId={p.id} />
 
       <ProductKnowledgePanel productId={p.id} />
     </section>

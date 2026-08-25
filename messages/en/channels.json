@@ -1,0 +1,77 @@
+{
+  "title": "Channels",
+  "subtitle": "Where the team talks, next to what it is talking about.",
+  "sections": {
+    "products": "Products",
+    "standing": "Channels"
+  },
+  "empty": {
+    "noChannels": "No channels yet.",
+    "noMessages": "Nothing here yet. Start the conversation.",
+    "pickOne": "Choose a channel to start reading."
+  },
+  "composer": {
+    "placeholder": "Write a message. Use @ to mention someone.",
+    "replyPlaceholder": "Reply in thread…",
+    "send": "Send",
+    "sending": "Sending…",
+    "mentionHint": "Mentioning an agent will ask it to reply.",
+    "mentionListLabel": "People and agents you can mention"
+  },
+  "message": {
+    "edited": "edited",
+    "deleted": "This message was deleted.",
+    "system": "System",
+    "reply": "Reply",
+    "replies": "{count, plural, =0 {No replies} one {1 reply} other {# replies}}",
+    "becameTask": "Became a work item",
+    "becameStatus": "Became a status update",
+    "becameNote": "Became a knowledge note",
+    "becamePhase": "Advanced a lifecycle phase"
+  },
+  "channel": {
+    "topic": "Topic",
+    "boundTo": "Bound to {product}",
+    "archived": "Archived",
+    "join": "Follow",
+    "leave": "Unfollow",
+    "following": "Following",
+    "notify": {
+      "label": "Notify me",
+      "all": "Every message",
+      "mentions": "Only mentions",
+      "none": "Never"
+    }
+  },
+  "create": {
+    "button": "New channel",
+    "title": "Create a channel",
+    "name": "Name",
+    "topic": "Topic",
+    "topicHint": "What this channel is for. Optional.",
+    "slugPreview": "Will be created as #{slug}",
+    "submit": "Create",
+    "cancel": "Cancel",
+    "namePlaceholder": "Channel name, then Enter",
+    "subchannel": "Add a channel inside this one",
+    "subchannelOf": "Add a channel inside {name}"
+  },
+  "errors": {
+    "generic": "That did not work. Try again.",
+    "forbidden": "You do not have access to do that.",
+    "empty": "Write something first.",
+    "invalid_slug": "That name has no letters or digits to build a channel address from.",
+    "duplicate_slug": "A channel with that address already exists. Pick another name.",
+    "parent_archived": "That channel is archived, so nothing can be added inside it.",
+    "parent_missing": "That channel no longer exists.",
+    "primary_locked": "That is the product's own room. It closes when the product is archived.",
+    "not_yours": "Only the channel creator or an admin can remove it."
+  },
+  "remove": {
+    "label": "Remove this channel",
+    "of": "Remove {name}",
+    "confirm": "Remove {name}? If it has no messages it is deleted. If it holds any, it is archived instead and its messages and proposals are kept. Anything nested inside follows the same rule.",
+    "deleted": "Channel deleted — it was empty.",
+    "archived": "Channel archived. Its messages were kept."
+  }
+}

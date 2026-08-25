@@ -20,7 +20,9 @@ const NAMESPACES = [
   'releases',
   'notifications',
   'settings',
-  'admin'
+  'admin',
+  'channels',
+  'agents'
 ] as const;
 
 type Messages = Record<string, unknown>;

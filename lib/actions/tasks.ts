@@ -5,6 +5,7 @@ import {z} from 'zod';
 
 import {getOwnMembership, getSessionUser} from '@/lib/auth';
 import {createInsForgeServerClient} from '@/lib/insforge/server';
+import {LIFECYCLE_PHASES, type LifecyclePhase} from '@/lib/lifecycle';
 
 export type TaskStatus = 'pending' | 'completed';
 
@@ -21,7 +22,9 @@ export type TaskAttachment = {
 
 export type ProductTask = {
   id: string;
-  product_id: string;
+  // NULL for a general task — work owned by the team rather than by any one
+  // product. See migrations/20260825097000_add-general-tasks.sql.
+  product_id: string | null;
   parent_task_id: string | null;
   title: string;
   notes: string | null;
@@ -43,6 +46,9 @@ export type ProductTask = {
   // Stamped by the database from auth.uid() on the transition to completed, so
   // it cannot be claimed on someone else's behalf.
   completed_by: string | null;
+  // Which delivery phase this work serves. Only ever set on a product task: the
+  // phase names a row in product_lifecycle_phases, which is keyed by product.
+  lifecycle_phase: LifecyclePhase | null;
   attachments: TaskAttachment[];
   // Derived per viewer from task_watchers — not a column. Whoever is looking at
   // the row needs to know whether THEY are following it.
@@ -50,12 +56,14 @@ export type ProductTask = {
 };
 
 export type TaskInput = {
-  productId: string;
+  // null creates a general task.
+  productId: string | null;
   parentTaskId: string | null;
   title: string;
   notes: string | null;
   dueDate: string | null;
   assigneeId: string | null;
+  lifecyclePhase?: LifecyclePhase | null;
 };
 
 type TaskActionResult =
@@ -68,14 +76,23 @@ const nullableDate = z
   .regex(/^\d{4}-\d{2}-\d{2}$/)
   .nullable();
 
-const createTaskSchema = z.object({
-  productId: z.string().uuid(),
-  parentTaskId: nullableUuid,
-  title: z.string().trim().min(1).max(240),
-  notes: z.string().trim().max(5000).nullable(),
-  dueDate: nullableDate,
-  assigneeId: nullableUuid
-});
+const nullablePhase = z.enum(LIFECYCLE_PHASES).nullable();
+
+const createTaskSchema = z
+  .object({
+    productId: nullableUuid,
+    parentTaskId: nullableUuid,
+    title: z.string().trim().min(1).max(240),
+    notes: z.string().trim().max(5000).nullable(),
+    dueDate: nullableDate,
+    assigneeId: nullableUuid,
+    lifecyclePhase: nullablePhase.optional()
+  })
+  // Mirrors the product_tasks_lifecycle_phase_needs_product CHECK. Caught here
+  // so the form gets 'phaseNeedsProduct' rather than a constraint name.
+  .refine((value) => !value.lifecyclePhase || value.productId !== null, {
+    path: ['lifecyclePhase']
+  });
 
 const updateTaskSchema = z.object({
   title: z.string().trim().min(1).max(240),
@@ -83,6 +100,12 @@ const updateTaskSchema = z.object({
   dueDate: nullableDate,
   assigneeId: nullableUuid,
   status: z.enum(['pending', 'completed']),
+  // Both optional for the same reason as completionNote below: `undefined`
+  // means "leave it alone". The status toggle sends neither.
+  lifecyclePhase: nullablePhase.optional(),
+  // Adopting a general task into a product. Never null — the database refuses
+  // to hand a product task back to general, so there is nothing to send.
+  productId: z.string().uuid().optional(),
   // Optional: the editor form does not carry it, only the completion dialog
   // does. `undefined` means "leave whatever is there alone".
   completionNote: z.string().trim().max(5000).nullable().optional()
@@ -97,10 +120,38 @@ async function requireActiveCaller() {
   return {user, member};
 }
 
-function revalidateProduct(productId: string) {
+// A general task has no product page to refresh, but it does appear on
+// /tasks — which, before general tasks existed, nothing here revalidated. That
+// is now the one page every task is guaranteed to show up on, so it is always
+// included.
+function revalidateTask(productId: string | null) {
+  revalidatePath('/[locale]/tasks', 'page');
+  revalidatePath('/[locale]', 'page');
+  if (!productId) return;
   revalidatePath(`/[locale]/products/${productId}`, 'page');
   revalidatePath('/[locale]/products', 'page');
-  revalidatePath('/[locale]', 'page');
+}
+
+// validate_product_task() raises with a human-readable reason. Map the ones a
+// user can act on to message keys; everything else falls through to a generic
+// failure. Same convention as lib/actions/releases.ts.
+function mapTaskError(error: unknown): string {
+  const message =
+    typeof error === 'object' && error !== null && 'message' in error
+      ? String((error as {message: unknown}).message)
+      : String(error ?? '');
+
+  if (message.includes('cannot be moved between products')) return 'productLocked';
+  if (message.includes('detach the subtasks')) return 'hasSubtasks';
+  if (message.includes('move the parent task instead')) return 'isSubtask';
+  if (message.includes('unscope the task from its release')) return 'inRelease';
+  if (message.includes('general task cannot join a release')) return 'inRelease';
+  if (message.includes('parent task must belong')) return 'parentMismatch';
+  if (message.includes('one subtask level only')) return 'tooDeep';
+  if (message.includes('parent task not found')) return 'notFound';
+  if (message.includes('lifecycle_phase_needs_product')) return 'phaseNeedsProduct';
+  if (message.includes('lifecycle_phase_known')) return 'invalid';
+  return 'generic';
 }
 
 export async function createTaskAction(
@@ -113,8 +164,15 @@ export async function createTaskAction(
   if (!caller) return {ok: false, error: 'forbidden'};
 
   const insforge = await createInsForgeServerClient();
-  const {productId, parentTaskId, title, notes, dueDate, assigneeId} =
-    parsed.data;
+  const {
+    productId,
+    parentTaskId,
+    title,
+    notes,
+    dueDate,
+    assigneeId,
+    lifecyclePhase
+  } = parsed.data;
   const {data, error} = await insforge.database
     .from('product_tasks')
     .insert([
@@ -125,15 +183,17 @@ export async function createTaskAction(
         notes: notes || null,
         due_date: dueDate,
         assignee_id: assigneeId,
+        lifecycle_phase: lifecyclePhase ?? null,
         created_by: caller.user.id
       }
     ])
     .select('id')
     .single();
 
-  if (error || !data) return {ok: false, error: 'generic'};
+  if (error) return {ok: false, error: mapTaskError(error)};
+  if (!data) return {ok: false, error: 'generic'};
 
-  revalidateProduct(productId);
+  revalidateTask(productId);
   return {ok: true, taskId: data.id as string};
 }
 
@@ -146,6 +206,8 @@ export async function updateTaskAction(
     assigneeId: string | null;
     status: TaskStatus;
     completionNote?: string | null;
+    lifecyclePhase?: LifecyclePhase | null;
+    productId?: string;
   }
 ): Promise<TaskActionResult> {
   const parsed = updateTaskSchema.safeParse(input);
@@ -174,6 +236,15 @@ export async function updateTaskAction(
   if (parsed.data.completionNote !== undefined) {
     patch.completion_note = parsed.data.completionNote || null;
   }
+  if (parsed.data.lifecyclePhase !== undefined) {
+    patch.lifecycle_phase = parsed.data.lifecyclePhase;
+  }
+  // Only sent when adopting a general task. The database is what decides
+  // whether that is allowed; sending it on an unchanged product is a no-op
+  // there, since the trigger only reacts to an actual change.
+  if (parsed.data.productId !== undefined) {
+    patch.product_id = parsed.data.productId;
+  }
 
   const {data, error} = await insforge.database
     .from('product_tasks')
@@ -181,10 +252,10 @@ export async function updateTaskAction(
     .eq('id', taskId)
     .select('id, product_id');
 
-  if (error) return {ok: false, error: 'generic'};
+  if (error) return {ok: false, error: mapTaskError(error)};
   if (!data?.length) return {ok: false, error: 'notFound'};
 
-  revalidateProduct(data[0].product_id as string);
+  revalidateTask((data[0].product_id as string | null) ?? null);
   return {ok: true, taskId};
 }
 
@@ -226,9 +297,9 @@ export async function deleteTaskAction(
     .from('product_tasks')
     .delete()
     .eq('id', taskId);
-  if (error) return {ok: false, error: 'generic'};
+  if (error) return {ok: false, error: mapTaskError(error)};
 
-  revalidateProduct(task.product_id as string);
+  revalidateTask((task.product_id as string | null) ?? null);
   return {
     ok: true,
     taskId,

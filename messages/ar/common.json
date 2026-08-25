@@ -15,7 +15,8 @@
     "section": "التنقل",
     "controlPanel": "لوحة التحكم",
     "settings": "الإعدادات",
-    "releases": "الإصدارات"
+    "releases": "الإصدارات",
+    "channels": "القنوات"
   },
   "actions": {
     "signOut": "تسجيل الخروج",

@@ -39,7 +39,7 @@ async function requireActiveCaller() {
 }
 
 const NOTIFICATION_COLUMNS =
-  'id, type, task_id, product_id, actor_id, title, body, read_at, email_state, created_at';
+  'id, type, task_id, product_id, message_id, channel_id, actor_id, title, body, read_at, email_state, created_at';
 
 // The bell polls this. RLS already restricts the table to the caller's own
 // rows, so there is no user filter here — adding one would be decoration that

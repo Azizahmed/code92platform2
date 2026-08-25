@@ -15,7 +15,8 @@
     "section": "Navigate",
     "controlPanel": "Control panel",
     "settings": "Settings",
-    "releases": "Releases"
+    "releases": "Releases",
+    "channels": "Channels"
   },
   "actions": {
     "signOut": "Sign out",
