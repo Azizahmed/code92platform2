@@ -9,19 +9,26 @@ import {
   ListFilter,
   ListTodo,
   Paperclip,
+  Pencil,
+  Plus,
   Search,
+  Trash2,
   UserRound
 } from 'lucide-react';
 import {useTranslations} from 'next-intl';
 import {useMemo, useOptimistic, useState, useTransition} from 'react';
 
+import type {TaskMemberOption} from '@/components/products/ProductTasksPanel';
 import TaskCompletionDialog from '@/components/tasks/TaskCompletionDialog';
 import TaskCompletionNote from '@/components/tasks/TaskCompletionNote';
+import TaskEditorDialog from '@/components/tasks/TaskEditorDialog';
 import TaskWatchToggle from '@/components/tasks/TaskWatchToggle';
 import {Link} from '@/i18n/navigation';
+import {removeStoredImages} from '@/lib/media-upload';
 import {drainNotificationEmailsAction} from '@/lib/actions/notifications';
 import type {ProductTask, TaskStatus} from '@/lib/actions/tasks';
-import {updateTaskAction} from '@/lib/actions/tasks';
+import {deleteTaskAction, updateTaskAction} from '@/lib/actions/tasks';
+import {LIFECYCLE_PHASES} from '@/lib/lifecycle';
 
 export type AllTaskItem = ProductTask & {
   product_name: string | null;
@@ -42,30 +49,49 @@ type Scope = 'open' | 'all' | 'completed';
 const SELECT_CLASS =
   'rounded-md border border-hairline bg-bg px-2.5 py-2 text-xs text-muted outline-none transition-colors focus:border-accent/50';
 
-// Flips a row's status locally while the action is in flight; React discards
-// this once the transition settles and the fresh server payload lands.
-function applyOptimisticToggle(
+// Applied to the server-rendered list the instant a mutation starts, so a row
+// reacts on click instead of after the round trip. React discards these once
+// the transition settles and the fresh server payload lands.
+type OptimisticAction =
+  | {type: 'toggle'; taskId: string}
+  | {type: 'delete'; taskId: string};
+
+function applyOptimisticAction(
   current: AllTaskItem[],
-  taskId: string
+  action: OptimisticAction
 ): AllTaskItem[] {
-  return current.map((task) =>
-    task.id === taskId
-      ? {
-          ...task,
-          status: task.status === 'completed' ? 'pending' : 'completed'
-        }
-      : task
-  );
+  switch (action.type) {
+    case 'toggle':
+      return current.map((task) =>
+        task.id === action.taskId
+          ? {
+              ...task,
+              status: task.status === 'completed' ? 'pending' : 'completed'
+            }
+          : task
+      );
+    case 'delete': {
+      // deleteTaskAction cascades to subtasks; mirror that here so a parent and
+      // its children disappear together rather than in two steps.
+      const removed = new Set([action.taskId]);
+      for (const task of current) {
+        if (task.parent_task_id === action.taskId) removed.add(task.id);
+      }
+      return current.filter((task) => !removed.has(task.id));
+    }
+  }
 }
 
 export default function AllTasksBoard({
   tasks,
   products,
+  members,
   currentUserId,
   locale
 }: {
   tasks: AllTaskItem[];
   products: TaskProductOption[];
+  members: TaskMemberOption[];
   currentUserId: string;
   locale: string;
 }) {
@@ -77,10 +103,13 @@ export default function AllTasksBoard({
   const [pendingTaskId, setPendingTaskId] = useState<string | null>(null);
   const [completingTask, setCompletingTask] = useState<AllTaskItem | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // null = closed, 'new' = the create form, otherwise the task being edited.
+  const [editing, setEditing] = useState<'new' | AllTaskItem | null>(null);
+  const [phaseFilter, setPhaseFilter] = useState('all');
   const [, startTransition] = useTransition();
-  const [optimisticTasks, applyOptimisticToggleFor] = useOptimistic(
+  const [optimisticTasks, applyOptimistic] = useOptimistic(
     tasks,
-    applyOptimisticToggle
+    applyOptimisticAction
   );
 
   const now = new Date();
@@ -113,7 +142,16 @@ export default function AllTasksBoard({
       if (scope !== 'all' && task.status !== scope.replace('open', 'pending')) {
         return false;
       }
-      if (productId !== 'all' && task.product_id !== productId) return false;
+      // 'general' is its own bucket rather than an absent product id, so the
+      // filter can ask for exactly the tasks that belong to nobody's product.
+      if (productId === 'general') {
+        if (task.product_id !== null) return false;
+      } else if (productId !== 'all' && task.product_id !== productId) {
+        return false;
+      }
+      if (phaseFilter !== 'all' && task.lifecycle_phase !== phaseFilter) {
+        return false;
+      }
       if (mineOnly && task.assignee_id !== currentUserId) return false;
       if (
         normalizedQuery &&
@@ -137,6 +175,7 @@ export default function AllTasksBoard({
     locale,
     mineOnly,
     optimisticTasks,
+    phaseFilter,
     productId,
     query,
     scope
@@ -160,7 +199,7 @@ export default function AllTasksBoard({
     setPendingTaskId(task.id);
     startTransition(async () => {
       // Flip the row first — the await below costs a full round trip.
-      applyOptimisticToggleFor(task.id);
+      applyOptimistic({type: 'toggle', taskId: task.id});
       const result = await updateTaskAction(task.id, {
         title: task.title,
         notes: task.notes,
@@ -182,6 +221,23 @@ export default function AllTasksBoard({
     });
   }
 
+  function remove(task: AllTaskItem) {
+    if (!window.confirm(t('task.deleteConfirm'))) return;
+    setError(null);
+    setPendingTaskId(task.id);
+    startTransition(async () => {
+      applyOptimistic({type: 'delete', taskId: task.id});
+      const result = await deleteTaskAction(task.id);
+      if (!result.ok) {
+        setError(result.error);
+      } else if (result.storageKeys?.length) {
+        // The rows went with the task; the objects behind them did not.
+        void removeStoredImages(result.storageKeys);
+      }
+      setPendingTaskId(null);
+    });
+  }
+
   return (
     <div className="space-y-5">
       {completingTask ? (
@@ -193,6 +249,31 @@ export default function AllTasksBoard({
           onConfirm={(note) => setStatus(completingTask, 'completed', note)}
         />
       ) : null}
+
+      {editing ? (
+        <TaskEditorDialog
+          key={editing === 'new' ? 'new' : editing.id}
+          task={editing === 'new' ? undefined : editing}
+          products={products}
+          members={members}
+          onDone={() => setEditing(null)}
+          onError={(key) => setError(key || null)}
+        />
+      ) : (
+        <div className="flex justify-end">
+          <button
+            type="button"
+            onClick={() => {
+              setError(null);
+              setEditing('new');
+            }}
+            className="inline-flex items-center gap-1.5 rounded-md bg-accent px-3.5 py-2 text-sm font-semibold text-bg transition-opacity hover:opacity-90"
+          >
+            <Plus className="h-4 w-4" strokeWidth={2} />
+            {t('section.newTask')}
+          </button>
+        </div>
+      )}
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         {[
@@ -278,9 +359,25 @@ export default function AllTasksBoard({
             className={SELECT_CLASS}
           >
             <option value="all">{t('all.allProducts')}</option>
+            <option value="general">{t('all.general')}</option>
             {products.map((product) => (
               <option key={product.id} value={product.id}>
                 {product.name}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <label className="flex items-center gap-2 text-xs text-muted">
+          <select
+            value={phaseFilter}
+            onChange={(event) => setPhaseFilter(event.target.value)}
+            className={SELECT_CLASS}
+          >
+            <option value="all">{t('all.allPhases')}</option>
+            {LIFECYCLE_PHASES.map((value) => (
+              <option key={value} value={value}>
+                {t(`phase.${value}`)}
               </option>
             ))}
           </select>
@@ -406,6 +503,11 @@ export default function AllTasksBoard({
                         ) : (
                           <span>{t('all.general')}</span>
                         )}
+                        {task.lifecycle_phase ? (
+                          <span className="rounded border border-hairline bg-raised px-1.5 py-0.5 text-[10px] text-muted">
+                            {t(`phase.${task.lifecycle_phase}`)}
+                          </span>
+                        ) : null}
                         {task.parent_title ? (
                           <span className="inline-flex items-center gap-1">
                             <CornerDownRight
@@ -480,6 +582,28 @@ export default function AllTasksBoard({
                       watching={task.is_watching}
                       compact
                     />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setError(null);
+                        setEditing(task);
+                      }}
+                      aria-label={t('task.edit')}
+                      title={t('task.edit')}
+                      className="rounded p-1 text-faint transition-colors hover:bg-raised hover:text-ink"
+                    >
+                      <Pencil className="h-3.5 w-3.5" strokeWidth={1.75} />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => remove(task)}
+                      disabled={pendingTaskId === task.id}
+                      aria-label={t('task.delete')}
+                      title={t('task.delete')}
+                      className="rounded p-1 text-faint transition-colors hover:bg-raised hover:text-danger disabled:opacity-40"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" strokeWidth={1.75} />
+                    </button>
                   </div>
                 </li>
               );

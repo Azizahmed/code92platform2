@@ -5,6 +5,7 @@ import AllTasksBoard, {
   type AllTaskItem,
   type TaskProductOption
 } from '@/components/tasks/AllTasksBoard';
+import type {TaskMemberOption} from '@/components/products/ProductTasksPanel';
 import {requireActiveMember} from '@/lib/auth';
 import type {
   ProductTask,
@@ -131,6 +132,11 @@ export default async function AllTasksPage({
       name: product.name as string
     }));
 
+  const memberOptions: TaskMemberOption[] = (members ?? []).map((member) => ({
+    userId: member.user_id as string,
+    displayName: member.display_name as string
+  }));
+
   return (
     <section className="space-y-6">
       <header>
@@ -144,6 +150,7 @@ export default async function AllTasksPage({
       <AllTasksBoard
         tasks={allTasks}
         products={productOptions}
+        members={memberOptions}
         currentUserId={user.id}
         locale={locale}
       />

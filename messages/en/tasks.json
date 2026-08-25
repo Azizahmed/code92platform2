@@ -27,7 +27,16 @@
     "saving": "Saving…",
     "cancel": "Cancel",
     "attachments": "Attachments",
-    "attachmentsHint": "Markdown, PDF, Office documents, or images. Up to 8 files, 25 MB each."
+    "attachmentsHint": "Markdown, PDF, Office documents, or images. Up to 8 files, 25 MB each.",
+    "product": "Product",
+    "generalTask": "General task",
+    "productHint": "Leave as General for team work that belongs to no single product.",
+    "productLockedHint": "A task stays with the product it was filed under.",
+    "productBlockedHint": "Subtasks follow their parent, and a task in a release must leave it first.",
+    "lifecyclePhase": "Lifecycle phase",
+    "noPhase": "No phase",
+    "phaseHint": "Which delivery phase this work serves.",
+    "phaseNeedsProductHint": "Pick a product first — phases belong to a product."
   },
   "task": {
     "subtasks": "{count, plural, =1 {1 subtask} other {# subtasks}}",
@@ -45,6 +54,14 @@
     "unassigned": "Unassigned",
     "noNotes": "No notes",
     "addFiles": "Attach files"
+  },
+  "phase": {
+    "ideation": "Ideation",
+    "requirements": "Requirements",
+    "plan": "Plan",
+    "code_test": "Code & Testing",
+    "deploy": "Deploy",
+    "monitor": "Monitor"
   },
   "logo": {
     "label": "Product logo",
@@ -65,14 +82,14 @@
   },
   "all": {
     "title": "All tasks",
-    "subtitle": "One operational view of every task across every product.",
+    "subtitle": "One operational view of every task: general team work and everything filed under a product.",
     "searchPlaceholder": "Search tasks, products, notes, or people…",
     "allProducts": "All products",
-    "general": "General task",
+    "general": "General",
     "assignedToMe": "Assigned to me",
     "noDueDate": "No date",
     "emptyTitle": "No tasks match this view",
-    "emptyBody": "Adjust the filters, or add a new task from a product page.",
+    "emptyBody": "Adjust the filters, or add a task — general, or filed under a product.",
     "scope": {
       "open": "Open",
       "all": "All",
@@ -94,7 +111,8 @@
       "open": "Open",
       "overdue": "Overdue",
       "completed": "Done"
-    }
+    },
+    "allPhases": "All phases"
   },
   "errors": {
     "generic": "Something went wrong. Please try again.",
@@ -107,7 +125,14 @@
     "uploadFailed": "The image upload failed. Please try again.",
     "fileType": "That file type cannot be attached.",
     "fileSize": "Each file must be smaller than 25 MB.",
-    "tooManyFiles": "You can attach up to 8 files at a time."
+    "tooManyFiles": "You can attach up to 8 files at a time.",
+    "productLocked": "A task cannot be moved between products.",
+    "hasSubtasks": "Remove the subtasks before moving this task to a product.",
+    "isSubtask": "Move the parent task instead of the subtask.",
+    "inRelease": "Take the task out of its release first.",
+    "parentMismatch": "A subtask must sit under the same product as its parent.",
+    "tooDeep": "Tasks support one level of subtasks only.",
+    "phaseNeedsProduct": "A lifecycle phase needs a product. Pick one, or clear the phase."
   },
   "attachments": {
     "preview": "Read this file",

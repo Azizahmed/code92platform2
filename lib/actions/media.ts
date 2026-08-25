@@ -137,10 +137,14 @@ export async function addTaskAttachmentsAction(
 
   if (error) return {ok: false, error: 'generic'};
 
-  revalidatePath(
-    `/[locale]/products/${task.product_id as string}`,
-    'page'
-  );
+  // /tasks always, because a general task has no product page to go back to.
+  revalidatePath('/[locale]/tasks', 'page');
+  if (task.product_id) {
+    revalidatePath(
+      `/[locale]/products/${task.product_id as string}`,
+      'page'
+    );
+  }
   return {ok: true};
 }
 
