@@ -1,5 +1,5 @@
 import {notFound} from 'next/navigation';
-import {Hash, Package} from 'lucide-react';
+import {Hash, MessageSquare, Package} from 'lucide-react';
 import {getTranslations} from 'next-intl/server';
 
 import MessageStream, {
@@ -16,7 +16,7 @@ export default async function ChannelPage({
   params: Promise<{locale: string; id: string}>;
 }) {
   const {locale, id} = await params;
-  const {member} = await requireActiveMember();
+  const {user, member} = await requireActiveMember();
   const t = await getTranslations('channels');
 
   const view = await getChannelViewAction(id);
@@ -51,6 +51,14 @@ export default async function ChannelPage({
   }));
 
   const isProduct = view.channel.kind === 'product';
+  const isDm = view.channel.kind === 'dm';
+  // The stored name of a DM is both participants; each reader is shown the
+  // other one, resolved from the same team_members list already loaded above.
+  const nameByUser = new Map(authors.map((a) => [a.user_id, a.display_name]));
+  const title = channelLabel(view.channel, locale, {
+    userId: user.id,
+    nameFor: (userId: string) => nameByUser.get(userId)
+  });
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
@@ -58,13 +66,15 @@ export default async function ChannelPage({
         <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded border border-hairline bg-raised text-faint">
           {isProduct ? (
             <Package className="h-3.5 w-3.5" strokeWidth={1.75} />
+          ) : isDm ? (
+            <MessageSquare className="h-3.5 w-3.5" strokeWidth={1.75} />
           ) : (
             <Hash className="h-3.5 w-3.5" strokeWidth={1.75} />
           )}
         </span>
         <div className="min-w-0">
-          <h1 className="truncate text-sm font-semibold text-ink">
-            {channelLabel(view.channel, locale)}
+          <h1 dir="auto" className="truncate text-sm font-semibold text-ink">
+            {title}
           </h1>
           {view.channel.topic ? (
             <p dir="auto" className="truncate text-xs text-faint">

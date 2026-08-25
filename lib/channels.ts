@@ -3,7 +3,7 @@
 //
 // Mirrors migrations/20260825090000_add-channels.sql.
 
-export const CHANNEL_KINDS = ['standing', 'product'] as const;
+export const CHANNEL_KINDS = ['standing', 'product', 'dm'] as const;
 export type ChannelKind = (typeof CHANNEL_KINDS)[number];
 
 export const MESSAGE_KINDS = ['human', 'agent', 'system'] as const;
@@ -35,6 +35,11 @@ export type Channel = {
   is_primary: boolean;
   // The channel this one sits under. Fixed at creation.
   parent_id: string | null;
+  // The two participants of a direct message, in id order, and NULL on every
+  // other kind. These are the access control list: see
+  // migrations/20260825098000_add-direct-messages.sql.
+  dm_user_a: string | null;
+  dm_user_b: string | null;
   archived_at: string | null;
   created_by: string | null;
   created_at: string;
@@ -64,9 +69,32 @@ export type Message = {
 // The channel name shown to a reader. Bound channels take the product's name,
 // which the trigger keeps in sync, so there is nothing locale-specific to do
 // for them; standing channels may carry a translated name.
-export function channelLabel(channel: Channel, locale: string): string {
+//
+// A direct message is the exception: its name is the pair, but what each of the
+// two people should see is the OTHER one. That cannot be a stored column, so
+// pass the viewer and a name lookup and the label is resolved per reader.
+export function channelLabel(
+  channel: Channel,
+  locale: string,
+  viewer?: {userId: string; nameFor: (userId: string) => string | undefined}
+): string {
+  if (channel.kind === 'dm' && viewer) {
+    const other = dmPeerId(channel, viewer.userId);
+    const name = other ? viewer.nameFor(other) : undefined;
+    if (name) return name;
+  }
   if (locale === 'ar' && channel.name_ar) return channel.name_ar;
   return channel.name;
+}
+
+// The participant who is not the viewer. Null when the channel is not a DM, or
+// when the viewer is not in it — which the database makes unreachable, since
+// such a channel is not selectable in the first place.
+export function dmPeerId(channel: Channel, viewerId: string): string | null {
+  if (channel.kind !== 'dm') return null;
+  if (channel.dm_user_a === viewerId) return channel.dm_user_b;
+  if (channel.dm_user_b === viewerId) return channel.dm_user_a;
+  return null;
 }
 
 // Slug proposed for a new standing channel. The database CHECK is the

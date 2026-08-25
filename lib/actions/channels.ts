@@ -31,7 +31,7 @@ async function requireActiveCaller() {
 }
 
 const CHANNEL_COLUMNS =
-  'id, slug, name, name_ar, topic, kind, product_id, is_primary, parent_id, archived_at, created_by, created_at';
+  'id, slug, name, name_ar, topic, kind, product_id, is_primary, parent_id, dm_user_a, dm_user_b, archived_at, created_by, created_at';
 const MESSAGE_COLUMNS =
   'id, channel_id, parent_id, author_id, body, kind, promoted_to_type, promoted_to_id, edited_at, deleted_at, created_at';
 const PROPOSAL_COLUMNS =
@@ -251,6 +251,63 @@ export async function createChannelAction(
 // The one failure a person can fix themselves is a name that normalises to a
 // slug already taken — every channel slug is unique across the whole workspace,
 // product rooms included.
+export type OpenDmResult =
+  | {ok: true; channelId: string}
+  | {ok: false; error: string};
+
+// Opening a DM is a single RPC because the row it writes is one a client is not
+// allowed to write: dm_user_a/dm_user_b carry no INSERT grant, and the channels
+// INSERT policy still pins kind = 'standing'. open_dm() is idempotent, so this
+// doubles as "go to my conversation with this person".
+export async function openDirectMessageAction(
+  otherUserId: string
+): Promise<OpenDmResult> {
+  const caller = await requireActiveCaller();
+  if (!caller) return {ok: false, error: 'forbidden'};
+  if (!uuid.safeParse(otherUserId).success) {
+    return {ok: false, error: 'invalid'};
+  }
+
+  const insforge = await createInsForgeServerClient();
+  const {data, error} = await insforge.database.rpc('open_dm', {
+    p_other_user: otherUserId
+  });
+
+  if (error) return {ok: false, error: mapChannelError(error)};
+
+  const channelId = (Array.isArray(data) ? data[0] : data) as string | null;
+  if (!channelId) return {ok: false, error: 'generic'};
+
+  revalidatePath('/[locale]/channels', 'layout');
+  return {ok: true, channelId};
+}
+
+export type DmPeer = {
+  userId: string;
+  displayName: string;
+};
+
+// Everyone a DM can be opened with, plus the names the rail needs to label the
+// conversations that already exist. Agents are excluded for the same reason
+// open_dm() refuses them: an agent only answers when its handle is mentioned,
+// so a DM to one would be a room where nobody ever replies.
+export async function getDmPeersAction(): Promise<DmPeer[]> {
+  const caller = await requireActiveCaller();
+  if (!caller) return [];
+
+  const insforge = await createInsForgeServerClient();
+  const {data} = await insforge.database
+    .from('team_members')
+    .select('user_id, display_name')
+    .eq('is_active', true)
+    .eq('kind', 'human')
+    .order('display_name');
+
+  return ((data ?? []) as Array<{user_id: string; display_name: string}>).map(
+    (row) => ({userId: row.user_id, displayName: row.display_name})
+  );
+}
+
 function mapChannelError(error: unknown): string {
   const message =
     typeof error === 'object' && error !== null && 'message' in error
@@ -263,6 +320,11 @@ function mapChannelError(error: unknown): string {
   if (message.includes('archived channel')) return 'parent_archived';
   if (message.includes('parent channel not found')) return 'parent_missing';
   if (message.includes('primary channel cannot be removed')) return 'primary_locked';
+  if (message.includes('direct message cannot be removed')) return 'dm_locked';
+  if (message.includes('direct message cannot have subchannels')) return 'dm_no_children';
+  if (message.includes('other than yourself')) return 'dm_self';
+  if (message.includes('direct messages are between people')) return 'dm_not_person';
+  if (message.includes('not an active member')) return 'dm_inactive';
   if (message.includes('creator or an admin')) return 'not_yours';
   if (message.includes('channel not found')) return 'parent_missing';
   if (message.includes('only active members')) return 'forbidden';

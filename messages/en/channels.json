@@ -3,7 +3,8 @@
   "subtitle": "Where the team talks, next to what it is talking about.",
   "sections": {
     "products": "Products",
-    "standing": "Channels"
+    "standing": "Channels",
+    "direct": "Direct messages"
   },
   "empty": {
     "noChannels": "No channels yet.",
@@ -56,6 +57,11 @@
     "subchannel": "Add a channel inside this one",
     "subchannelOf": "Add a channel inside {name}"
   },
+  "dm": {
+    "start": "New direct message",
+    "none": "No direct messages yet.",
+    "nobodyLeft": "You already have a conversation with everyone."
+  },
   "errors": {
     "generic": "That did not work. Try again.",
     "forbidden": "You do not have access to do that.",
@@ -65,7 +71,12 @@
     "parent_archived": "That channel is archived, so nothing can be added inside it.",
     "parent_missing": "That channel no longer exists.",
     "primary_locked": "That is the product's own room. It closes when the product is archived.",
-    "not_yours": "Only the channel creator or an admin can remove it."
+    "not_yours": "Only the channel creator or an admin can remove it.",
+    "dm_locked": "A direct message stays with both people — it cannot be removed.",
+    "dm_no_children": "A direct message cannot have subchannels.",
+    "dm_self": "Pick someone other than yourself.",
+    "dm_not_person": "Direct messages are between people. Mention an agent by its handle in a channel instead.",
+    "dm_inactive": "That person is not an active member."
   },
   "remove": {
     "label": "Remove this channel",
