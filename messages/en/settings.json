@@ -22,15 +22,12 @@
   },
   "mcp": {
     "title": "MCP access",
-    "intro": "Connect an MCP client such as Claude Code, Claude Desktop or Cursor to this workspace. The client acts as you: it sees only what you can see, and a read-write token can do what the workspace assistant can — read records, create and update tasks, post status updates and draft knowledge notes. It cannot delete anything, change membership, ship releases or publish notes.",
+    "intro": "Connect an MCP client such as Claude Code, Claude Desktop or Cursor to this workspace. The client acts as you and can never do more than you can. Choose below exactly which abilities each token gives it; workspace administration (members, agents, integrations) always stays in the browser.",
     "unavailable": "MCP access is not configured on this deployment yet. An administrator needs to set INSFORGE_API_KEY and INSFORGE_JWT_SECRET.",
     "endpoint": "Server URL (Streamable HTTP)",
     "name": "Token name",
     "namePlaceholder": "e.g. Laptop — Claude Code",
-    "scope": "Access",
-    "scopeRead": "Read only",
-    "scopeWrite": "Read & write",
-    "scopeHint": "Prefer read only unless the client needs to make changes. Each token is shown once; revoke it here if it is lost or no longer needed.",
+    "scopeHint": "Grant only what the client needs. Each token is shown once; revoke it here if it is lost or no longer needed.",
     "expires": "Expires after",
     "days": "{count} days",
     "create": "Create token",
@@ -51,6 +48,47 @@
       "invalid": "Check the token name and options.",
       "limit": "You already have 10 active tokens. Revoke one first.",
       "failed": "That did not work. Try again."
+    },
+    "permissionsLabel": "What this token can do",
+    "presetRead": "Read only",
+    "presetFull": "Full access",
+    "permissions": {
+      "read": {
+        "label": "Read",
+        "hint": "Products, tasks, members, releases, knowledge, lifecycle and channels. Always included."
+      },
+      "tasks": {
+        "label": "Tasks",
+        "hint": "Create, edit, complete and reopen tasks; watch them; scope them into releases."
+      },
+      "products": {
+        "label": "Products",
+        "hint": "Create and edit products, post status updates, set risk tiers."
+      },
+      "lifecycle": {
+        "label": "Lifecycle",
+        "hint": "Edit phase owners and notes, move phases (including waivers), add evidence."
+      },
+      "knowledge": {
+        "label": "Knowledge",
+        "hint": "Create, edit, publish and archive articles, notes and sources; create tags."
+      },
+      "releases": {
+        "label": "Releases",
+        "hint": "Create and edit releases, tick checklist items, move releases through to shipped."
+      },
+      "channels": {
+        "label": "Channels & messages",
+        "hint": "Post messages and replies, create channels, read and send direct messages."
+      },
+      "attachments": {
+        "label": "Files & attachments",
+        "hint": "Upload files and attach them to tasks, status updates, messages, knowledge and lifecycle evidence; set product logos."
+      },
+      "delete": {
+        "label": "Delete",
+        "hint": "Permanently delete tasks, status updates, knowledge items, releases, messages and evidence; archive products."
+      }
     }
   }
 }

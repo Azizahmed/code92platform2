@@ -121,8 +121,10 @@ changes and validation for this feature.
 
 Members can also connect their own MCP clients (Claude Code, Claude Desktop,
 Cursor, …) at `/api/mcp` with a personal access token from **Settings → MCP
-access**. The client gets the assistant's tools under the member's own RLS;
-setup and the security model are in [MCP.md](MCP.md).
+access**. The member ticks what each token may do — read, tasks, products,
+lifecycle, knowledge, releases, channels, file attachments, delete — and the
+client gets exactly those tools, under the member's own RLS. Setup, the tool
+list and the security model are in [MCP.md](MCP.md).
 
 Agents answer on one of two runtimes, chosen per agent in Settings.
 

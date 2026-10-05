@@ -2,7 +2,9 @@ import {AssistantError} from '@/lib/assistant/runtime';
 import {readBoundedBody} from '@/lib/assistant/request';
 import {createToolExecutor} from '@/lib/assistant/tools';
 import {createInsForgeServerClient, runWithAccessToken} from '@/lib/insforge/server';
+import {MAX_MCP_INLINE_UPLOAD_BYTES} from '@/lib/mcp/files';
 import {handleMcpBody, SUPPORTED_PROTOCOL_VERSIONS} from '@/lib/mcp/server';
+import {mcpToolList, runMcpTool, toolAllowed} from '@/lib/mcp/tools';
 import {mcpAvailable, readBearerToken, resolveMcpCaller, signMemberAccessToken} from '@/lib/mcp/tokens';
 
 export const runtime = 'nodejs';
@@ -12,8 +14,9 @@ export const maxDuration = 60;
 // authorised from scratch, and is answered with plain JSON. No session id is
 // issued and no SSE stream is offered (GET answers 405, as the transport
 // allows). Browser cookies are never read here, so a cross-site request cannot
-// ride a signed-in session.
-const MAX_BODY_BYTES = 256 * 1024;
+// ride a signed-in session. The body ceiling leaves room for upload_file's
+// base64 payload plus its JSON-RPC envelope.
+const MAX_BODY_BYTES = Math.ceil(MAX_MCP_INLINE_UPLOAD_BYTES * 4 / 3) + 64 * 1024;
 
 // Local admission control only, per server instance — enough to stop one
 // runaway client from monopolising it. RLS remains the authority.
@@ -71,10 +74,15 @@ export async function POST(request: Request) {
       : rpcError(400, -32700, 'Parse error');
   }
 
+  const origin = new URL(request.url).origin;
   const reply = await runWithAccessToken(signMemberAccessToken(caller.userId), async () => {
     const insforge = await createInsForgeServerClient();
-    return handleMcpBody(body, {caller, origin: new URL(request.url).origin,
-      execute: createToolExecutor(insforge)});
+    const context = {insforge, caller, origin, assistant: createToolExecutor(insforge)};
+    return handleMcpBody(body, {caller, origin, tools: {
+      list: () => mcpToolList(caller.permissions),
+      allowed: (name) => toolAllowed(name, caller.permissions),
+      call: (name, input) => runMcpTool(name, input, context)
+    }});
   });
   if (reply === null) return new Response(null, {status: 202, headers: {'Cache-Control': 'no-store'}});
   return Response.json(reply, {headers: {'Cache-Control': 'no-store'}});
