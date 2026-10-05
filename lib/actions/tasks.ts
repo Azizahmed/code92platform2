@@ -259,6 +259,39 @@ export async function updateTaskAction(
   return {ok: true, taskId};
 }
 
+// Partial edits for the assistant. Updating just a due date must not overwrite
+// a title, assignee or status changed by another person after the read.
+export async function patchTaskAction(
+  taskId: string,
+  input: Partial<z.infer<typeof updateTaskSchema>>
+): Promise<TaskActionResult> {
+  const parsed = updateTaskSchema.partial().strict().safeParse(input);
+  if (!z.string().uuid().safeParse(taskId).success || !parsed.success ||
+      !Object.values(parsed.data).some((value) => value !== undefined)) {
+    return {ok: false, error: 'invalid'};
+  }
+  const caller = await requireActiveCaller();
+  if (!caller) return {ok: false, error: 'forbidden'};
+
+  const columns = {
+    title: 'title', notes: 'notes', dueDate: 'due_date', assigneeId: 'assignee_id',
+    status: 'status', completionNote: 'completion_note',
+    lifecyclePhase: 'lifecycle_phase', productId: 'product_id'
+  } as const;
+  const patch: Record<string, unknown> = {};
+  for (const key of Object.keys(parsed.data) as (keyof typeof columns)[]) {
+    const value = parsed.data[key];
+    if (value !== undefined) patch[columns[key]] = value === '' ? null : value;
+  }
+  const insforge = await createInsForgeServerClient();
+  const {data, error} = await insforge.database.from('product_tasks')
+    .update(patch).eq('id', taskId).select('id, product_id');
+  if (error) return {ok: false, error: mapTaskError(error)};
+  if (!data?.length) return {ok: false, error: 'notFound'};
+  revalidateTask((data[0].product_id as string | null) ?? null);
+  return {ok: true, taskId};
+}
+
 export async function deleteTaskAction(
   taskId: string
 ): Promise<TaskActionResult> {

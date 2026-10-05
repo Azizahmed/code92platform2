@@ -146,3 +146,25 @@ html[dir='rtl'] body {
 .md-body img {
   @apply max-w-full rounded-md border border-hairline;
 }
+
+/* The assistant is physically on the right in both languages, as requested.
+   Logical properties keep its text and controls localized; only the dock's
+   position reverses in RTL to stay on the same side of the screen. */
+.assistant-dock { inset-inline-end: 0; }
+.assistant-launcher { inset-inline-end: 1.5rem; }
+html[dir='rtl'] .assistant-dock { inset-inline-start: 0; inset-inline-end: auto; border-inline-start: 0; border-inline-end: 1px solid rgb(var(--color-hairline)); }
+html[dir='rtl'] .assistant-launcher { inset-inline-start: 1.5rem; inset-inline-end: auto; }
+@media (min-width: 1280px) {
+  .assistant-content { margin-inline-end: 380px; }
+  html[dir='rtl'] .assistant-shell-open .platform-sidebar { inset-inline-start: auto; inset-inline-end: 0; }
+  html[dir='rtl'] .assistant-content { margin-inline-end: 240px; margin-inline-start: 380px; }
+}
+
+@keyframes dashboard-reveal {
+  from { opacity: 0; transform: translateY(0.5rem); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.dashboard-reveal { animation: dashboard-reveal 500ms ease-out both; }
+@media (prefers-reduced-motion: reduce) {
+  .dashboard-reveal { animation: none; }
+}

@@ -21,14 +21,15 @@ function sortProducts(rows: ProductOverview[]): ProductOverview[] {
 }
 
 export default async function DashboardPage() {
-  await requireActiveMember();
-  const t = await getTranslations('dashboard');
-
   const insforge = await createInsForgeServerClient();
-  const {data, error} = await insforge.database
+  const [, t, {data, error}] = await Promise.all([
+    requireActiveMember(),
+    getTranslations('dashboard'),
+    insforge.database
     .from('product_overview')
-    .select('*')
-    .is('archived_at', null);
+    .select('id, name, slug, logo_url, category, stage, health, owner_name, next_review_at, is_overdue, staleness_days, last_update_summary, risk_tier, lifecycle_phase, lifecycle_state, lifecycle_complete_count')
+    .is('archived_at', null)
+  ]);
 
   if (error) {
     console.error('dashboard product_overview query failed', error);

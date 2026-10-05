@@ -110,6 +110,14 @@ architectural.
 
 ## Agent runtimes
 
+The app also includes a right-side **workspace assistant** that can answer
+platform questions, read workspace data, create/update tasks, post product
+status updates and draft knowledge notes. Its server can connect to any
+OpenAI-compatible Chat Completions provider with tool calling. Configure
+`ASSISTANT_BASE_URL`, `ASSISTANT_MODEL` and `ASSISTANT_API_KEY` as described in
+[ASSISTANT.md](ASSISTANT.md). The guide also records the application performance
+changes and validation for this feature.
+
 Agents answer on one of two runtimes, chosen per agent in Settings.
 
 | | `direct_openrouter` (default) | `jcode` |

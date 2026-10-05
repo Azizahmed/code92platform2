@@ -1,7 +1,9 @@
 'use client';
 
 import {useEffect, useState} from 'react';
+import dynamic from 'next/dynamic';
 import {
+  Bot,
   BookOpen,
   LayoutDashboard,
   ListTodo,
@@ -19,10 +21,13 @@ import {signOutAction} from '@/lib/actions/auth';
 import ControlPanel from '@/components/ControlPanel';
 import NotificationBell from '@/components/notifications/NotificationBell';
 
+const AssistantPanel = dynamic(() => import('@/components/assistant/AssistantPanel'), {ssr: false});
+
 type Props = {
   userName: string | null;
   userEmail: string | null;
   isAdmin: boolean;
+  assistantUserId: string | null;
   children: React.ReactNode;
 };
 
@@ -40,12 +45,22 @@ const NAV_ITEMS = [
   {href: '/governance', key: 'governance', icon: Scale}
 ] as const;
 
-export default function AppShell({userName, userEmail, isAdmin, children}: Props) {
+export default function AppShell({userName, userEmail, isAdmin, assistantUserId, children}: Props) {
   const t = useTranslations('common');
+  const assistantT = useTranslations('assistant');
   const pathname = usePathname();
   const router = useRouter();
   const [signingOut, setSigningOut] = useState(false);
   const [controlPanelOpen, setControlPanelOpen] = useState(false);
+  const [assistantOpen, setAssistantOpen] = useState(false);
+  const [assistantLoaded, setAssistantLoaded] = useState(false);
+
+  useEffect(() => {
+    if (assistantUserId && window.matchMedia('(min-width: 1280px)').matches) {
+      setAssistantOpen(true);
+      setAssistantLoaded(true);
+    }
+  }, [assistantUserId]);
 
   useEffect(() => {
     setControlPanelOpen(false);
@@ -72,8 +87,8 @@ export default function AppShell({userName, userEmail, isAdmin, children}: Props
   );
 
   return (
-    <div className="min-h-screen">
-      <aside className="fixed inset-y-0 start-0 z-40 hidden w-60 flex-col border-e border-hairline bg-panel/80 backdrop-blur md:flex">
+    <div className={`min-h-screen ${assistantOpen && assistantUserId ? 'assistant-shell-open' : ''}`}>
+      <aside className="platform-sidebar fixed inset-y-0 start-0 z-40 hidden w-60 flex-col border-e border-hairline bg-panel/80 backdrop-blur md:flex">
         <div className="flex items-center gap-2.5 border-b border-hairline px-5 py-4">
           <span className="flex h-7 w-7 items-center justify-center rounded-md border border-accent/30 bg-accent/10 font-mono text-xs font-semibold text-accent">
             92
@@ -148,7 +163,7 @@ export default function AppShell({userName, userEmail, isAdmin, children}: Props
         </div>
       </aside>
 
-      <div className="min-w-0 md:ms-60">
+      <div className={`min-w-0 md:ms-60 ${assistantOpen && assistantUserId ? 'assistant-content' : ''}`}>
         <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b border-hairline bg-panel/90 px-4 backdrop-blur-xl md:hidden">
           <div className="flex min-w-0 items-center gap-2.5">
             <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-accent/30 bg-accent/10 font-mono text-xs font-semibold text-accent">
@@ -227,6 +242,16 @@ export default function AppShell({userName, userEmail, isAdmin, children}: Props
         </ul>
         <div className="h-[env(safe-area-inset-bottom)]" />
       </nav>
+
+      {assistantUserId ? <>
+        {!assistantOpen ? <button type="button" aria-controls="platform-assistant" aria-expanded={false}
+          onClick={() => {setAssistantLoaded(true); setAssistantOpen(true);}}
+          aria-label={assistantT('open')}
+          className="assistant-launcher fixed bottom-[calc(5rem+env(safe-area-inset-bottom))] z-40 flex items-center gap-2 rounded-full border border-accent/30 bg-panel px-4 py-3 text-sm text-accent shadow-lg md:bottom-6">
+          <Bot className="h-4 w-4" />{assistantT('title')}
+        </button> : null}
+        {assistantLoaded ? <AssistantPanel key={assistantUserId} open={assistantOpen} onClose={() => setAssistantOpen(false)} /> : null}
+      </> : null}
 
       <ControlPanel
         open={controlPanelOpen}

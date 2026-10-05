@@ -1,0 +1,44 @@
+{
+  "title": "Assistant",
+  "subtitle": "Code 92 · your workspace copilot",
+  "open": "Open assistant",
+  "close": "Minimize assistant",
+  "newChat": "New conversation",
+  "conversation": "Assistant conversation",
+  "welcome": "How can I help?",
+  "welcomeBody": "Ask about your products, find knowledge, or ask me to get work done in your workspace.",
+  "suggestions": {
+    "overview": "Which products need attention?",
+    "tasks": "Show my open tasks.",
+    "help": "What can I do in this platform?"
+  },
+  "you": "You",
+  "working": "Working…",
+  "view": "View",
+  "actionFailed": "Could not complete",
+  "interrupted": "Interrupted",
+  "placeholder": "Ask a question or describe a task…",
+  "inputHint": "Enter to send · Shift+Enter for a new line",
+  "send": "Send message",
+  "permissions": "Actions use your permissions. Completed actions appear in the conversation. Chat history lasts until you reload or start a new chat.",
+  "tools": {
+    "list_records": "Looking up workspace records",
+    "search_knowledge": "Searching knowledge",
+    "read_knowledge": "Reading knowledge",
+    "create_task": "Creating task",
+    "update_task": "Updating task",
+    "post_status_update": "Posting status update",
+    "create_knowledge_note": "Drafting knowledge note"
+  },
+  "errors": {
+    "notConfigured": "The assistant is not connected yet. An administrator needs to configure its provider, model and API key on the server.",
+    "forbidden": "Your session is unavailable or you do not have access. Sign in again to continue.",
+    "invalid": "This conversation could not be submitted. Try a shorter message or start a new chat.",
+    "busy": "Another assistant request is already running. Wait for it to finish.",
+    "rateLimited": "The model provider is busy. Try again in a moment. Any completed actions above remain saved.",
+    "providerError": "The model provider could not finish this request. Any completed actions above remain saved.",
+    "timeout": "This request took too long. Check the workspace before repeating an action; it may already have been saved.",
+    "stepLimit": "The assistant reached its action limit. Review the results above and send a smaller follow-up request.",
+    "generic": "The request was interrupted. Check the workspace before repeating an action; it may already have been saved."
+  }
+}

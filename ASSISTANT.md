@@ -1,0 +1,111 @@
+# Workspace assistant
+
+The authenticated app shell includes a chat dock on the physical right side in
+English and Arabic. It opens by default at desktop widths of 1280px and above;
+at narrower widths, use the Assistant button. Minimize it with the close button
+or Escape. Conversations survive client-side navigation and minimizing, and
+reset on reload, sign-out, or New conversation.
+
+## Connect a provider
+
+Copy the variables in [.env.example](.env.example) into `.env.local`, keeping
+the existing InsForge settings. Configure these **server-only** variables:
+
+```dotenv
+ASSISTANT_BASE_URL=https://your-provider.example/v1
+ASSISTANT_MODEL=your-tool-capable-model
+ASSISTANT_API_KEY=your-provider-key
+```
+
+The base URL must include the API prefix, without `/chat/completions` at the
+end. The app appends that path and uses bearer authentication. For OpenAI the
+base is `https://api.openai.com/v1`; for OpenRouter it is
+`https://openrouter.ai/api/v1`. Select a model that supports Chat Completions
+function calling. The implementation follows the
+[official function-calling contract](https://developers.openai.com/api/docs/guides/function-calling)
+to send tool definitions, execute requested functions, and return their results
+to the model.
+
+Restart the dev server after changing settings. In production, set these three
+variables on the existing app deployment. This assistant is separate from the
+OpenRouter connection saved in Settings for channel agents; that encrypted key
+is owned by the edge functions and is not readable by the Next.js server.
+No database migrations or new services are required.
+
+## Supported work
+
+| Capability | Behavior |
+| --- | --- |
+| Explain the platform | Built-in guide to dashboard, products, tasks, releases, knowledge, channels, governance and settings. |
+| Read workspace data | Paginated products, tasks, active members and releases, under the caller's RLS context. |
+| Search knowledge | Existing bilingual full-text search and individual note/article content. |
+| Create tasks | General or product work, optional assignee, due date, notes and parent task. |
+| Update tasks | Change only requested fields; complete/reopen tasks and add completion notes. |
+| Post product status | Append a status update using the existing action and database triggers. |
+| Draft knowledge | Create a draft note, optionally linked to products. |
+
+For example: “Show my open tasks”, “Move the launch checklist due date to
+October 8”, or “Create a general task called Review onboarding”. The assistant
+looks up record IDs and asks when a requested target is ambiguous. It has no
+tools for deletions, membership changes, shipping, waivers, publishing notes,
+or repository commits. Those workflows remain on their existing pages.
+
+## Request behavior
+
+- `/api/assistant` requires a same-origin request and an active member. Its
+  middleware refreshes the existing cookie-based session before authorization.
+- Reads use `createInsForgeServerClient`, never an admin client. Writes reuse
+  the project's authenticated actions, validation, RLS, triggers and page
+  revalidation. `patchTaskAction` updates only supplied fields.
+- Provider keys stay on the server. The configured provider receives the chat,
+  platform guide, current user ID/page and data returned by the selected tools.
+  Chat contents are kept in component memory, not browser storage or a new table.
+- The response streams newline-delimited progress and action results, followed
+  by the final answer. Completed writes have a View link; affected app data is
+  refreshed even if a later model call fails.
+- Each turn permits six model calls and twelve tool calls, with a 110-second
+  deadline. Identical successful writes within that turn are reused. The API
+  rejects overlapping turns per user on the same server instance; this is not a
+  distributed rate limiter or cross-request idempotency store.
+  Input history is capped at 60,000 characters and accumulated model context
+  at 120,000 characters.
+- No requests or writes are automatically retried. If a connection drops during
+  an action, check the workspace before repeating it. A closed browser stream
+  cannot undo an already committed database operation.
+
+## Validation
+
+Run `npm test`, `npx tsc --noEmit`, `npm run lint`, and `npm run build` with
+the existing backend environment settings. Tests execute the real TypeScript
+with mocked adapters to cover the provider loop, validated tool dispatch,
+partial task writes, RLS-filtered results, route authorization, admission
+cleanup and bounded request handling.
+
+The panel was also checked in cloud Chrome using the real React components
+with a mocked chat endpoint: desktop/mobile, English/Arabic, navigation
+persistence, minimizing, new conversation, action links, provider errors and
+fragmented UTF-8 responses. Live model/backend integration needs the provider
+and backend credentials, which are not present in this checkout.
+
+## Performance changes in this update
+
+- Channel replies and proposals are indexed once per dataset instead of
+  repeatedly filtered per message. Unchanged Markdown bodies are memoized;
+  author/mention indexes are reused while typing. Polls skip in-flight refreshes
+  and mutation refreshes queue behind them.
+- Task statistics use one memoized pass; searchable text is built once per
+  task dataset/locale. Deferred filtering keeps typing responsive, and date
+  formatting reuses one formatter per locale.
+- Dashboard, product registry, knowledge, governance and channel-layout reads
+  start alongside their independent auth/translation work. Translation
+  namespaces load concurrently. User-specific data is not cached across requests.
+- Dashboard queries select only fields rendered in cards, and card reveal
+  animations run in CSS with reduced-motion support. Relative-time formatters
+  are shared by locale.
+- Turbopack's root is fixed to this checkout so a parent lockfile cannot expand
+  the workspace it scans.
+
+A synthetic 20,000-message/1,000-group check measured 268.47ms for repeated
+filtering and 5.06ms for indexing plus lookups on this machine. This isolates
+grouping work; it is not a measured production page-speed improvement. The
+regression test verifies one indexing visit per row without a timing threshold.

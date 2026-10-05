@@ -22,7 +22,8 @@ const NAMESPACES = [
   'settings',
   'admin',
   'channels',
-  'agents'
+  'agents',
+  'assistant'
 ] as const;
 
 type Messages = Record<string, unknown>;
@@ -49,12 +50,12 @@ export default getRequestConfig(async ({requestLocale}) => {
     ? requested
     : routing.defaultLocale;
 
-  let messages: Messages = {};
-  for (const namespace of NAMESPACES) {
+  const namespaces = await Promise.all(NAMESPACES.map(async (namespace) => {
     const nsMessages = (await import(`../messages/${locale}/${namespace}.json`))
       .default as Messages;
-    messages = deepMerge(messages, {[namespace]: nsMessages});
-  }
+    return {[namespace]: nsMessages};
+  }));
+  const messages = namespaces.reduce(deepMerge, {});
 
   return {locale, messages};
 });

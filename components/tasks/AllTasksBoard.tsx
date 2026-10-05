@@ -16,7 +16,7 @@ import {
   UserRound
 } from 'lucide-react';
 import {useTranslations} from 'next-intl';
-import {useMemo, useOptimistic, useState, useTransition} from 'react';
+import {useDeferredValue, useMemo, useOptimistic, useState, useTransition} from 'react';
 
 import type {TaskMemberOption} from '@/components/products/ProductTasksPanel';
 import TaskCompletionDialog from '@/components/tasks/TaskCompletionDialog';
@@ -100,6 +100,7 @@ export default function AllTasksBoard({
   const [productId, setProductId] = useState('all');
   const [mineOnly, setMineOnly] = useState(false);
   const [query, setQuery] = useState('');
+  const deferredQuery = useDeferredValue(query);
   const [pendingTaskId, setPendingTaskId] = useState<string | null>(null);
   const [completingTask, setCompletingTask] = useState<AllTaskItem | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -119,25 +120,29 @@ export default function AllTasksBoard({
     now.getDate()
   ).getTime();
 
-  const openCount = optimisticTasks.filter(
-    (task) => task.status === 'pending'
-  ).length;
-  const completedCount = optimisticTasks.length - openCount;
-  const overdueCount = optimisticTasks.filter(
-    (task) =>
-      task.status === 'pending' &&
-      task.due_date !== null &&
-      new Date(`${task.due_date}T00:00:00`).getTime() < today
-  ).length;
-  const dueTodayCount = optimisticTasks.filter(
-    (task) =>
-      task.status === 'pending' &&
-      task.due_date !== null &&
-      new Date(`${task.due_date}T00:00:00`).getTime() === today
-  ).length;
+  const {openCount, completedCount, overdueCount, dueTodayCount} = useMemo(() => {
+    let openCount = 0, overdueCount = 0, dueTodayCount = 0;
+    for (const task of optimisticTasks) {
+      if (task.status !== 'pending') continue;
+      openCount += 1;
+      if (!task.due_date) continue;
+      const dueTime = new Date(`${task.due_date}T00:00:00`).getTime();
+      if (dueTime < today) overdueCount += 1;
+      if (dueTime === today) dueTodayCount += 1;
+    }
+    return {openCount, completedCount: optimisticTasks.length - openCount, overdueCount, dueTodayCount};
+  }, [optimisticTasks, today]);
+
+  const searchTextById = useMemo(() => new Map(optimisticTasks.map((task) => [task.id,
+    [task.title, task.notes ?? '', task.product_name ?? '', task.assignee_name ?? '', task.parent_title ?? '']
+      .join(' ').toLocaleLowerCase(locale)
+  ])), [optimisticTasks, locale]);
+  const dateFormatter = useMemo(() => new Intl.DateTimeFormat(locale, {
+    year: 'numeric', month: 'short', day: 'numeric'
+  }), [locale]);
 
   const visible = useMemo(() => {
-    const normalizedQuery = query.trim().toLocaleLowerCase(locale);
+    const normalizedQuery = deferredQuery.trim().toLocaleLowerCase(locale);
     return optimisticTasks.filter((task) => {
       if (scope !== 'all' && task.status !== scope.replace('open', 'pending')) {
         return false;
@@ -155,16 +160,7 @@ export default function AllTasksBoard({
       if (mineOnly && task.assignee_id !== currentUserId) return false;
       if (
         normalizedQuery &&
-        ![
-          task.title,
-          task.notes ?? '',
-          task.product_name ?? '',
-          task.assignee_name ?? '',
-          task.parent_title ?? ''
-        ]
-          .join(' ')
-          .toLocaleLowerCase(locale)
-          .includes(normalizedQuery)
+        !searchTextById.get(task.id)?.includes(normalizedQuery)
       ) {
         return false;
       }
@@ -177,7 +173,8 @@ export default function AllTasksBoard({
     optimisticTasks,
     phaseFilter,
     productId,
-    query,
+    deferredQuery,
+    searchTextById,
     scope
   ]);
 
@@ -428,11 +425,7 @@ export default function AllTasksBoard({
               const overdue = !completed && dueTime !== null && dueTime < today;
               const dueToday = !completed && dueTime === today;
               const formattedDate = task.due_date
-                ? new Intl.DateTimeFormat(locale, {
-                    year: 'numeric',
-                    month: 'short',
-                    day: 'numeric'
-                  }).format(new Date(`${task.due_date}T00:00:00`))
+                ? dateFormatter.format(new Date(`${task.due_date}T00:00:00`))
                 : null;
 
               return (

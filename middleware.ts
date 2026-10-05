@@ -11,6 +11,16 @@ import {routing} from '@/i18n/routing';
 const intlMiddleware = createMiddleware(routing);
 
 export default async function middleware(request: NextRequest) {
+  // The assistant is a cookie-authenticated API route. Refresh its session
+  // without applying locale redirects (all other APIs retain their own flow).
+  if (request.nextUrl.pathname === '/api/assistant') {
+    const response = NextResponse.next();
+    await updateSession({
+      requestCookies: {get: (name: string) => request.cookies.get(name)},
+      responseCookies: response.cookies
+    });
+    return response;
+  }
   // 1. Locale routing (redirects/rewrites unprefixed paths itself).
   const response = intlMiddleware(request);
 
@@ -59,5 +69,5 @@ export default async function middleware(request: NextRequest) {
 
 export const config = {
   // Skip API routes, Next internals, and files with an extension.
-  matcher: ['/((?!api|_next|_vercel|.*\\..*).*)']
+  matcher: ['/api/assistant', '/((?!api|_next|_vercel|.*\\..*).*)']
 };

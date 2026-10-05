@@ -7,18 +7,19 @@ import {requireActiveMember} from '@/lib/auth';
 import {createInsForgeServerClient} from '@/lib/insforge/server';
 
 export default async function ProductsPage() {
-  await requireActiveMember();
-  const t = await getTranslations('products');
-
   const insforge = await createInsForgeServerClient();
   // product_overview already joins the owner name and carries the lifecycle
   // columns, so this is one round trip instead of products + team_members.
-  const {data: products} = await insforge.database
+  const [, t, {data: products}] = await Promise.all([
+    requireActiveMember(),
+    getTranslations('products'),
+    insforge.database
     .from('product_overview')
     .select(
       'id, name, slug, logo_url, stage, health, owner_name, next_review_at, last_status_update_at, archived_at, risk_tier, lifecycle_phase, lifecycle_state, lifecycle_complete_count, created_at'
     )
-    .order('created_at', {ascending: false});
+    .order('created_at', {ascending: false})
+  ]);
 
   const rows: ProductRow[] = (products ?? []).map((p) => ({
     id: p.id as string,

@@ -1,6 +1,7 @@
 'use client';
 
 import {
+  memo,
   useCallback,
   useEffect,
   useMemo,
@@ -20,6 +21,7 @@ import {
 import {useTranslations} from 'next-intl';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import {groupBy} from '@/lib/collections';
 
 import ProposalCard from '@/components/channels/ProposalCard';
 import RelativeTime from '@/components/RelativeTime';
@@ -127,30 +129,38 @@ export default function MessageStream({
     return grouped;
   }, [attachments]);
 
-  const authorMap = new Map(authors.map((a) => [a.user_id, a]));
+  const authorMap = useMemo(() => new Map(authors.map((a) => [a.user_id, a])), [authors]);
 
   // Everyone who can actually be reached with an @. Members whose name yields no
   // usable token are left out rather than offered and silently ignored.
-  const mentionable = authors
+  const mentionable = useMemo(() => authors
     .filter((a) => a.mentionable)
     .map((a) => ({author: a, token: mentionToken(a)}))
-    .filter((c): c is {author: MessageAuthor; token: string} => c.token !== null);
+    .filter((c): c is {author: MessageAuthor; token: string} => c.token !== null), [authors]);
 
-  const knownTokens = new Set(mentionable.map((c) => c.token));
-  const highlight = mentionHighlight(knownTokens);
+  const highlight = useMemo(() => mentionHighlight(new Set(mentionable.map((c) => c.token))), [mentionable]);
+  const refreshInFlight = useRef<Promise<void> | null>(null);
 
-  const refresh = useCallback(async () => {
-    const view = await getChannelViewAction(channelId);
-    setMessages(view.messages);
-    setProposals(view.proposals);
-    setAttachments(view.attachments);
+  const refresh = useCallback(() => {
+    // Polls, sends and delayed agent checks serialize their refreshes. A slow backend
+    // must not accumulate overlapping polls or overwrite newer responses.
+    const request = (refreshInFlight.current ?? Promise.resolve()).catch(() => {}).then(async () => {
+      const view = await getChannelViewAction(channelId);
+      setMessages(view.messages);
+      setProposals(view.proposals);
+      setAttachments(view.attachments);
+    });
+    refreshInFlight.current = request;
+    return request.finally(() => {
+      if (refreshInFlight.current === request) refreshInFlight.current = null;
+    });
   }, [channelId]);
 
   useEffect(() => {
     // Pause while the tab is hidden. A backgrounded channel polling every five
     // seconds is a battery cost with no reader on the other end.
     const timer = setInterval(() => {
-      if (document.visibilityState === 'visible') void refresh();
+      if (document.visibilityState === 'visible' && !refreshInFlight.current) void refresh().catch(() => {});
     }, POLL_INTERVAL_MS);
     return () => clearInterval(timer);
   }, [refresh]);
@@ -333,7 +343,7 @@ export default function MessageStream({
 
       // An agent reply lands a few seconds after the mention, so look again
       // once rather than making the reader wait for the next poll.
-      setTimeout(() => void refresh(), 3000);
+      setTimeout(() => void refresh().catch(() => {}), 3000);
     });
   }
 
@@ -352,12 +362,13 @@ export default function MessageStream({
     });
   }
 
-  const allMessages = [...messages, ...sending];
-  const topLevel = allMessages.filter((m) => m.parent_id === null);
+  const messagesByParent = useMemo(() => groupBy([...messages, ...sending], (m) => m.parent_id), [messages, sending]);
+  const proposalsByMessage = useMemo(() => groupBy(proposals, (p) => p.message_id), [proposals]);
+  const topLevel = messagesByParent.get(null) ?? [];
   const repliesOf = (id: string) =>
-    allMessages.filter((m) => m.parent_id === id);
+    messagesByParent.get(id) ?? [];
   const proposalsFor = (messageId: string) =>
-    proposals.filter((p) => p.message_id === messageId);
+    proposalsByMessage.get(messageId) ?? [];
   const attachmentsFor = (messageId: string) =>
     attachmentsByMessage.get(messageId) ?? [];
 
@@ -696,30 +707,7 @@ function MessageRow({
           dir="auto"
           className="prose-sm mt-1 max-w-none whitespace-pre-wrap break-words text-sm text-muted [&_a]:text-accent [&_code]:rounded [&_code]:border [&_code]:border-hairline [&_code]:bg-raised [&_code]:px-1 [&_code]:font-mono [&_code]:text-xs [&_strong]:text-ink"
         >
-          <ReactMarkdown
-            remarkPlugins={[remarkGfm, highlight]}
-            components={{
-              a({className, children, ...props}) {
-                if (className === 'c92-mention') {
-                  return (
-                    <span
-                      dir="ltr"
-                      className="rounded bg-accent/10 px-1 font-medium text-accent"
-                    >
-                      {children}
-                    </span>
-                  );
-                }
-                return (
-                  <a className={className} {...props}>
-                    {children}
-                  </a>
-                );
-              }
-            }}
-          >
-            {message.body}
-          </ReactMarkdown>
+          <MessageBody body={message.body} highlight={highlight} />
         </div>
 
         {message.promoted_to_type ? (
@@ -768,3 +756,35 @@ function MessageRow({
     </article>
   );
 }
+
+// Parsing existing markdown is independent of composer keystrokes and polls.
+const MessageBody = memo(function MessageBody({body, highlight}: {
+  body: string; highlight: ReturnType<typeof mentionHighlight>;
+}) {
+  return (
+          <ReactMarkdown
+            remarkPlugins={[remarkGfm, highlight]}
+            components={{
+              a({className, children, ...props}) {
+                if (className === 'c92-mention') {
+                  return (
+                    <span
+                      dir="ltr"
+                      className="rounded bg-accent/10 px-1 font-medium text-accent"
+                    >
+                      {children}
+                    </span>
+                  );
+                }
+                return (
+                  <a className={className} {...props}>
+                    {children}
+                  </a>
+                );
+              }
+            }}
+          >
+            {body}
+          </ReactMarkdown>
+  );
+});

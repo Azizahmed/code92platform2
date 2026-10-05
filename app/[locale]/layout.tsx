@@ -102,6 +102,7 @@ export default async function LocaleLayout({
             userName={member?.display_name ?? null}
             userEmail={user?.email ?? null}
             isAdmin={Boolean(member?.is_active && member.role === 'admin')}
+            assistantUserId={member?.is_active ? user?.id ?? null : null}
           >
             {children}
           </AppShell>

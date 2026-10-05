@@ -17,11 +17,11 @@ export default async function ChannelsLayout({
   params: Promise<{locale: string}>;
 }) {
   const {locale} = await params;
-  const {user} = await requireActiveMember();
-  const t = await getTranslations('channels');
   // The peer list is what labels a DM: its name column holds both participants,
   // and each reader needs to see the other one.
-  const [channels, peers] = await Promise.all([
+  const [{user}, t, channels, peers] = await Promise.all([
+    requireActiveMember(),
+    getTranslations('channels'),
     getChannelsAction(),
     getDmPeersAction()
   ]);

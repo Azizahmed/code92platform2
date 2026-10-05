@@ -46,8 +46,6 @@ export default async function KnowledgePage({
 }: {
   searchParams: Promise<SearchParams>;
 }) {
-  await requireActiveMember();
-  const t = await getTranslations('knowledge');
   const params = await searchParams;
 
   const query = readParam(params, 'q') ?? '';
@@ -65,7 +63,9 @@ export default async function KnowledgePage({
   const includeArchived = readParam(params, 'archived') === '1';
 
   const insforge = await createInsForgeServerClient();
-  const [{data: rows}, {data: tags}, {data: products}] = await Promise.all([
+  const [, t, {data: rows}, {data: tags}, {data: products}] = await Promise.all([
+    requireActiveMember(),
+    getTranslations('knowledge'),
     insforge.database.rpc('search_knowledge_items', {
       p_query: query || null,
       p_kind: kind,

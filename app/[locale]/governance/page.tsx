@@ -15,12 +15,11 @@ import {
 const STUCK_AFTER_DAYS = 30;
 
 export default async function GovernancePage() {
-  await requireActiveMember();
-  const t = await getTranslations('lifecycle');
-
   const insforge = await createInsForgeServerClient();
-  const [overview, transitions, waivers, {data: members}, {data: products}] =
+  const [, t, overview, transitions, waivers, {data: members}, {data: products}] =
     await Promise.all([
+      requireActiveMember(),
+      getTranslations('lifecycle'),
       loadLifecycleOverview(),
       loadPhaseTransitions(50),
       loadWaivers(50),
