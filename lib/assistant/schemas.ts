@@ -1,4 +1,6 @@
 import {z} from 'zod';
+import {assistantAttachmentSchema} from './attachment-schema';
+import {chatAttachmentsFit, chatTextSize, MAX_ASSISTANT_FILES} from './attachments';
 
 const uuid = z.string().uuid();
 const date = z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable();
@@ -8,12 +10,13 @@ const text = z.string().trim().min(1).max(240);
 export const chatRequestSchema = z.object({
   messages: z.array(z.object({
     role: z.enum(['user', 'assistant']),
-    content: z.string().trim().min(1).max(12000)
-  }).strict()).min(1).max(20),
+    content: z.string().trim().min(1).max(12000),
+    attachments: z.array(assistantAttachmentSchema).max(MAX_ASSISTANT_FILES).optional()
+  }).strict().refine((message) => message.role === 'user' || !message.attachments?.length)).min(1).max(20),
   locale: z.enum(['en', 'ar']),
   pathname: z.string().max(250).regex(/^\/(?:[a-zA-Z0-9_\-/]*)$/)
 }).strict().refine((value) => value.messages.at(-1)?.role === 'user')
-  .refine((value) => value.messages.reduce((size, message) => size + message.content.length, 0) <= 60000);
+  .refine((value) => chatTextSize(value.messages) <= 60000 && chatAttachmentsFit(value.messages));
 
 export const toolSchemas = {
   list_records: z.object({

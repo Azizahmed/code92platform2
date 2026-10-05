@@ -7,6 +7,7 @@ const load = typescriptLoader();
 const {readProviderConfig, runAssistant} = load('lib/assistant/runtime.ts');
 const {chatRequestSchema, toolSchemas, assistantTools} = load('lib/assistant/schemas.ts');
 const {readChatBody} = load('lib/assistant/request.ts');
+const {MAX_ASSISTANT_BODY_BYTES} = load('lib/assistant/attachments.ts');
 const config = {endpoint: 'https://provider.example/v1/chat/completions', apiKey: 'test-only', model: 'test-model'};
 const taskId = 'e89b8790-07df-4e90-99ea-964ae69fdd14';
 const reply = (content, calls = []) => Response.json({choices: [{message: {content, tool_calls: calls}}]});
@@ -140,10 +141,10 @@ test('request validation rejects forged system/tool messages and oversized conte
   assert.equal(chatRequestSchema.safeParse({...valid, messages: Array.from({length: 10}, () => ({role: 'user', content: 'x'.repeat(10000)}))}).success, false);
 });
 
-test('bounded request reader handles chunked JSON and rejects bodies over 100 KB', async () => {
+test('bounded request reader handles chunked JSON and rejects bodies over the attachment budget', async () => {
   const request = new Request('https://app.example/api/assistant', {method: 'POST', body: JSON.stringify({text: 'مرحبا'})});
   assert.deepEqual(await readChatBody(request), {text: 'مرحبا'});
-  await assert.rejects(readChatBody(new Request(request.url, {method: 'POST', body: 'x'.repeat(100001)})), /invalid/);
+  await assert.rejects(readChatBody(new Request(request.url, {method: 'POST', body: 'x'.repeat(MAX_ASSISTANT_BODY_BYTES + 1)})), /invalid/);
   await assert.rejects(readChatBody(new Request(request.url, {method: 'POST', body: '{'})), /invalid/);
 });
 

@@ -1,4 +1,6 @@
-export type ChatMessage = {role: 'user' | 'assistant'; content: string};
+import type {AssistantAttachment} from './attachments';
+
+export type ChatMessage = {role: 'user' | 'assistant'; content: string; attachments?: AssistantAttachment[]};
 
 export type ToolResult = {
   ok: boolean;

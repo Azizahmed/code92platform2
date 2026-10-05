@@ -95,16 +95,16 @@ test('inactive members cannot mutate tasks and a row hidden by RLS is not a succ
 
 function route({member = {is_active: true}, run, configError} = {}) {
   let calls = 0;
+  const runtime = typescriptLoader()('lib/assistant/runtime.ts');
   const load = typescriptLoader({
     '@/lib/auth': {getSessionUser: async () => ({id: userId}), getOwnMembership: async () => member},
     '@/lib/insforge/server': {createInsForgeServerClient: async () => ({})},
     '@/lib/assistant/tools': {createToolExecutor: () => () => ({ok: true})},
     '@/lib/assistant/settings': {loadAssistantProviderConfig: async () => {
-      if (configError) throw configError; return {model: 'test'};
+      if (configError) throw new runtime.AssistantError(configError); return {model: 'test'};
     }},
     '@/lib/assistant/runtime': {
-      ...typescriptLoader()('lib/assistant/runtime.ts'),
-      readProviderConfig: () => {if (configError) throw configError; return {model: 'test'};},
+      ...runtime,
       runAssistant: async (args) => {calls++; return run ? run(args) : args.emit({type: 'done'});}
     }
   });
@@ -149,4 +149,15 @@ test('overlapping turns from a user are refused until the current turn ends', as
   finish();
   await response.text();
   assert.equal(harness.calls(), 1);
+});
+
+test('invalid bodies and missing provider setup release admission before the next request', async () => {
+  const harness = route();
+  const invalid = new Request('https://app.example/api/assistant', {method: 'POST',
+    headers: {origin: 'https://app.example', 'Content-Type': 'application/json'}, body: '{'});
+  assert.equal((await harness.POST(invalid)).status, 400);
+  assert.equal((await harness.POST(request())).status, 200);
+  const unconfigured = route({configError: 'notConfigured'});
+  assert.equal((await unconfigured.POST(request())).status, 503);
+  assert.equal((await unconfigured.POST(request())).status, 503);
 });

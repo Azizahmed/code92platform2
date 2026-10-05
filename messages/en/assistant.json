@@ -50,7 +50,7 @@
     "baseUrl": "Provider API base URL",
     "model": "Model",
     "apiKey": "API key",
-    "urlHint": "Use a public HTTPS API base, including its prefix (for example, /v1). Do not include /chat/completions. Choose a model with function calling.",
+    "urlHint": "Use a public HTTPS API base, including its prefix (for example, /v1). Do not include /chat/completions. Choose a model with function calling. Image attachments also require vision support.",
     "keySaved": "Saved key — leave blank to keep it",
     "keyHint": "Keys are encrypted and never shown again. Enter a new key when changing the provider URL.",
     "save": "Save settings",
@@ -67,6 +67,27 @@
       "unavailable": "Assistant setup storage is unavailable. Check the server configuration and database migration.",
       "conflict": "Another administrator changed these settings. Reload and try again.",
       "testFailed": "The provider test failed. Check the saved API URL, model and key, then try again."
+    }
+  },
+  "attachments": {
+    "attach": "Attach files",
+    "attached": "Attached files",
+    "selected": "Selected attachments",
+    "remove": "Remove {name}",
+    "preparing": "Reading attachments…",
+    "truncated": "Excerpt only",
+    "defaultPrompt": "Please review the attached files.",
+    "hint": "Up to 3 files · 2 MB total. Images, PDF text, TXT, MD, CSV, JSON or YAML. Images require a vision-capable model.",
+    "errors": {
+      "fileSize": "Choose a non-empty file smaller than 2 MB.",
+      "fileTotalSize": "Attachments must total 2 MB or less.",
+      "fileCount": "Attach up to 3 files per message.",
+      "fileType": "Use PNG, JPG, WebP, PDF or a text file (TXT, MD, CSV, JSON, YAML).",
+      "fileUnreadable": "This file could not be read. Use a valid image, an unlocked PDF or a UTF-8 text file.",
+      "fileNoText": "No readable text was found. For a scanned PDF, attach a screenshot instead.",
+      "forbidden": "Sign in again to attach files.",
+      "busy": "A file is already being processed. Try again shortly.",
+      "generic": "The file could not be attached. Try selecting it again."
     }
   }
 }

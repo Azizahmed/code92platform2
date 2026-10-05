@@ -25,22 +25,25 @@ export async function POST(request: Request) {
   const [user, member] = await Promise.all([getSessionUser(), getOwnMembership()]);
   if (!user || !member?.is_active) return jsonError('forbidden', 403);
 
+  // Reserve admission before parsing large attachment bodies or loading the
+  // provider so duplicate requests cannot repeat that work concurrently.
+  const now = Date.now();
+  for (const [id, expires] of active) if (expires < now) active.delete(id);
+  if (active.has(user.id) || active.size >= 64) return jsonError('busy', 429);
+  const expires = now + 125000;
+  active.set(user.id, expires);
   let input;
   let config;
+  let insforge;
   try {
     input = chatRequestSchema.parse(await readChatBody(request));
     config = await loadAssistantProviderConfig();
+    insforge = await createInsForgeServerClient();
   } catch (error) {
+    if (active.get(user.id) === expires) active.delete(user.id);
     const code = error instanceof AssistantError ? error.code : 'invalid';
     return jsonError(code, code === 'notConfigured' ? 503 : 400);
   }
-  const now = Date.now();
-  for (const [id, expires] of active) if (expires < now) active.delete(id);
-  if (active.has(user.id) || active.size >= 1000) return jsonError('busy', 429);
-  const insforge = await createInsForgeServerClient();
-  if (active.has(user.id)) return jsonError('busy', 429);
-  const expires = now + 125000;
-  active.set(user.id, expires);
   const signal = AbortSignal.any([request.signal, AbortSignal.timeout(110000)]);
   const encoder = new TextEncoder();
   const stream = new ReadableStream<Uint8Array>({

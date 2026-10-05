@@ -15,6 +15,7 @@ saved connection** to make one small model call without workspace data or action
 Saved settings apply to the next request without restarting or redeploying.
 Keys are never returned to the browser. Leaving the key blank preserves it only
 when the provider URL stays the same; changing that URL requires a new key.
+To analyze image attachments, the selected model must also support vision.
 
 The settings store needs migration
 `20261005110644_add-assistant-settings.sql` and two **server-only** variables:
@@ -47,6 +48,36 @@ take precedence; clearing them restores any environment fallback. This assistant
 OpenRouter connection saved in Settings for channel agents; that encrypted key
 is owned by the edge functions and is not readable by the Next.js server.
 Platform reads and writes still use the member's own client and RLS.
+
+## Attachments
+
+Use the paperclip button to select up to three files (2 MB total per message):
+PNG, JPEG, WebP, PDFs with selectable text, or UTF-8 text such as TXT, Markdown,
+CSV, JSON and YAML. Images have thumbnail previews; selected files can be removed
+before sending. A message can contain only attachments, in which case the user
+asks the assistant to review them. Files remain available for recent follow-up
+questions and are cleared on New conversation, reload or sign-out.
+
+`/api/assistant/attachments` authenticates an active member and prepares one file
+at a time without storing it in the database, storage bucket or knowledge base.
+Documents contribute up to 12,000 characters; PDF extraction visits at most 50
+pages. Excerpts are marked in both the UI and model context. Scanned/image-only
+PDFs and locked or unreadable files show an error; use a screenshot for scanned
+pages. PDF charts and embedded images are not extracted. Office files, SVG and
+archives are unsupported; export documents to PDF or text first.
+
+Images use inline Chat Completions `image_url` content parts following the
+[official vision input format](https://developers.openai.com/api/docs/guides/images-vision).
+Extracted document text uses ordinary text content parts, keeping document
+questions compatible with text-only providers. Attachment contents are reference
+data and cannot authorize platform actions. Attachments stay in browser memory
+and are sent to the chosen provider with the user's conversation request.
+
+Each chat request contains at most six attachment references, 2 MB of image/text
+data and 60,000 text characters. Oldest messages are dropped from the model
+request when these limits are reached, while their conversation entries remain
+visible. The chat JSON body is bounded at 3.4 MB, including base64 overhead;
+the multipart preparation body is bounded before parsing.
 
 ## Supported work
 
@@ -83,7 +114,7 @@ or repository commits. Those workflows remain on their existing pages.
   deadline. Identical successful writes within that turn are reused. The API
   rejects overlapping turns per user on the same server instance; this is not a
   distributed rate limiter or cross-request idempotency store.
-  Input history is capped at 60,000 characters and accumulated model context
+  Input history (including extracted document text) is capped at 60,000 characters and accumulated model context
   at 120,000 characters.
 - No requests or writes are automatically retried. If a connection drops during
   an action, check the workspace before repeating it. A closed browser stream

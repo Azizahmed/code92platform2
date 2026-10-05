@@ -13,7 +13,7 @@ const intlMiddleware = createMiddleware(routing);
 export default async function middleware(request: NextRequest) {
   // The assistant is a cookie-authenticated API route. Refresh its session
   // without applying locale redirects (all other APIs retain their own flow).
-  if (request.nextUrl.pathname === '/api/assistant') {
+  if (request.nextUrl.pathname === '/api/assistant' || request.nextUrl.pathname === '/api/assistant/attachments') {
     const response = NextResponse.next();
     await updateSession({
       requestCookies: {get: (name: string) => request.cookies.get(name)},
@@ -69,5 +69,5 @@ export default async function middleware(request: NextRequest) {
 
 export const config = {
   // Skip API routes, Next internals, and files with an extension.
-  matcher: ['/api/assistant', '/((?!api|_next|_vercel|.*\\..*).*)']
+  matcher: ['/api/assistant', '/api/assistant/attachments', '/((?!api|_next|_vercel|.*\\..*).*)']
 };

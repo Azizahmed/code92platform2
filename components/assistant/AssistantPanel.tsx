@@ -1,11 +1,16 @@
 'use client';
 
+/* eslint-disable @next/next/no-img-element -- These small previews use in-memory data URLs. */
+
 import {memo, useEffect, useRef, useState} from 'react';
-import {Bot, Check, Loader2, Plus, Send, X} from 'lucide-react';
+import {Bot, Check, FileText, Loader2, Paperclip, Plus, Send, X} from 'lucide-react';
 import {useLocale, useTranslations} from 'next-intl';
 import Markdown from '@/components/knowledge/Markdown';
 import {Link, usePathname, useRouter} from '@/i18n/navigation';
 import {parseEventLine, type AssistantEvent, type ChatMessage, type ToolResult} from '@/lib/assistant/protocol';
+import {ASSISTANT_FILE_ACCEPT, MAX_ASSISTANT_FILES, MAX_ASSISTANT_FILE_BYTES,
+  trimChatHistory, validateAssistantFile, type AssistantAttachment} from '@/lib/assistant/attachments';
+import {formatFileSize} from '@/lib/attachments';
 
 type Activity = {id: string; tool: string; result?: ToolResult};
 type Entry = ChatMessage & {id: string; activities?: Activity[]; error?: string};
@@ -16,6 +21,20 @@ const KNOWN_ERRORS = new Set(['notConfigured', 'forbidden', 'invalid', 'busy',
   'rateLimited', 'providerError', 'timeout', 'stepLimit', 'generic']);
 const TOOL_NAMES = new Set(['list_records', 'search_knowledge', 'read_knowledge',
   'create_task', 'update_task', 'post_status_update', 'create_knowledge_note']);
+const FILE_ERRORS = new Set(['fileSize', 'fileType', 'fileCount', 'fileTotalSize',
+  'fileUnreadable', 'fileNoText', 'forbidden', 'busy']);
+
+function AttachmentPreview({file, truncatedLabel}: {file: AssistantAttachment; truncatedLabel: string}) {
+  return <>
+    {/* Data URLs are restricted to PNG/JPEG/WebP by the server. */}
+    {file.kind === 'image' ? <img src={file.dataUrl} alt={file.name} loading="lazy" className="h-10 w-10 shrink-0 rounded object-cover" />
+      : <FileText className="h-5 w-5 shrink-0 text-faint" />}
+    <div className="min-w-0 flex-1"><p dir="auto" className="truncate text-xs">{file.name}</p>
+      <p className="text-[10px] text-faint">{formatFileSize(file.sizeBytes)}
+        {file.kind === 'text' && file.truncated ? ` · ${truncatedLabel}` : ''}</p>
+    </div>
+  </>;
+}
 
 export default function AssistantPanel({open, onClose}: {open: boolean; onClose: () => void}) {
   const t = useTranslations('assistant');
@@ -25,6 +44,12 @@ export default function AssistantPanel({open, onClose}: {open: boolean; onClose:
   const [entries, setEntries] = useState<Entry[]>([]);
   const [draft, setDraft] = useState('');
   const [pending, setPending] = useState(false);
+  const [attachments, setAttachments] = useState<AssistantAttachment[]>([]);
+  const [preparing, setPreparing] = useState(false);
+  const [fileError, setFileError] = useState<string | null>(null);
+  const preparingRef = useRef(false);
+  const preparationRef = useRef<AbortController | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const inFlight = useRef(false);
   const nextEntryId = useRef(0);
   const requestRef = useRef<AbortController | null>(null);
@@ -33,7 +58,7 @@ export default function AssistantPanel({open, onClose}: {open: boolean; onClose:
   const closeRef = useRef(onClose);
   closeRef.current = onClose;
 
-  useEffect(() => () => requestRef.current?.abort(), []);
+  useEffect(() => () => {requestRef.current?.abort(); preparationRef.current?.abort();}, []);
   useEffect(() => {
     if (!open) return;
     composerRef.current?.focus();
@@ -47,23 +72,57 @@ export default function AssistantPanel({open, onClose}: {open: boolean; onClose:
     if (open && scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
   }, [entries, open]);
 
+  async function attachFiles(files: File[]) {
+    if (!files.length || inFlight.current || preparingRef.current) return;
+    setFileError(null);
+    if (attachments.length + files.length > MAX_ASSISTANT_FILES) {setFileError('fileCount'); return;}
+    const invalid = files.map(validateAssistantFile).find(Boolean);
+    if (invalid) {setFileError(invalid); return;}
+    if ([...attachments, ...files].reduce((size, file) => size + ('sizeBytes' in file ? file.sizeBytes : file.size), 0) > MAX_ASSISTANT_FILE_BYTES) {
+      setFileError('fileTotalSize'); return;
+    }
+    preparingRef.current = true;
+    setPreparing(true);
+    const controller = new AbortController();
+    preparationRef.current = controller;
+    try {
+      for (const file of files) {
+        const body = new FormData();
+        body.append('file', file);
+        const response = await fetch('/api/assistant/attachments', {method: 'POST', body, signal: controller.signal});
+        const result = await response.json();
+        if (!response.ok || !result.attachment) {
+          setFileError(FILE_ERRORS.has(result.error) ? result.error : 'fileUnreadable');
+          break;
+        }
+        setAttachments((current) => [...current, result.attachment]);
+      }
+    } catch {
+      if (!controller.signal.aborted) setFileError('generic');
+    } finally {
+      preparingRef.current = false;
+      preparationRef.current = null;
+      if (!controller.signal.aborted) setPreparing(false);
+    }
+  }
+
   async function send(text = draft) {
-    const content = text.trim();
-    if (!content || inFlight.current) return;
+    const content = text.trim() || (attachments.length ? t('attachments.defaultPrompt') : '');
+    if (!content || inFlight.current || preparingRef.current) return;
     inFlight.current = true;
     setPending(true);
     setDraft('');
+    setAttachments([]);
+    setFileError(null);
     // Only completed conversational messages go back to the provider; action
     // results are produced by the server, never trusted from the browser.
-    const messages: ChatMessage[] = [...entries.filter((entry) => entry.content && !entry.error)
-      .map(({role, content}) => ({role, content})), {role: 'user' as const, content}].slice(-20);
-    while (messages.length > 1 && messages.reduce((size, message) => size + message.content.length, 0) > 60000) {
-      messages.shift();
-    }
+    const userMessage: ChatMessage = {role: 'user', content, ...(attachments.length ? {attachments} : {})};
+    const messages = trimChatHistory([...entries.filter((entry) => entry.content && !entry.error)
+      .map(({role, content, attachments}) => ({role, content, ...(attachments?.length ? {attachments} : {})})), userMessage]);
     const id = `assistant-${nextEntryId.current++}`;
     const userEntryId = `user-${nextEntryId.current++}`;
     setEntries((current) => [...current,
-      {id: userEntryId, role: 'user', content},
+      {id: userEntryId, ...userMessage},
       {id, role: 'assistant', content: '', activities: []}]);
     const controller = new AbortController();
     requestRef.current = controller;
@@ -129,8 +188,8 @@ export default function AssistantPanel({open, onClose}: {open: boolean; onClose:
           <div><h2 className="text-sm font-semibold">{t('title')}</h2><p className="text-[11px] text-faint">{t('subtitle')}</p></div>
         </div>
         <div className="flex gap-1">
-          <button type="button" onClick={() => {setEntries([]); setDraft(''); composerRef.current?.focus();}}
-            disabled={pending} aria-label={t('newChat')} title={t('newChat')}
+          <button type="button" onClick={() => {setEntries([]); setDraft(''); setAttachments([]); setFileError(null); composerRef.current?.focus();}}
+            disabled={pending || preparing} aria-label={t('newChat')} title={t('newChat')}
             className="rounded-md p-2 text-muted hover:bg-raised disabled:opacity-40"><Plus className="h-4 w-4" /></button>
           <button type="button" onClick={onClose} aria-label={t('close')}
             className="rounded-md p-2 text-muted hover:bg-raised"><X className="h-4 w-4" /></button>
@@ -163,6 +222,11 @@ export default function AssistantPanel({open, onClose}: {open: boolean; onClose:
               ))}
               {entry.content ? entry.role === 'assistant' ? <Answer content={entry.content} />
                 : <p className="whitespace-pre-wrap break-words text-sm" dir="auto">{entry.content}</p> : null}
+              {entry.attachments?.length ? <ul className="mt-2 space-y-2" aria-label={t('attachments.attached')}>
+                {entry.attachments.map((file, index) => <li key={index} className="flex items-center gap-2 rounded border border-hairline p-2">
+                  <AttachmentPreview file={file} truncatedLabel={t('attachments.truncated')} />
+                </li>)}
+              </ul> : null}
               {entry.error ? <p role="alert" className="text-xs leading-relaxed text-danger">{t(`errors.${KNOWN_ERRORS.has(entry.error) ? entry.error : 'generic'}`)}</p> : null}
               {pending && entry.id === entries.at(-1)?.id && !entry.content ? <p role="status" className="flex items-center gap-2 text-xs text-faint"><Loader2 className="h-3 w-3 animate-spin" />{t('working')}</p> : null}
             </li>
@@ -171,6 +235,19 @@ export default function AssistantPanel({open, onClose}: {open: boolean; onClose:
       </div>
       <form onSubmit={(event) => {event.preventDefault(); void send();}}
         className="shrink-0 space-y-2 border-t border-hairline bg-panel p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+        <input ref={fileInputRef} type="file" multiple accept={ASSISTANT_FILE_ACCEPT} className="hidden"
+          aria-label={t('attachments.attach')} disabled={pending || preparing}
+          onChange={(event) => {const files = Array.from(event.target.files ?? []); event.target.value = ''; void attachFiles(files);}} />
+        {attachments.length ? <ul className="max-h-40 space-y-2 overflow-y-auto" aria-label={t('attachments.selected')}>
+          {attachments.map((file, index) => <li key={index} className="flex items-center gap-2 rounded-md border border-hairline bg-bg p-2">
+            <AttachmentPreview file={file} truncatedLabel={t('attachments.truncated')} />
+            <button type="button" disabled={pending || preparing} aria-label={t('attachments.remove', {name: file.name})}
+              onClick={() => setAttachments((current) => current.filter((_, position) => position !== index))}
+              className="rounded p-1.5 text-muted hover:bg-raised disabled:opacity-40"><X className="h-3.5 w-3.5" /></button>
+          </li>)}
+        </ul> : null}
+        {preparing ? <p role="status" className="flex items-center gap-2 text-xs text-faint"><Loader2 className="h-3 w-3 animate-spin" />{t('attachments.preparing')}</p> : null}
+        {fileError ? <p role="alert" className="text-xs text-danger">{t(`attachments.errors.${fileError}`)}</p> : null}
         <label htmlFor="assistant-composer" className="sr-only">{t('placeholder')}</label>
         <div className="rounded-lg border border-hairline bg-bg p-2 focus-within:border-accent/50">
           <textarea id="assistant-composer" ref={composerRef} value={draft} onChange={(event) => setDraft(event.target.value)}
@@ -180,11 +257,15 @@ export default function AssistantPanel({open, onClose}: {open: boolean; onClose:
             }}
             className="w-full resize-none bg-transparent px-1 py-1 text-sm outline-none placeholder:text-faint disabled:opacity-50" />
           <div className="flex items-center justify-between gap-2">
-            <span className="px-1 text-[10px] text-faint">{t('inputHint')}</span>
-            <button type="submit" disabled={pending || !draft.trim()} aria-label={t('send')}
+            <button type="button" disabled={pending || preparing} onClick={() => fileInputRef.current?.click()}
+              aria-label={t('attachments.attach')} title={t('attachments.attach')}
+              className="rounded-md p-2 text-muted hover:bg-raised disabled:opacity-40"><Paperclip className="h-4 w-4" /></button>
+            <span className="flex-1 px-1 text-[10px] text-faint">{t('inputHint')}</span>
+            <button type="submit" disabled={pending || preparing || (!draft.trim() && !attachments.length)} aria-label={t('send')}
               className="rounded-md bg-accent p-2 text-bg disabled:opacity-40"><Send className="h-3.5 w-3.5 rtl:rotate-180" /></button>
           </div>
         </div>
+        <p className="px-1 text-[10px] leading-relaxed text-faint">{t('attachments.hint')}</p>
         <p className="px-1 text-[10px] leading-relaxed text-faint">{t('permissions')}</p>
       </form>
     </aside>
