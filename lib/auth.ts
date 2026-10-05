@@ -3,7 +3,7 @@ import {cookies} from 'next/headers';
 import {getLocale} from 'next-intl/server';
 
 import {redirect} from '@/i18n/navigation';
-import {createInsForgeServerClient} from '@/lib/insforge/server';
+import {createInsForgeServerClient, hasRequestAccessToken} from '@/lib/insforge/server';
 
 export type SessionUser = {
   id: string;
@@ -37,12 +37,14 @@ type MeRow = {
 // Cached per request, so layout, page, and any server action in the same
 // request all share the single call.
 const getMe = cache(async (): Promise<MeRow | null> => {
-  const cookieStore = await cookies();
-  if (
-    !cookieStore.has('insforge_access_token') &&
-    !cookieStore.has('insforge_refresh_token')
-  ) {
-    return null;
+  if (!hasRequestAccessToken()) {
+    const cookieStore = await cookies();
+    if (
+      !cookieStore.has('insforge_access_token') &&
+      !cookieStore.has('insforge_refresh_token')
+    ) {
+      return null;
+    }
   }
 
   const insforge = await createInsForgeServerClient();

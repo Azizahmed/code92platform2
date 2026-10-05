@@ -61,7 +61,7 @@ export const toolSchemas = {
 };
 export type ToolName = keyof typeof toolSchemas;
 
-const descriptions: Record<ToolName, string> = {
+export const toolDescriptions: Record<ToolName, string> = {
   list_records: 'Read a page of visible products, tasks, active team members or releases. Search by name/title. Filters productId (tasks/releases), assigneeId and taskStatus (tasks only). Returns up to 25 rows, hasMore, nextOffset and internal links.',
   search_knowledge: 'Search the bilingual knowledge base. Returns up to 15 excerpts with links. Query may be empty to browse recent items. Use read_knowledge to read a specific item.',
   read_knowledge: 'Read the content of a visible knowledge item. Long content is truncated explicitly.',
@@ -75,7 +75,7 @@ export const assistantTools = (Object.keys(toolSchemas) as ToolName[]).map((name
   type: 'function' as const,
   function: {
     name,
-    description: descriptions[name],
+    description: toolDescriptions[name],
     parameters: z.toJSONSchema(toolSchemas[name], {target: 'draft-7'})
   }
 }));

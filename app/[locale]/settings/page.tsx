@@ -1,5 +1,6 @@
 import {ShieldCheck} from 'lucide-react';
 import {getTranslations} from 'next-intl/server';
+import {headers} from 'next/headers';
 
 import AgentActivityPanel from '@/components/agents/AgentActivityPanel';
 import AgentRosterPanel from '@/components/agents/AgentRosterPanel';
@@ -9,6 +10,7 @@ import AssistantSettingsPanel from '@/components/admin/AssistantSettingsPanel';
 import {getAssistantSettingsAction} from '@/lib/actions/assistant-settings';
 import type {AssistantSettingsStatus} from '@/lib/assistant/settings-schema';
 import MembersTable, {type MemberRow} from '@/components/admin/MembersTable';
+import McpAccessPanel from '@/components/settings/McpAccessPanel';
 import NotificationPreferencesPanel from '@/components/settings/NotificationPreferencesPanel';
 import SettingsPreferences from '@/components/settings/SettingsPreferences';
 import {
@@ -16,11 +18,13 @@ import {
   getAgentsAction,
   getOpenRouterStatusAction
 } from '@/lib/actions/agents';
+import {getMcpTokensAction} from '@/lib/actions/mcp-tokens';
 import {getNotificationPreferencesAction} from '@/lib/actions/notifications';
 import {requireActiveMember} from '@/lib/auth';
 import type {Agent, AgentRun, OpenRouterStatus} from '@/lib/agents';
 import type {GithubConnectionStatus} from '@/lib/github';
 import {createInsForgeServerClient} from '@/lib/insforge/server';
+import {mcpAvailable} from '@/lib/mcp/tokens';
 
 // The control panel's full surface. Everyone gets language, appearance and
 // their account; admins additionally get the panels that used to live at
@@ -37,7 +41,14 @@ export default async function SettingsPage() {
   ]);
 
   const isAdmin = member.role === 'admin';
-  const notificationPreferences = await getNotificationPreferencesAction();
+  const [notificationPreferences, mcpTokens, requestHeaders] = await Promise.all([
+    getNotificationPreferencesAction(),
+    getMcpTokensAction(),
+    headers()
+  ]);
+  const host = requestHeaders.get('x-forwarded-host') ?? requestHeaders.get('host') ?? 'localhost:3000';
+  const protocol = requestHeaders.get('x-forwarded-proto') ?? (host.startsWith('localhost') ? 'http' : 'https');
+  const mcpEndpoint = `${protocol}://${host}/api/mcp`;
 
   let members: MemberRow[] = [];
   let githubStatus: GithubConnectionStatus | null = null;
@@ -82,6 +93,8 @@ export default async function SettingsPage() {
       <SettingsPreferences />
 
       <NotificationPreferencesPanel preferences={notificationPreferences} />
+
+      <McpAccessPanel tokens={mcpTokens} endpoint={mcpEndpoint} available={mcpAvailable()} />
 
       <section className="space-y-3">
         <h2 className="text-sm font-medium">{t('account.title')}</h2>

@@ -107,6 +107,7 @@ architectural.
 | [DESIGN.md](DESIGN.md) | Design tokens, typography, responsive shell, RTL hard rules |
 | [DEPLOY.md](DEPLOY.md) | Deployment, measured production latency, the planned region move |
 | [AGENTS.md](AGENTS.md) | InsForge conventions for coding agents |
+| [MCP.md](MCP.md) | Connecting MCP clients (Claude Code, Cursor, …) with personal access tokens |
 
 ## Agent runtimes
 
@@ -117,6 +118,11 @@ OpenAI-compatible Chat Completions provider with tool calling. Configure
 `ASSISTANT_BASE_URL`, `ASSISTANT_MODEL` and `ASSISTANT_API_KEY` as described in
 [ASSISTANT.md](ASSISTANT.md). The guide also records the application performance
 changes and validation for this feature.
+
+Members can also connect their own MCP clients (Claude Code, Claude Desktop,
+Cursor, …) at `/api/mcp` with a personal access token from **Settings → MCP
+access**. The client gets the assistant's tools under the member's own RLS;
+setup and the security model are in [MCP.md](MCP.md).
 
 Agents answer on one of two runtimes, chosen per agent in Settings.
 

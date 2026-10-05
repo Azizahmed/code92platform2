@@ -19,5 +19,38 @@
   },
   "admin": {
     "hint": "Visible to admins only"
+  },
+  "mcp": {
+    "title": "MCP access",
+    "intro": "Connect an MCP client such as Claude Code, Claude Desktop or Cursor to this workspace. The client acts as you: it sees only what you can see, and a read-write token can do what the workspace assistant can — read records, create and update tasks, post status updates and draft knowledge notes. It cannot delete anything, change membership, ship releases or publish notes.",
+    "unavailable": "MCP access is not configured on this deployment yet. An administrator needs to set INSFORGE_API_KEY and INSFORGE_JWT_SECRET.",
+    "endpoint": "Server URL (Streamable HTTP)",
+    "name": "Token name",
+    "namePlaceholder": "e.g. Laptop — Claude Code",
+    "scope": "Access",
+    "scopeRead": "Read only",
+    "scopeWrite": "Read & write",
+    "scopeHint": "Prefer read only unless the client needs to make changes. Each token is shown once; revoke it here if it is lost or no longer needed.",
+    "expires": "Expires after",
+    "days": "{count} days",
+    "create": "Create token",
+    "createdOnce": "Copy this token now. It will not be shown again.",
+    "token": "Access token",
+    "claudeCode": "Claude Code",
+    "jsonConfig": "Client configuration (JSON)",
+    "copy": "Copy",
+    "copied": "Copied",
+    "revoke": "Revoke",
+    "revoked": "Revoked",
+    "expired": "Expired",
+    "never": "never",
+    "meta": "Created {created} · expires {expires} · last used {used}",
+    "empty": "No tokens yet.",
+    "errors": {
+      "forbidden": "Only active members can create tokens.",
+      "invalid": "Check the token name and options.",
+      "limit": "You already have 10 active tokens. Revoke one first.",
+      "failed": "That did not work. Try again."
+    }
   }
 }
