@@ -56,10 +56,8 @@ export default function AppShell({userName, userEmail, isAdmin, assistantUserId,
   const [assistantLoaded, setAssistantLoaded] = useState(false);
 
   useEffect(() => {
-    if (assistantUserId && window.matchMedia('(min-width: 1280px)').matches) {
-      setAssistantOpen(true);
-      setAssistantLoaded(true);
-    }
+    setAssistantOpen(false);
+    setAssistantLoaded(false);
   }, [assistantUserId]);
 
   useEffect(() => {

@@ -5,6 +5,9 @@ import AgentActivityPanel from '@/components/agents/AgentActivityPanel';
 import AgentRosterPanel from '@/components/agents/AgentRosterPanel';
 import OpenRouterPanel from '@/components/agents/OpenRouterPanel';
 import GithubSettingsPanel from '@/components/admin/GithubSettingsPanel';
+import AssistantSettingsPanel from '@/components/admin/AssistantSettingsPanel';
+import {getAssistantSettingsAction} from '@/lib/actions/assistant-settings';
+import type {AssistantSettingsStatus} from '@/lib/assistant/settings-schema';
 import MembersTable, {type MemberRow} from '@/components/admin/MembersTable';
 import NotificationPreferencesPanel from '@/components/settings/NotificationPreferencesPanel';
 import SettingsPreferences from '@/components/settings/SettingsPreferences';
@@ -39,6 +42,7 @@ export default async function SettingsPage() {
   let members: MemberRow[] = [];
   let githubStatus: GithubConnectionStatus | null = null;
   let openRouterStatus: OpenRouterStatus | null = null;
+  let assistantStatus: AssistantSettingsStatus | null = null;
   let agents: Agent[] = [];
   let runs: AgentRun[] = [];
 
@@ -51,13 +55,14 @@ export default async function SettingsPage() {
         .order('created_at', {ascending: true}),
       insforge.database.rpc('github_connection_status')
     ]);
-    [openRouterStatus, agents, runs] = await Promise.all([
+    [openRouterStatus, agents, runs, assistantStatus] = await Promise.all([
       getOpenRouterStatusAction(),
       getAgentsAction(),
       // The last few runs only. This panel answers "is the harness alive and
       // what did the last run cost", not "what has it ever done" — and the
       // limit is passed to the query so the rows are never fetched and hidden.
-      getAgentRunsAction(5)
+      getAgentRunsAction(5),
+      getAssistantSettingsAction()
     ]);
 
     members = (memberRows ?? []) as unknown as MemberRow[];
@@ -116,6 +121,7 @@ export default async function SettingsPage() {
 
           <MembersTable members={members} currentUserId={user.id} />
           <GithubSettingsPanel status={githubStatus} />
+          <AssistantSettingsPanel status={assistantStatus} />
           <OpenRouterPanel status={openRouterStatus} />
           <AgentRosterPanel agents={agents} />
           <AgentActivityPanel agents={agents} runs={runs} />

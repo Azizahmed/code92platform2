@@ -3,7 +3,8 @@ import {createInsForgeServerClient} from '@/lib/insforge/server';
 import {platformPrompt} from '@/lib/assistant/context';
 import type {AssistantEvent} from '@/lib/assistant/protocol';
 import {readChatBody} from '@/lib/assistant/request';
-import {AssistantError, readProviderConfig, runAssistant} from '@/lib/assistant/runtime';
+import {AssistantError, runAssistant} from '@/lib/assistant/runtime';
+import {loadAssistantProviderConfig} from '@/lib/assistant/settings';
 import {assistantTools, chatRequestSchema} from '@/lib/assistant/schemas';
 import {createToolExecutor} from '@/lib/assistant/tools';
 
@@ -28,7 +29,7 @@ export async function POST(request: Request) {
   let config;
   try {
     input = chatRequestSchema.parse(await readChatBody(request));
-    config = readProviderConfig(process.env);
+    config = await loadAssistantProviderConfig();
   } catch (error) {
     const code = error instanceof AssistantError ? error.code : 'invalid';
     return jsonError(code, code === 'notConfigured' ? 503 : 400);

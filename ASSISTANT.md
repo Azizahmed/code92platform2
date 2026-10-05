@@ -1,15 +1,31 @@
 # Workspace assistant
 
 The authenticated app shell includes a chat dock on the physical right side in
-English and Arabic. It opens by default at desktop widths of 1280px and above;
-at narrower widths, use the Assistant button. Minimize it with the close button
+English and Arabic. It starts minimized on every screen size; use the Assistant
+button to open it. Minimize it with the close button
 or Escape. Conversations survive client-side navigation and minimizing, and
 reset on reload, sign-out, or New conversation.
 
 ## Connect a provider
 
-Copy the variables in [.env.example](.env.example) into `.env.local`, keeping
-the existing InsForge settings. Configure these **server-only** variables:
+Active administrators can configure the assistant in **Settings → Admin →
+Workspace assistant**. Enter a public HTTPS provider API base URL, a model that
+supports function calling, and that provider's API key. Save, then use **Test
+saved connection** to make one small model call without workspace data or actions.
+Saved settings apply to the next request without restarting or redeploying.
+Keys are never returned to the browser. Leaving the key blank preserves it only
+when the provider URL stays the same; changing that URL requires a new key.
+
+The settings store needs migration
+`20261005110644_add-assistant-settings.sql` and two **server-only** variables:
+`INSFORGE_API_KEY` (project admin key, used only for the settings singleton) and
+`ASSISTANT_SETTINGS_ENCRYPTION_KEY` (64 hex characters, generate once with
+`openssl rand -hex 32`). Preserve the encryption key across deploys; losing it
+requires entering the provider key again. Database access is denied to browser
+roles, and API keys are encrypted using AES-256-GCM.
+
+For an optional environment fallback, copy these variables from
+[.env.example](.env.example) into `.env.local`, keeping the existing backend settings:
 
 ```dotenv
 ASSISTANT_BASE_URL=https://your-provider.example/v1
@@ -26,11 +42,11 @@ function calling. The implementation follows the
 to send tool definitions, execute requested functions, and return their results
 to the model.
 
-Restart the dev server after changing settings. In production, set these three
-variables on the existing app deployment. This assistant is separate from the
+Restart or redeploy after changing environment variables. Admin-saved settings
+take precedence; clearing them restores any environment fallback. This assistant is separate from the
 OpenRouter connection saved in Settings for channel agents; that encrypted key
 is owned by the edge functions and is not readable by the Next.js server.
-No database migrations or new services are required.
+Platform reads and writes still use the member's own client and RLS.
 
 ## Supported work
 

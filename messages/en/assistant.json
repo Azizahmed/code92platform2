@@ -31,7 +31,7 @@
     "create_knowledge_note": "Drafting knowledge note"
   },
   "errors": {
-    "notConfigured": "The assistant is not connected yet. An administrator needs to configure its provider, model and API key on the server.",
+    "notConfigured": "The assistant is not connected yet. An administrator can configure its provider, model and API key in Settings.",
     "forbidden": "Your session is unavailable or you do not have access. Sign in again to continue.",
     "invalid": "This conversation could not be submitted. Try a shorter message or start a new chat.",
     "busy": "Another assistant request is already running. Wait for it to finish.",
@@ -40,5 +40,33 @@
     "timeout": "This request took too long. Check the workspace before repeating an action; it may already have been saved.",
     "stepLimit": "The assistant reached its action limit. Review the results above and send a smaller follow-up request.",
     "generic": "The request was interrupted. Check the workspace before repeating an action; it may already have been saved."
+  },
+  "setup": {
+    "title": "Workspace assistant",
+    "intro": "Connect an OpenAI-compatible provider so the assistant can answer platform questions and perform tasks for members.",
+    "configured": "Configured",
+    "environment": "Configured on server",
+    "notConfigured": "Not configured",
+    "baseUrl": "Provider API base URL",
+    "model": "Model",
+    "apiKey": "API key",
+    "urlHint": "Use a public HTTPS API base, including its prefix (for example, /v1). Do not include /chat/completions. Choose a model with function calling.",
+    "keySaved": "Saved key — leave blank to keep it",
+    "keyHint": "Keys are encrypted and never shown again. Enter a new key when changing the provider URL.",
+    "save": "Save settings",
+    "test": "Test saved connection",
+    "clear": "Clear saved settings",
+    "saved": "Assistant settings saved. They apply to the next conversation request.",
+    "testOk": "The saved provider and model responded successfully.",
+    "cleared": "Saved settings cleared. Any server-configured provider is now used.",
+    "testHint": "The test uses the saved settings and makes one small model call without workspace data or actions.",
+    "errors": {
+      "forbidden": "Only active administrators can manage assistant settings.",
+      "invalid": "Enter a valid public HTTPS API base URL and model.",
+      "keyRequired": "Enter an API key for this provider URL.",
+      "unavailable": "Assistant setup storage is unavailable. Check the server configuration and database migration.",
+      "conflict": "Another administrator changed these settings. Reload and try again.",
+      "testFailed": "The provider test failed. Check the saved API URL, model and key, then try again."
+    }
   }
 }

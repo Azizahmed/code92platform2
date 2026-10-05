@@ -99,6 +99,9 @@ function route({member = {is_active: true}, run, configError} = {}) {
     '@/lib/auth': {getSessionUser: async () => ({id: userId}), getOwnMembership: async () => member},
     '@/lib/insforge/server': {createInsForgeServerClient: async () => ({})},
     '@/lib/assistant/tools': {createToolExecutor: () => () => ({ok: true})},
+    '@/lib/assistant/settings': {loadAssistantProviderConfig: async () => {
+      if (configError) throw configError; return {model: 'test'};
+    }},
     '@/lib/assistant/runtime': {
       ...typescriptLoader()('lib/assistant/runtime.ts'),
       readProviderConfig: () => {if (configError) throw configError; return {model: 'test'};},
