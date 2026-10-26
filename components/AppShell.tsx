@@ -5,9 +5,13 @@ import dynamic from 'next/dynamic';
 import {
   Bot,
   BookOpen,
+  Handshake,
+  History,
+  Inbox,
   LayoutDashboard,
   ListTodo,
   LogOut,
+  Menu,
   MessagesSquare,
   Package,
   Rocket,
@@ -18,7 +22,9 @@ import {useTranslations} from 'next-intl';
 
 import {Link, usePathname, useRouter} from '@/i18n/navigation';
 import {signOutAction} from '@/lib/actions/auth';
+import {CURRENT_VERSION} from '@/lib/platform-releases';
 import ControlPanel from '@/components/ControlPanel';
+import NavBadge, {useMyWorkBadge} from '@/components/NavBadge';
 import NotificationBell from '@/components/notifications/NotificationBell';
 
 const AssistantPanel = dynamic(() => import('@/components/assistant/AssistantPanel'), {ssr: false});
@@ -28,6 +34,7 @@ type Props = {
   userEmail: string | null;
   isAdmin: boolean;
   assistantUserId: string | null;
+  myWorkBadge: number;
   children: React.ReactNode;
 };
 
@@ -35,17 +42,26 @@ type Props = {
 // switch in functions/trend-scan.ts), so navigating to a feed that can never
 // gain an item would be advertising a feature that does not work. The route
 // still resolves and explains itself for anyone holding a direct link.
+//
+// Top to bottom: me and my team today (Dashboard → All tasks), the pipeline
+// left to right (Sales → Releases), the record (Knowledge, Governance).
 const NAV_ITEMS = [
   {href: '/', key: 'dashboard', icon: LayoutDashboard},
+  {href: '/my-work', key: 'myWork', icon: Inbox},
   {href: '/channels', key: 'channels', icon: MessagesSquare},
   {href: '/tasks', key: 'tasks', icon: ListTodo},
+  {href: '/sales', key: 'sales', icon: Handshake},
   {href: '/products', key: 'products', icon: Package},
   {href: '/releases', key: 'releases', icon: Rocket},
   {href: '/knowledge', key: 'knowledge', icon: BookOpen},
   {href: '/governance', key: 'governance', icon: Scale}
 ] as const;
 
-export default function AppShell({userName, userEmail, isAdmin, assistantUserId, children}: Props) {
+// Nine items do not fit a phone's bottom bar. The first five daily ones are
+// tabs; "More" opens the control panel, which lists the rest.
+const MOBILE_TAB_COUNT = 5;
+
+export default function AppShell({userName, userEmail, isAdmin, assistantUserId, myWorkBadge, children}: Props) {
   const t = useTranslations('common');
   const assistantT = useTranslations('assistant');
   const pathname = usePathname();
@@ -54,6 +70,7 @@ export default function AppShell({userName, userEmail, isAdmin, assistantUserId,
   const [controlPanelOpen, setControlPanelOpen] = useState(false);
   const [assistantOpen, setAssistantOpen] = useState(false);
   const [assistantLoaded, setAssistantLoaded] = useState(false);
+  const badge = useMyWorkBadge(myWorkBadge);
 
   useEffect(() => {
     setAssistantOpen(false);
@@ -83,6 +100,12 @@ export default function AppShell({userName, userEmail, isAdmin, assistantUserId,
   const activeItem = items.find(({href}) =>
     href === '/' ? pathname === '/' : pathname.startsWith(href)
   );
+  const tabItems = items.slice(0, MOBILE_TAB_COUNT);
+  const moreItems = items.slice(MOBILE_TAB_COUNT);
+  const moreActive =
+    moreItems.some(({href}) => pathname.startsWith(href)) ||
+    pathname.startsWith('/changelog');
+  const badgeLabel = t('nav.badge', {count: badge});
 
   return (
     <div className={`min-h-screen ${assistantOpen && assistantUserId ? 'assistant-shell-open' : ''}`}>
@@ -117,6 +140,7 @@ export default function AppShell({userName, userEmail, isAdmin, assistantUserId,
                   >
                     <Icon className="h-4 w-4 shrink-0" strokeWidth={1.75} />
                     {t(`nav.${key}`)}
+                    {key === 'myWork' ? <NavBadge count={badge} label={badgeLabel} /> : null}
                   </Link>
                 </li>
               );
@@ -125,6 +149,19 @@ export default function AppShell({userName, userEmail, isAdmin, assistantUserId,
         </nav>
 
         <div className="border-t border-hairline px-4 py-4">
+          <Link
+            href="/changelog"
+            title={t('nav.changelog')}
+            className={`mb-3 flex items-center justify-between gap-2 rounded-md px-1 text-[11px] transition-colors ${
+              pathname.startsWith('/changelog') ? 'text-accent' : 'text-faint hover:text-ink'
+            }`}
+          >
+            <span className="inline-flex items-center gap-1.5">
+              <History className="h-3 w-3" strokeWidth={1.75} />
+              {t('nav.changelog')}
+            </span>
+            <span className="font-mono">v{CURRENT_VERSION}</span>
+          </Link>
           <div className="flex items-center justify-between gap-2">
             <div className="min-w-0 leading-tight">
               <div className="truncate text-sm font-medium">
@@ -178,7 +215,9 @@ export default function AppShell({userName, userEmail, isAdmin, assistantUserId,
                     // the nav, so it has no activeItem to name it.
                     pathname.startsWith('/settings')
                     ? t('nav.settings')
-                    : t('consoleTag')}
+                    : pathname.startsWith('/changelog')
+                      ? t('nav.changelog')
+                      : t('consoleTag')}
               </div>
             </div>
           </div>
@@ -208,10 +247,10 @@ export default function AppShell({userName, userEmail, isAdmin, assistantUserId,
         <ul
           className="grid"
           style={{
-            gridTemplateColumns: `repeat(${items.length}, minmax(0, 1fr))`
+            gridTemplateColumns: `repeat(${tabItems.length + 1}, minmax(0, 1fr))`
           }}
         >
-          {items.map(({href, key, icon: Icon}) => {
+          {tabItems.map(({href, key, icon: Icon}) => {
             const active =
               href === '/' ? pathname === '/' : pathname.startsWith(href);
             return (
@@ -228,15 +267,41 @@ export default function AppShell({userName, userEmail, isAdmin, assistantUserId,
                   {active ? (
                     <span className="absolute inset-x-3 top-0 h-0.5 rounded-full bg-accent" />
                   ) : null}
-                  <Icon
-                    className="h-5 w-5 shrink-0"
-                    strokeWidth={active ? 2 : 1.75}
-                  />
+                  <span className="relative">
+                    <Icon
+                      className="h-5 w-5 shrink-0"
+                      strokeWidth={active ? 2 : 1.75}
+                    />
+                    {key === 'myWork' && badge > 0 ? (
+                      <span
+                        aria-label={badgeLabel}
+                        className="absolute -end-2.5 -top-1.5 min-w-4 rounded-full bg-amber px-1 text-center font-mono text-[9px] font-semibold leading-4 text-bg"
+                      >
+                        {badge > 99 ? '99+' : badge}
+                      </span>
+                    ) : null}
+                  </span>
                   <span className="max-w-full truncate">{t(`nav.${key}`)}</span>
                 </Link>
               </li>
             );
           })}
+          <li>
+            <button
+              type="button"
+              onClick={() => setControlPanelOpen(true)}
+              aria-expanded={controlPanelOpen}
+              className={`relative flex min-h-14 w-full flex-col items-center justify-center gap-1 rounded-lg px-1 py-1.5 text-[9px] font-medium transition-colors ${
+                moreActive ? 'text-accent' : 'text-faint active:bg-raised active:text-ink'
+              }`}
+            >
+              {moreActive ? (
+                <span className="absolute inset-x-3 top-0 h-0.5 rounded-full bg-accent" />
+              ) : null}
+              <Menu className="h-5 w-5 shrink-0" strokeWidth={moreActive ? 2 : 1.75} />
+              <span className="max-w-full truncate">{t('nav.more')}</span>
+            </button>
+          </li>
         </ul>
         <div className="h-[env(safe-area-inset-bottom)]" />
       </nav>
@@ -259,6 +324,10 @@ export default function AppShell({userName, userEmail, isAdmin, assistantUserId,
         isAdmin={isAdmin}
         signingOut={signingOut}
         onSignOut={handleSignOut}
+        moreLinks={[
+          ...moreItems.map(({href, key, icon}) => ({href, label: t(`nav.${key}`), icon})),
+          {href: '/changelog', label: `${t('nav.changelog')} · v${CURRENT_VERSION}`, icon: History}
+        ]}
       />
     </div>
   );

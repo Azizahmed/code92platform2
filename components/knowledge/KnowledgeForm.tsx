@@ -9,6 +9,7 @@ import ProductPicker, {
 } from '@/components/knowledge/ProductPicker';
 import TagPicker from '@/components/knowledge/TagPicker';
 import {Link, useRouter} from '@/i18n/navigation';
+import {pushAfterAction} from '@/lib/navigation-guard';
 import {
   createKnowledgeItemAction,
   updateKnowledgeItemAction,
@@ -169,7 +170,7 @@ export default function KnowledgeForm(props: Props) {
 
       // revalidatePath already invalidated the client router cache, so this
       // push lands on a freshly fetched page.
-      router.push(`/knowledge/${result.itemId}`);
+      pushAfterAction(router, `/knowledge/${result.itemId}`);
     });
   }
 

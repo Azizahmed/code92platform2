@@ -18,7 +18,16 @@ export const NOTIFICATION_TYPES = [
   'mention',
   'channel_message',
   'proposal_pending',
-  'proposal_decided'
+  'proposal_decided',
+  // Release 0.2, 20261026120200_extend-notifications-for-sales.sql.
+  'task_due',
+  'task_overdue',
+  'deal_assigned',
+  'deal_due',
+  'deal_overdue',
+  'deal_closed',
+  'account_assigned',
+  'account_archived'
 ] as const;
 export type NotificationType = (typeof NOTIFICATION_TYPES)[number];
 
@@ -32,6 +41,8 @@ export type AppNotification = {
   product_id: string | null;
   message_id: string | null;
   channel_id: string | null;
+  deal_id: string | null;
+  account_id: string | null;
   actor_id: string | null;
   title: string;
   body: string | null;
@@ -44,6 +55,8 @@ export type NotificationPreferences = {
   email_enabled: boolean;
   email_on_assign: boolean;
   email_on_update: boolean;
+  email_on_due: boolean;
+  email_on_closed: boolean;
 };
 
 // What a person gets when they have never opened the preferences panel: the
@@ -52,8 +65,23 @@ export type NotificationPreferences = {
 export const DEFAULT_PREFERENCES: NotificationPreferences = {
   email_enabled: false,
   email_on_assign: true,
-  email_on_update: true
+  email_on_update: true,
+  email_on_due: true,
+  email_on_closed: true
 };
+
+// Where a notification leads. Chat to its channel, sales records to their
+// page, tasks to the task inside its product (General tasks to All tasks).
+export function notificationHref(item: Pick<
+  AppNotification,
+  'channel_id' | 'deal_id' | 'account_id' | 'product_id' | 'task_id'
+>): string | null {
+  if (item.channel_id) return `/channels/${item.channel_id}`;
+  if (item.deal_id) return `/sales/deals/${item.deal_id}`;
+  if (item.account_id) return `/sales/accounts/${item.account_id}`;
+  if (item.task_id) return item.product_id ? `/products/${item.product_id}#task-${item.task_id}` : '/tasks';
+  return null;
+}
 
 // How many the bell loads at a time. The panel is a recent-activity list, not
 // an archive: past this you are looking for the task itself.

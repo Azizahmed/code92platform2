@@ -2,8 +2,13 @@
 
 import {useCallback, useEffect, useRef, useState, useTransition} from 'react';
 import {
+  AlarmClock,
+  Archive,
   AtSign,
   Bell,
+  Building2,
+  CalendarClock,
+  Handshake,
   CheckCheck,
   CircleCheck,
   CircleDot,
@@ -23,7 +28,11 @@ import {
   getNotificationFeedAction,
   markNotificationsReadAction
 } from '@/lib/actions/notifications';
-import type {AppNotification, NotificationType} from '@/lib/notifications';
+import {
+  notificationHref,
+  type AppNotification,
+  type NotificationType
+} from '@/lib/notifications';
 
 // How often the bell asks for new items while the tab is open. Notifications
 // here are minutes-matter, not seconds-matter — a task was reassigned, a due
@@ -41,7 +50,15 @@ const TYPE_ICONS: Record<NotificationType, typeof Bell> = {
   mention: AtSign,
   channel_message: MessagesSquare,
   proposal_pending: Sparkles,
-  proposal_decided: Sparkles
+  proposal_decided: Sparkles,
+  task_due: CalendarClock,
+  task_overdue: AlarmClock,
+  deal_assigned: Handshake,
+  deal_due: CalendarClock,
+  deal_overdue: AlarmClock,
+  deal_closed: CircleCheck,
+  account_assigned: Building2,
+  account_archived: Archive
 };
 
 function NotificationRow({
@@ -56,6 +73,7 @@ function NotificationRow({
   const t = useTranslations('notifications');
   const Icon = TYPE_ICONS[item.type] ?? Bell;
   const unread = item.read_at === null;
+  const href = notificationHref(item);
 
   const body = (
     <>
@@ -90,15 +108,9 @@ function NotificationRow({
 
   return (
     <li className="group/row flex items-start gap-1">
-      {item.channel_id || (item.product_id && item.task_id) ? (
+      {href ? (
         <Link
-          href={
-            // Chat notifications point at the channel; task ones keep pointing
-            // at the task inside its product page.
-            item.channel_id
-              ? `/channels/${item.channel_id}`
-              : `/products/${item.product_id}#task-${item.task_id}`
-          }
+          href={href}
           onClick={onNavigate}
           className="flex min-w-0 flex-1 items-start gap-2.5 rounded-lg px-2 py-2 transition-colors hover:bg-raised"
         >

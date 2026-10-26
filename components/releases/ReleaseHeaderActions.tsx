@@ -8,6 +8,7 @@ import ReleaseForm, {
   type ReleaseMemberOption
 } from '@/components/releases/ReleaseForm';
 import {useRouter} from '@/i18n/navigation';
+import {pushAfterAction} from '@/lib/navigation-guard';
 import {deleteReleaseAction} from '@/lib/actions/releases';
 import type {ReleaseOverview} from '@/lib/releases';
 
@@ -38,7 +39,7 @@ export default function ReleaseHeaderActions({
         setError(result.error);
         return;
       }
-      router.push('/releases');
+      pushAfterAction(router, '/releases');
       router.refresh();
     });
   }

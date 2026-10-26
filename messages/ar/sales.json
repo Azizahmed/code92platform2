@@ -1,0 +1,237 @@
+{
+  "title": "المبيعات",
+  "subtitle": "مسار مبيعات واحد للشركات يشمل صفقات المنتجات والاستشارات.",
+  "stale": "راكدة",
+  "staleHint": "لا يوجد إجراء تالٍ، أو مرّ تاريخه، منذ أكثر من 7 أيام.",
+  "kanbanInstructions": "لنقل صفقة، اضغط المسافة أو الإدخال لالتقاطها، ثم استخدم الأسهم لاختيار المرحلة، ثم اضغط المسافة أو الإدخال لإفلاتها. اضغط Escape للإلغاء.",
+  "nav": {
+    "pipeline": "مسار المبيعات",
+    "accounts": "الحسابات"
+  },
+  "actions": {
+    "newAccount": "حساب جديد",
+    "newDeal": "صفقة جديدة",
+    "cancel": "إلغاء",
+    "save": "حفظ",
+    "saving": "جارٍ الحفظ…",
+    "createDeal": "إنشاء الصفقة",
+    "createAccount": "إنشاء الحساب",
+    "edit": "تعديل",
+    "editNextAction": "تعديل الإجراء التالي"
+  },
+  "stages": {
+    "lead": "عميل محتمل",
+    "meeting": "اجتماع",
+    "discovery_demo": "استكشاف / عرض",
+    "proposal": "عرض سعر",
+    "negotiation": "تفاوض",
+    "closed_won": "تم الربح",
+    "closed_lost": "خسارة"
+  },
+  "types": {
+    "product": "منتج",
+    "consultation": "استشارة"
+  },
+  "sources": {
+    "referral": "إحالة",
+    "inbound": "وارد",
+    "outbound": "صادر",
+    "operator_introduced": "عبر شريك تشغيل"
+  },
+  "ownership": {
+    "client": "العميل يملك الشيفرة",
+    "code92_full": "Code92 تملكها — كاملة",
+    "code92_partial": "Code92 تملكها — جزئياً"
+  },
+  "ownershipHint": {
+    "client": "تُسلَّم كخدمة؛ ويحتفظ العميل بكامل الملكية الفكرية.",
+    "code92_full": "تحتفظ Code92 بالملكية الكاملة ويمكنها تحويلها إلى منتج.",
+    "code92_partial": "الملكية مشتركة؛ سجّل نسب التقسيم في الملاحظات."
+  },
+  "move": {
+    "title": "نقل إلى {stage}",
+    "reason": "السبب",
+    "reasonBackward": "الرجوع بالصفقة للخلف يتطلب سبباً، ويُسجَّل على الصفقة.",
+    "reasonLost": "لماذا خُسرت؟ يُسجَّل السبب على الصفقة ويظهر في الحساب.",
+    "ownership": "من يملك الشيفرة؟",
+    "engagementNote": "ربح صفقة استشارية يفتح ارتباطاً على الحساب.",
+    "confirm": "نقل الصفقة",
+    "moving": "جارٍ النقل…"
+  },
+  "stageHelp": {
+    "reopen": "إعادة فتح صفقة مغلقة تتطلب سبباً."
+  },
+  "counters": {
+    "openDeals": "صفقات مفتوحة",
+    "openValue": "القيمة المفتوحة",
+    "closingThisMonth": "تُغلق هذا الشهر",
+    "stale": "صفقات راكدة"
+  },
+  "filters": {
+    "type": "النوع",
+    "allTypes": "كل الأنواع",
+    "owner": "المالك",
+    "allOwners": "كل المالكين",
+    "mine": "صفقاتي",
+    "product": "المنتج",
+    "allProducts": "كل المنتجات",
+    "sector": "القطاع",
+    "allSectors": "كل القطاعات",
+    "searchAccounts": "ابحث في الحسابات…",
+    "showArchived": "إظهار المؤرشفة"
+  },
+  "views": {
+    "kanban": "كانبان",
+    "list": "قائمة"
+  },
+  "card": {
+    "noNextAction": "لا يوجد إجراء تالٍ"
+  },
+  "columns": {
+    "deal": "الصفقة",
+    "stage": "المرحلة",
+    "owner": "المالك",
+    "value": "القيمة",
+    "nextAction": "الإجراء التالي",
+    "expectedClose": "الإغلاق المتوقع"
+  },
+  "fields": {
+    "name": "اسم الصفقة",
+    "account": "الحساب",
+    "chooseAccount": "اختر حساباً",
+    "noAccounts": "لا توجد حسابات — أنشئ حساباً أولاً",
+    "owner": "المالك",
+    "type": "النوع",
+    "product": "المنتج",
+    "chooseProduct": "اختر منتجاً",
+    "stage": "المرحلة",
+    "source": "المصدر",
+    "noSource": "غير محدد",
+    "value": "القيمة",
+    "currency": "العملة",
+    "expectedClose": "الإغلاق المتوقع",
+    "nextAction": "الإجراء التالي",
+    "nextActionPlaceholder": "مثال: إرسال عرض السعر",
+    "nextActionDate": "تاريخ الإجراء التالي",
+    "involvedContacts": "جهات الاتصال المعنية",
+    "created": "تاريخ الإنشاء"
+  },
+  "accountFields": {
+    "name": "الجهة",
+    "sector": "القطاع",
+    "city": "المدينة",
+    "owner": "المالك",
+    "notes": "ملاحظات"
+  },
+  "contactFields": {
+    "name": "الاسم",
+    "title": "الدور / المسمى",
+    "email": "البريد الإلكتروني",
+    "phone": "الهاتف",
+    "notes": "ملاحظات",
+    "primary": "أساسية"
+  },
+  "newDealTitle": "صفقة جديدة",
+  "newDealSubtitle": "تتبع الصفقة حساباً واحداً وتنتقل عبر مراحل المسار.",
+  "editDealTitle": "تعديل الصفقة",
+  "newAccountTitle": "حساب جديد",
+  "newAccountSubtitle": "جهة نبيع لها — عميل محتمل أو عميل حالي.",
+  "editAccountTitle": "تعديل الحساب",
+  "accountsTitle": "الحسابات",
+  "accountsSubtitle": "كل العملاء المحتملين والحاليين، مع جهات الاتصال والصفقات والارتباطات.",
+  "accountColumns": {
+    "name": "الحساب",
+    "sector": "القطاع",
+    "owner": "المالك",
+    "openDeals": "صفقات مفتوحة",
+    "status": "الحالة"
+  },
+  "accountStatus": {
+    "archived": "مؤرشف",
+    "customer": "عميل",
+    "prospect": "محتمل"
+  },
+  "sections": {
+    "stage": "المرحلة",
+    "engagement": "الارتباط",
+    "activity": "النشاط",
+    "nextAction": "الإجراء التالي",
+    "details": "التفاصيل",
+    "contacts": "جهات الاتصال",
+    "watchers": "الإشعارات",
+    "deals": "الصفقات",
+    "engagements": "الارتباطات",
+    "history": "السجل",
+    "customerOf": "عميل لـ"
+  },
+  "contacts": {
+    "none": "لا توجد جهات اتصال بعد.",
+    "add": "إضافة جهة اتصال",
+    "delete": "حذف جهة الاتصال",
+    "deleteConfirm": "حذف {name}؟",
+    "makePrimary": "تعيين كأساسية",
+    "noneOnAccount": "لا توجد جهات اتصال لهذا الحساب بعد.",
+    "addOnAccount": "أضفها من صفحة الحساب",
+    "noneInvolved": "لا توجد جهات اتصال معنية بعد.",
+    "choose": "اختيار جهات الاتصال المعنية"
+  },
+  "watchers": {
+    "owner": "المالك",
+    "none": "لا يوجد متابعون."
+  },
+  "activity": {
+    "notePlaceholder": "أضف ملاحظة — مكالمة، اجتماع، قرار…",
+    "addNote": "إضافة ملاحظة",
+    "none": "لا يوجد نشاط بعد.",
+    "system": "النظام",
+    "created": "أنشأ الصفقة في مرحلة {stage}",
+    "moved": "نقلها من {from} إلى {to}",
+    "noted": "أضاف ملاحظة",
+    "reason": "السبب",
+    "empty": "لا شيء",
+    "fields": {
+      "owner_id": "المالك",
+      "value_amount": "القيمة",
+      "currency": "العملة",
+      "expected_close": "الإغلاق المتوقع",
+      "next_action": "الإجراء التالي",
+      "next_action_date": "تاريخ الإجراء التالي"
+    }
+  },
+  "engagements": {
+    "name": "اسم الارتباط",
+    "notes": "ملاحظات",
+    "fromDeal": "من الصفقة",
+    "none": "لا توجد ارتباطات بعد. ربح صفقة استشارية يفتح ارتباطاً.",
+    "later": "تحويل الارتباط إلى منتج يأتي مع مسار المنتجات في إصدار لاحق."
+  },
+  "customerOf": {
+    "none": "ليس عميلاً بعد. ربح صفقة منتج يضيف المنتج هنا.",
+    "since": "منذ {date}"
+  },
+  "archive": {
+    "archive": "أرشفة",
+    "unarchive": "إلغاء الأرشفة",
+    "confirm": "أرشفة هذا الحساب؟ سيتم إشعار المالك والمتابعين."
+  },
+  "empty": {
+    "pipelineTitle": "لا توجد صفقات بعد",
+    "pipelineBody": "أنشئ حساباً ثم أضف له صفقة. لكل صفقة مالك ومرحلة وإجراء تالٍ.",
+    "column": "لا صفقات",
+    "deals": "لا توجد صفقات.",
+    "accountsTitle": "لا توجد حسابات",
+    "accountsBody": "أضف الجهات التي تبيع لها."
+  },
+  "errors": {
+    "invalid": "تحقق من الحقول وحاول مرة أخرى.",
+    "forbidden": "ليست لديك صلاحية لذلك.",
+    "generic": "حدث خطأ. حاول مرة أخرى.",
+    "notFound": "هذا السجل لم يعد موجوداً.",
+    "reasonRequired": "هذه الحركة تتطلب ذكر السبب.",
+    "ownershipRequired": "حدّد من يملك الشيفرة لربح صفقة استشارية.",
+    "sameStage": "الصفقة في هذه المرحلة بالفعل.",
+    "archiveForbidden": "يمكن لمالك الحساب أو المشرف فقط أرشفته.",
+    "productRequired": "صفقات المنتجات تتطلب تحديد منتج.",
+    "contactAccount": "يجب أن تتبع جهات الاتصال المعنية حساب الصفقة."
+  }
+}

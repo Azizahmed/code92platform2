@@ -11,6 +11,7 @@ import {getTranslations} from 'next-intl/server';
 import AppShell from '@/components/AppShell';
 import {routing} from '@/i18n/routing';
 import {getOwnMembership, getSessionUser} from '@/lib/auth';
+import {getMyWorkCounts} from '@/lib/my-work-counts';
 
 import '../globals.css';
 
@@ -81,9 +82,12 @@ export default async function LocaleLayout({
     notFound();
   }
 
-  const [user, member] = await Promise.all([
+  // The My work badge rides in the same wave as get_me(): no added latency,
+  // and getMyWorkCounts() returns before any call for anonymous requests.
+  const [user, member, counts] = await Promise.all([
     getSessionUser(),
-    getOwnMembership()
+    getOwnMembership(),
+    getMyWorkCounts()
   ]);
 
   return (
@@ -103,6 +107,7 @@ export default async function LocaleLayout({
             userEmail={user?.email ?? null}
             isAdmin={Boolean(member?.is_active && member.role === 'admin')}
             assistantUserId={member?.is_active ? user?.id ?? null : null}
+            myWorkBadge={member?.is_active ? counts.badge : 0}
           >
             {children}
           </AppShell>

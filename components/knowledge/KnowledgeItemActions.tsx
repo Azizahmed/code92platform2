@@ -5,6 +5,7 @@ import {useState, useTransition} from 'react';
 import {useTranslations} from 'next-intl';
 
 import {useRouter} from '@/i18n/navigation';
+import {pushAfterAction} from '@/lib/navigation-guard';
 import {
   deleteKnowledgeItemAction,
   setKnowledgeArchivedAction
@@ -58,7 +59,7 @@ export default function KnowledgeItemActions({
       if (result.fileKey) await removeKnowledgeFile(result.fileKey);
       // revalidatePath already invalidated the client router cache, so this
       // push lands on a freshly fetched list.
-      router.push('/knowledge');
+      pushAfterAction(router, '/knowledge');
     });
   }
 

@@ -314,6 +314,35 @@ waiver never reaching the register. Cron parser passes 14 cases. See
 COLLABORATION.md §11 for the two defects this caught, and for what still needs the
 live backend.
 
+### M14 — Release 0.2: My work, Sales, notifications · `20261026120000_…` → `20261026120300_…`
+
+*Know what's mine, know who we're selling to.* New screens only; every existing
+screen keeps its behaviour.
+
+- **Task workflow status** — `workflow_status` beside `status`, synced both ways
+  inside `validate_product_task()` so the kanban's Done reuses the existing
+  completion trigger rather than a second notification path.
+- **Sales** — accounts, contacts, deals, deal contacts, activity log, account
+  products, engagements, watchers; `move_deal_stage()` as the only stage writer;
+  `deal_overview` / `account_overview` views.
+- **Notifications** — eight new types on the existing table, `dedupe_key`,
+  `enqueue_notification()`, `notification_enqueue_due()` behind a daily schedule
+  (`notify-email` in `daily` mode, bearer `CRON_SECRET`).
+- **My work** — `my_waiting_on()` and `my_work_counts()`; nav badge; mobile bar
+  of five plus More.
+- **Release log** — `/changelog`, linked from the sidebar footer as `v0.2`.
+
+*Verified locally* (Postgres 16 + a PostgREST-shaped emulator; InsForge was
+unreachable from the build environment): 43 migrations replay clean; SQL suites
+`tests/sql/*` pass; 62 unit tests; a 68-check Playwright smoke against the
+production build covering every screen and flow above, EN and AR, desktop and
+360 px.
+
+*Fixed along the way:* `RelativeTime` rendered a different string on server and
+client, a hydration mismatch (#418) that made React regenerate the tree and
+drop revalidated updates — the main cause of "saved but the screen didn't
+change" on existing screens too.
+
 ## 4. Outstanding work
 
 ### Blocked on a credential
@@ -328,6 +357,10 @@ the body and the `InsForgeError`, but which branch actually fires is untested.
 
 ### Needs an authenticated session to verify
 
+Release 0.2, against the live project: apply the four `20261026…`
+migrations, deploy `notify-email`, set `CRON_SECRET`, create the daily schedule
+(DEPLOY.md), then check one real email of each kind and the badge counts.
+
 Carried from M9 and still open:
 
 - Owner vs member vs admin paths through `advance_lifecycle_phase`.
@@ -341,6 +374,25 @@ Carried from M9 and still open:
 
 ### Known issues
 
+- **Navigation after a save can stall (pre-existing, upstream).** A
+  `router.push` — or a server-action `redirect()` — right after a server action
+  that revalidated leaves the old page on screen in a minority of runs: React
+  holds the router transition as suspended with every wakeable already
+  fulfilled. Measured on the 0.1 baseline at 6/20 for channel creation (1/20
+  after the `RelativeTime` fix); unchanged by Next 15.5.28, webpack vs
+  Turbopack, or `clientSegmentCache`. Related upstream: vercel/next.js#95391.
+  The data is always written; a reload shows it.
+  *Mitigated app-wide* (`lib/navigation-guard.ts`): Next navigates as usual;
+  if the URL is still the page the save started from after the bound, the
+  destination is loaded outright. Server-action redirects (0.2 forms, via
+  `useServerAction`) use 1.5 s — their response already carries the page;
+  client `pushAfterAction()` (channels, knowledge, products, releases) uses
+  5 s, since it still fetches. 120 measured runs across deal and channel
+  creation: 0 stuck; 9 of 60 deal saves took the fallback (≤ 2.1 s), the rest
+  landed softly (median ~200 ms). Tried and rejected: skipping revalidation on
+  redirect (24/30 stalled), swallowing the redirect rejection (21/30),
+  deferring the pending reset (no change). Root cause remains upstream —
+  revisit on the Next 16 upgrade and drop the guard if it no longer fires.
 - **The security advisor is unavailable** on this project — `pg_stat_statements`
   is not installed, so `diagnose advisor` prints "No issues found" over an empty
   result set. No automated security scan has actually run against this schema.

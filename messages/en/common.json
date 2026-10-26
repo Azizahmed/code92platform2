@@ -16,7 +16,12 @@
     "controlPanel": "Control panel",
     "settings": "Settings",
     "releases": "Releases",
-    "channels": "Channels"
+    "channels": "Channels",
+    "myWork": "My work",
+    "sales": "Sales",
+    "more": "More",
+    "changelog": "Release log",
+    "badge": "{count, plural, =1 {1 item needs you} other {# items need you}}"
   },
   "actions": {
     "signOut": "Sign out",

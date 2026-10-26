@@ -141,6 +141,13 @@ sub-tasks via `parent_task_id`, assignee, due date, manual ordering via
 `position`, and attachments. Parent/child rules a CHECK cannot reach are enforced
 by `validate_product_task()`. A cross-product `/tasks` view aggregates them.
 
+**Workflow status** (0.2) is a second, finer axis for the kanban: `todo`,
+`in_progress`, `blocked`, `done`. It is kept in step with `status` by the same
+trigger, in both directions — moving a card to Done completes the task (and so
+notifies through the existing path), completing a task moves its card to Done,
+and reopening sends it back to To do. Nothing else reads it, so every screen
+built on `status` keeps working unchanged.
+
 **Attachments** take documents as well as images: markdown, plain text, PDF and
 the Office formats, up to 25 MB each. The allowlist is defined once in
 `public.is_allowed_attachment_type()` and mirrored in `lib/attachments.ts`.
@@ -344,6 +351,28 @@ anywhere still notifies the people following it.
   `notification_email_targets()`, which only answers for users with mail already
   queued, so it cannot double as a team directory.
 
+**0.2 additions — deals, accounts, due dates.** The same table and the same
+bell carry eight more types: `task_due`, `task_overdue`, `deal_assigned`,
+`deal_due`, `deal_overdue`, `deal_closed`, `account_assigned`,
+`account_archived`. `deal_watchers` and `account_watchers` follow the
+`task_watchers` rules (self-service only; the owner is subscribed implicitly).
+
+- **Who** — owner plus watchers, never the actor. Fan-out goes through
+  `enqueue_notification()`, server-only, which dedupes on
+  `(user_id, dedupe_key)` so a re-run never files twice.
+- **Due / overdue** — `notification_enqueue_due()` runs once a day (05:00
+  Kuwait; see DEPLOY.md). It files a due notice on the due date and one overdue
+  notice the day after, with a three-day look-back so a missed run catches up.
+  Completed tasks and closed deals are never chased. Dates are business dates:
+  `public.business_today()` is Asia/Kuwait.
+- **Preferences** — `notification_preferences` gains `email_on_due` and
+  `email_on_closed`. **Owners cannot opt out of their own due/overdue email**:
+  for the owner those rows are always queued `pending`, regardless of the email
+  switch. Watchers' switches are respected.
+- **Draining** — 0.2 mutations drain the outbox server-side with `after()` once
+  the response is sent (`lib/email-drain.ts`), not by a second action from the
+  client. The daily job's mail goes out in the same scheduled call.
+
 ### 4.10 GitHub integration
 
 Each product links to **exactly one private repository** in the `code92-dev`
@@ -386,6 +415,49 @@ repositories mitigates but does not remove this. Org membership should be
 reviewed before enabling mirroring on a high-risk product.
 
 ---
+
+### 4.11 My work (0.2)
+
+`/my-work` answers "what is mine" in two tabs.
+
+- **Assigned to me** — every open task assigned to the caller across products,
+  plus Done cards for 14 days. List view groups by product (General last);
+  kanban has To do / In progress / Blocked / Done and drag between them.
+  Counters: overdue, due today, this week (Sunday–Saturday, business dates).
+  Quick capture adds a task to the caller in one line; the full editor is the
+  shared task editor, not a copy.
+- **Waiting on me** — `my_waiting_on()` (one `SECURITY DEFINER` read, scoped to
+  the caller) returns six sources: lifecycle gates whose required evidence is
+  all filed (owner for low/medium risk, admin for high), pending agent
+  proposals (product owner, or channel member when unbound), overdue product
+  reviews, `@mentions` with no later reply from the caller in that thread (30
+  days), stale deals, and deals whose expected close is this week. Items leave
+  on their own once resolved; there is no dismiss state to drift.
+- **Nav badge** — `my_work_counts()`: waiting items plus overdue tasks, rendered
+  in the same request as the shell and refreshed by polling while visible.
+
+### 4.12 Sales (0.2)
+
+Accounts, contacts and deals, for the team to see who it is selling to.
+
+- **Entities** — `accounts` (owner, sector, city, archive by owner/admin),
+  `contacts` (one primary per account), `deals` (product or consultation;
+  value + currency; expected close; next action + date; source), deal↔contact
+  links within the same account, and an append-only `deal_activities` log.
+- **Stages** — Lead → Meeting → Discovery/Demo → Proposal → Negotiation →
+  Closed Won / Closed Lost. `stage` has no client `UPDATE` grant; every move
+  goes through `move_deal_stage()`, which requires a reason for a backward move
+  or a loss and logs the transition.
+- **Outcomes** — a product win records the account as a customer of that
+  product (`account_products`); a consultation win requires an ownership choice
+  and opens an `engagements` row.
+- **Stale** — an open deal is stale when it has had no next action for seven
+  days, or its next-action date is more than seven days past
+  (`deal_overview.is_stale`). Stale deals and deals closing this week also
+  surface in Waiting on me.
+- **Screens** — kanban and list with owner / type / product filters and
+  totals by currency; deal page with stepper, next action, contacts, watchers
+  and activity; account page with contacts, deals, products and engagements.
 
 ## 5. Security model
 

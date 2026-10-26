@@ -26,7 +26,9 @@ const uuid = z.string().uuid();
 const preferencesSchema = z.object({
   emailEnabled: z.boolean(),
   emailOnAssign: z.boolean(),
-  emailOnUpdate: z.boolean()
+  emailOnUpdate: z.boolean(),
+  emailOnDue: z.boolean(),
+  emailOnClosed: z.boolean()
 });
 
 async function requireActiveCaller() {
@@ -39,7 +41,7 @@ async function requireActiveCaller() {
 }
 
 const NOTIFICATION_COLUMNS =
-  'id, type, task_id, product_id, message_id, channel_id, actor_id, title, body, read_at, email_state, created_at';
+  'id, type, task_id, product_id, message_id, channel_id, deal_id, account_id, actor_id, title, body, read_at, email_state, created_at';
 
 // The bell polls this. RLS already restricts the table to the caller's own
 // rows, so there is no user filter here — adding one would be decoration that
@@ -158,6 +160,46 @@ export async function setTaskWatchAction(
   return {ok: true};
 }
 
+// Deals and accounts, same rule as tasks: you watch or unwatch yourself only
+// (the RLS policies pin user_id to the caller). Owners are not watchers — they
+// are always told about their own records.
+export async function setRecordWatchAction(
+  recordType: 'deal' | 'account',
+  recordId: string,
+  watching: boolean
+): Promise<NotificationActionResult> {
+  if (!['deal', 'account'].includes(recordType) || !uuid.safeParse(recordId).success) {
+    return {ok: false, error: 'invalid'};
+  }
+
+  const caller = await requireActiveCaller();
+  if (!caller) return {ok: false, error: 'forbidden'};
+
+  const insforge = await createInsForgeServerClient();
+  const table = recordType === 'deal' ? 'deal_watchers' : 'account_watchers';
+  const column = recordType === 'deal' ? 'deal_id' : 'account_id';
+
+  if (watching) {
+    const {error} = await insforge.database
+      .from(table)
+      .insert([{[column]: recordId, user_id: caller.user.id}]);
+    if (error && !String(error.message ?? '').includes('duplicate key')) {
+      return {ok: false, error: 'generic'};
+    }
+  } else {
+    const {error} = await insforge.database
+      .from(table)
+      .delete()
+      .eq(column, recordId)
+      .eq('user_id', caller.user.id);
+    if (error) return {ok: false, error: 'generic'};
+  }
+
+  // A concrete path, like the product pages: see lib/revalidate.ts.
+  revalidatePath(`/[locale]/sales/${recordType === 'deal' ? 'deals' : 'accounts'}/${recordId}`, 'page');
+  return {ok: true};
+}
+
 // ============================================================
 // Preferences
 // ============================================================
@@ -169,7 +211,7 @@ export async function getNotificationPreferencesAction(): Promise<NotificationPr
   const insforge = await createInsForgeServerClient();
   const {data} = await insforge.database
     .from('notification_preferences')
-    .select('email_enabled, email_on_assign, email_on_update')
+    .select('email_enabled, email_on_assign, email_on_update, email_on_due, email_on_closed')
     .eq('user_id', caller.user.id)
     .maybeSingle();
 
@@ -179,7 +221,9 @@ export async function getNotificationPreferencesAction(): Promise<NotificationPr
   return {
     email_enabled: Boolean(data.email_enabled),
     email_on_assign: Boolean(data.email_on_assign),
-    email_on_update: Boolean(data.email_on_update)
+    email_on_update: Boolean(data.email_on_update),
+    email_on_due: Boolean(data.email_on_due),
+    email_on_closed: Boolean(data.email_on_closed)
   };
 }
 
@@ -187,6 +231,8 @@ export async function saveNotificationPreferencesAction(input: {
   emailEnabled: boolean;
   emailOnAssign: boolean;
   emailOnUpdate: boolean;
+  emailOnDue: boolean;
+  emailOnClosed: boolean;
 }): Promise<NotificationActionResult> {
   const parsed = preferencesSchema.safeParse(input);
   if (!parsed.success) return {ok: false, error: 'invalid'};
@@ -199,7 +245,9 @@ export async function saveNotificationPreferencesAction(input: {
     user_id: caller.user.id,
     email_enabled: parsed.data.emailEnabled,
     email_on_assign: parsed.data.emailOnAssign,
-    email_on_update: parsed.data.emailOnUpdate
+    email_on_update: parsed.data.emailOnUpdate,
+    email_on_due: parsed.data.emailOnDue,
+    email_on_closed: parsed.data.emailOnClosed
   };
 
   // No upsert: the client holds INSERT and a column-scoped UPDATE, and an
@@ -210,7 +258,9 @@ export async function saveNotificationPreferencesAction(input: {
     .update({
       email_enabled: row.email_enabled,
       email_on_assign: row.email_on_assign,
-      email_on_update: row.email_on_update
+      email_on_update: row.email_on_update,
+      email_on_due: row.email_on_due,
+      email_on_closed: row.email_on_closed
     })
     .eq('user_id', caller.user.id)
     .select('user_id');

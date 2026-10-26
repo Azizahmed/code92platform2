@@ -1,0 +1,93 @@
+{
+  "title": "My work",
+  "subtitle": "What you owe and what is waiting on you, across every product.",
+  "settingsLink": "Notifications",
+  "general": "General",
+  "assignedHint": "Moving a task to Done here completes it in its product record.",
+  "counters": {
+    "overdue": "Overdue",
+    "dueToday": "Due today",
+    "open": "Open tasks",
+    "waiting": "Waiting on me"
+  },
+  "tabs": {
+    "assigned": "Assigned to me",
+    "waiting": "Waiting on me"
+  },
+  "views": {
+    "list": "List",
+    "kanban": "Kanban"
+  },
+  "status": {
+    "todo": "To do",
+    "in_progress": "In progress",
+    "blocked": "Blocked",
+    "done": "Done"
+  },
+  "kanban": {
+    "doneWindow": "Showing tasks completed in the last 14 days",
+    "instructions": "To move a task, press space or enter to pick it up, use the arrow keys to choose a column, then press space or enter to drop it. Press escape to cancel."
+  },
+  "capture": {
+    "title": "Task title",
+    "placeholder": "Capture a task… (assigned to you)",
+    "product": "Product",
+    "dueDate": "Due date",
+    "add": "Add task",
+    "adding": "Adding…"
+  },
+  "task": {
+    "edit": "Edit task",
+    "complete": "Toggle complete",
+    "today": "Today",
+    "noDueDate": "No date"
+  },
+  "empty": {
+    "assignedTitle": "Nothing assigned to you",
+    "assignedBody": "Tasks assigned to you on any product, or captured above, show up here.",
+    "allDone": "No open tasks. Completed ones are in the kanban's Done column.",
+    "column": "Drop tasks here",
+    "waitingTitle": "Nothing is waiting on you",
+    "waitingBody": "Gates ready for your decision, agent proposals, overdue reviews, unanswered mentions, and your stale or closing deals appear here when they need you."
+  },
+  "waiting": {
+    "sources": {
+      "review_overdue": "Product review overdue",
+      "deal_stale": "Stale deal — no current next action",
+      "deal_closing": "Deal expected to close this week",
+      "gate_ready": "Gate ready for your decision",
+      "proposal_pending": "Agent proposal waiting",
+      "mention_unreplied": "Mentioned you — no reply yet"
+    },
+    "when": {
+      "review_overdue": "Due {date}",
+      "deal_stale": "Since {date}",
+      "deal_closing": "Closes {date}",
+      "gate_ready": "Since {date}",
+      "proposal_pending": "{date}",
+      "mention_unreplied": "{date}"
+    },
+    "actions": {
+      "review_overdue": "Post update",
+      "deal_stale": "Set next action",
+      "deal_closing": "Open deal",
+      "gate_ready": "Review gate",
+      "proposal_pending": "Decide",
+      "mention_unreplied": "Reply"
+    },
+    "gatePhase": "{phase} — all required evidence filed",
+    "proposalActions": {
+      "knowledge_note": "Knowledge note",
+      "task_create": "New task",
+      "task_update": "Task change",
+      "status_update": "Status update",
+      "lifecycle_advance": "Advance a phase"
+    }
+  },
+  "errors": {
+    "invalid": "Check the fields and try again.",
+    "forbidden": "You don't have access to do that.",
+    "generic": "Something went wrong. Try again.",
+    "notFound": "That task no longer exists."
+  }
+}

@@ -1,0 +1,93 @@
+{
+  "title": "عملي",
+  "subtitle": "ما عليك وما ينتظرك، في كل المنتجات.",
+  "settingsLink": "الإشعارات",
+  "general": "عام",
+  "assignedHint": "نقل المهمة إلى «منجزة» هنا يُنجزها في سجل المنتج أيضاً.",
+  "counters": {
+    "overdue": "متأخرة",
+    "dueToday": "مستحقة اليوم",
+    "open": "مهام مفتوحة",
+    "waiting": "بانتظاري"
+  },
+  "tabs": {
+    "assigned": "مسندة إليّ",
+    "waiting": "بانتظاري"
+  },
+  "views": {
+    "list": "قائمة",
+    "kanban": "كانبان"
+  },
+  "status": {
+    "todo": "للتنفيذ",
+    "in_progress": "قيد التنفيذ",
+    "blocked": "متوقفة",
+    "done": "منجزة"
+  },
+  "kanban": {
+    "doneWindow": "تُعرض المهام المنجزة خلال آخر 14 يوماً",
+    "instructions": "لنقل مهمة، اضغط المسافة أو الإدخال لالتقاطها، ثم استخدم الأسهم لاختيار العمود، ثم اضغط المسافة أو الإدخال لإفلاتها. اضغط Escape للإلغاء."
+  },
+  "capture": {
+    "title": "عنوان المهمة",
+    "placeholder": "أضف مهمة… (تُسند إليك)",
+    "product": "المنتج",
+    "dueDate": "تاريخ الاستحقاق",
+    "add": "إضافة",
+    "adding": "جارٍ الإضافة…"
+  },
+  "task": {
+    "edit": "تعديل المهمة",
+    "complete": "تبديل الإنجاز",
+    "today": "اليوم",
+    "noDueDate": "بلا تاريخ"
+  },
+  "empty": {
+    "assignedTitle": "لا شيء مسند إليك",
+    "assignedBody": "المهام المسندة إليك في أي منتج، أو التي تضيفها من الأعلى، تظهر هنا.",
+    "allDone": "لا توجد مهام مفتوحة. المهام المنجزة في عمود «منجزة» في الكانبان.",
+    "column": "أفلت المهام هنا",
+    "waitingTitle": "لا شيء بانتظارك",
+    "waitingBody": "البوابات الجاهزة لقرارك، ومقترحات الوكلاء، والمراجعات المتأخرة، والإشارات غير المردود عليها، وصفقاتك الراكدة أو المتوقع إغلاقها تظهر هنا عندما تحتاجك."
+  },
+  "waiting": {
+    "sources": {
+      "review_overdue": "مراجعة منتج متأخرة",
+      "deal_stale": "صفقة راكدة — لا إجراء تالياً حالياً",
+      "deal_closing": "صفقة متوقع إغلاقها هذا الأسبوع",
+      "gate_ready": "بوابة جاهزة لقرارك",
+      "proposal_pending": "مقترح وكيل بانتظارك",
+      "mention_unreplied": "أشار إليك — دون رد بعد"
+    },
+    "when": {
+      "review_overdue": "مستحقة {date}",
+      "deal_stale": "منذ {date}",
+      "deal_closing": "تُغلق {date}",
+      "gate_ready": "منذ {date}",
+      "proposal_pending": "{date}",
+      "mention_unreplied": "{date}"
+    },
+    "actions": {
+      "review_overdue": "نشر تحديث",
+      "deal_stale": "تحديد الإجراء التالي",
+      "deal_closing": "فتح الصفقة",
+      "gate_ready": "مراجعة البوابة",
+      "proposal_pending": "اتخاذ القرار",
+      "mention_unreplied": "الرد"
+    },
+    "gatePhase": "{phase} — كل الأدلة المطلوبة مرفوعة",
+    "proposalActions": {
+      "knowledge_note": "ملاحظة معرفة",
+      "task_create": "مهمة جديدة",
+      "task_update": "تعديل مهمة",
+      "status_update": "تحديث حالة",
+      "lifecycle_advance": "تقدّم مرحلة"
+    }
+  },
+  "errors": {
+    "invalid": "تحقق من الحقول وحاول مرة أخرى.",
+    "forbidden": "ليست لديك صلاحية لذلك.",
+    "generic": "حدث خطأ. حاول مرة أخرى.",
+    "notFound": "هذه المهمة لم تعد موجودة."
+  }
+}

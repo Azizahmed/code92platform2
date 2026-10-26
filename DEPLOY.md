@@ -145,3 +145,23 @@ unattended schedule is the risk the "use a test key" guidance exists to prevent.
 `npx @insforge/cli config push`. Until it is applied the channel view still works
 — it polls every five seconds — so this is a latency improvement rather than a
 prerequisite.
+
+## Release 0.2 — My work, Sales, notifications
+
+Four migrations, one function redeploy, one secret, one schedule.
+
+```bash
+npx @insforge/cli db migrations up --all          # 20261026120000 → 20261026120300
+npx @insforge/cli functions deploy notify-email --file functions/notify-email.ts
+npx @insforge/cli secrets add CRON_SECRET "$(openssl rand -hex 32)"
+```
+
+| Name | Cron (UTC) | Target | Body | Header |
+|---|---|---|---|---|
+| `notify-daily` | `0 2 * * *` (05:00 Kuwait) | `POST /functions/notify-email` | `{"mode":"daily"}` | `Authorization: Bearer ${{secrets.CRON_SECRET}}` |
+
+The daily call runs `notification_enqueue_due()` (due and overdue notices for
+tasks and deals, idempotent per day) and then drains the outbox. Without the
+schedule everything else in 0.2 works; only due/overdue reminders are missing.
+Run it once by hand after deploying to confirm it answers `{"enqueued": n, ...}`.
+

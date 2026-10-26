@@ -5,6 +5,7 @@ import {Plus} from 'lucide-react';
 import {useTranslations} from 'next-intl';
 
 import {useRouter} from '@/i18n/navigation';
+import {pushAfterAction} from '@/lib/navigation-guard';
 import {createChannelAction} from '@/lib/actions/channels';
 import {toChannelSlug} from '@/lib/channels';
 
@@ -50,7 +51,7 @@ export default function CreateChannelForm({
       setOpen(false);
       // Straight into the room that was just opened, rather than leaving the
       // creator to find it in the rail.
-      if (result.channelId) router.push(`/channels/${result.channelId}`);
+      if (result.channelId) pushAfterAction(router, `/channels/${result.channelId}`);
       else router.refresh();
     });
   }

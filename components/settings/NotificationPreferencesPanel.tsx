@@ -55,6 +55,8 @@ export default function NotificationPreferencesPanel({
   const [emailEnabled, setEmailEnabled] = useState(preferences.email_enabled);
   const [onAssign, setOnAssign] = useState(preferences.email_on_assign);
   const [onUpdate, setOnUpdate] = useState(preferences.email_on_update);
+  const [onDue, setOnDue] = useState(preferences.email_on_due);
+  const [onClosed, setOnClosed] = useState(preferences.email_on_closed);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
@@ -63,6 +65,8 @@ export default function NotificationPreferencesPanel({
     emailEnabled: boolean;
     emailOnAssign: boolean;
     emailOnUpdate: boolean;
+    emailOnDue: boolean;
+    emailOnClosed: boolean;
   }) {
     setError(null);
     setSaved(false);
@@ -80,11 +84,15 @@ export default function NotificationPreferencesPanel({
     const next = {
       emailEnabled: patch.email_enabled ?? emailEnabled,
       emailOnAssign: patch.email_on_assign ?? onAssign,
-      emailOnUpdate: patch.email_on_update ?? onUpdate
+      emailOnUpdate: patch.email_on_update ?? onUpdate,
+      emailOnDue: patch.email_on_due ?? onDue,
+      emailOnClosed: patch.email_on_closed ?? onClosed
     };
     setEmailEnabled(next.emailEnabled);
     setOnAssign(next.emailOnAssign);
     setOnUpdate(next.emailOnUpdate);
+    setOnDue(next.emailOnDue);
+    setOnClosed(next.emailOnClosed);
     save(next);
   }
 
@@ -131,7 +139,25 @@ export default function NotificationPreferencesPanel({
           disabled={!emailEnabled}
           onChange={(next) => update({email_on_update: next})}
         />
+        <Toggle
+          label={t('preferences.onDue')}
+          hint={t('preferences.onDueHint')}
+          checked={onDue}
+          disabled={!emailEnabled}
+          onChange={(next) => update({email_on_due: next})}
+        />
+        <Toggle
+          label={t('preferences.onClosed')}
+          hint={t('preferences.onClosedHint')}
+          checked={onClosed}
+          disabled={!emailEnabled}
+          onChange={(next) => update({email_on_closed: next})}
+        />
       </div>
+
+      <p className="text-[11px] leading-relaxed text-faint">
+        {t('preferences.ownerDueNote')}
+      </p>
     </section>
   );
 }

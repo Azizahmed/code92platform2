@@ -1,0 +1,237 @@
+{
+  "title": "Sales",
+  "subtitle": "One B2B pipeline for product and consultation deals.",
+  "stale": "Stale",
+  "staleHint": "No next action, or the next-action date passed, for more than 7 days.",
+  "kanbanInstructions": "To move a deal, press space or enter to pick it up, use the arrow keys to choose a stage, then press space or enter to drop it. Press escape to cancel.",
+  "nav": {
+    "pipeline": "Pipeline",
+    "accounts": "Accounts"
+  },
+  "actions": {
+    "newAccount": "New account",
+    "newDeal": "New deal",
+    "cancel": "Cancel",
+    "save": "Save",
+    "saving": "Saving…",
+    "createDeal": "Create deal",
+    "createAccount": "Create account",
+    "edit": "Edit",
+    "editNextAction": "Edit next action"
+  },
+  "stages": {
+    "lead": "Lead",
+    "meeting": "Meeting",
+    "discovery_demo": "Discovery / Demo",
+    "proposal": "Proposal",
+    "negotiation": "Negotiation",
+    "closed_won": "Closed Won",
+    "closed_lost": "Closed Lost"
+  },
+  "types": {
+    "product": "Product",
+    "consultation": "Consultation"
+  },
+  "sources": {
+    "referral": "Referral",
+    "inbound": "Inbound",
+    "outbound": "Outbound",
+    "operator_introduced": "Operator-introduced"
+  },
+  "ownership": {
+    "client": "Client owns the code",
+    "code92_full": "Code92 owns it — full",
+    "code92_partial": "Code92 owns it — partial"
+  },
+  "ownershipHint": {
+    "client": "Delivered as a service; the client keeps all IP.",
+    "code92_full": "Code92 keeps full ownership and can productise it.",
+    "code92_partial": "Ownership is shared; record the split in the notes."
+  },
+  "move": {
+    "title": "Move to {stage}",
+    "reason": "Reason",
+    "reasonBackward": "Moving a deal backward needs a reason. It is logged on the deal.",
+    "reasonLost": "Why was it lost? This is logged on the deal and shown on the account.",
+    "ownership": "Who owns the code?",
+    "engagementNote": "Winning a consultation deal opens an engagement on the account.",
+    "confirm": "Move deal",
+    "moving": "Moving…"
+  },
+  "stageHelp": {
+    "reopen": "Reopening a closed deal needs a reason."
+  },
+  "counters": {
+    "openDeals": "Open deals",
+    "openValue": "Open value",
+    "closingThisMonth": "Closing this month",
+    "stale": "Stale deals"
+  },
+  "filters": {
+    "type": "Type",
+    "allTypes": "All types",
+    "owner": "Owner",
+    "allOwners": "All owners",
+    "mine": "Mine",
+    "product": "Product",
+    "allProducts": "All products",
+    "sector": "Sector",
+    "allSectors": "All sectors",
+    "searchAccounts": "Search accounts…",
+    "showArchived": "Show archived"
+  },
+  "views": {
+    "kanban": "Kanban",
+    "list": "List"
+  },
+  "card": {
+    "noNextAction": "No next action"
+  },
+  "columns": {
+    "deal": "Deal",
+    "stage": "Stage",
+    "owner": "Owner",
+    "value": "Value",
+    "nextAction": "Next action",
+    "expectedClose": "Expected close"
+  },
+  "fields": {
+    "name": "Deal name",
+    "account": "Account",
+    "chooseAccount": "Choose an account",
+    "noAccounts": "No accounts yet — create one first",
+    "owner": "Owner",
+    "type": "Type",
+    "product": "Product",
+    "chooseProduct": "Choose a product",
+    "stage": "Stage",
+    "source": "Source",
+    "noSource": "Not set",
+    "value": "Value",
+    "currency": "Currency",
+    "expectedClose": "Expected close",
+    "nextAction": "Next action",
+    "nextActionPlaceholder": "e.g. Send the proposal",
+    "nextActionDate": "Next action date",
+    "involvedContacts": "Involved contacts",
+    "created": "Created"
+  },
+  "accountFields": {
+    "name": "Organisation",
+    "sector": "Sector",
+    "city": "City",
+    "owner": "Owner",
+    "notes": "Notes"
+  },
+  "contactFields": {
+    "name": "Name",
+    "title": "Role / title",
+    "email": "Email",
+    "phone": "Phone",
+    "notes": "Notes",
+    "primary": "Primary"
+  },
+  "newDealTitle": "New deal",
+  "newDealSubtitle": "A deal belongs to one account and moves through the pipeline.",
+  "editDealTitle": "Edit deal",
+  "newAccountTitle": "New account",
+  "newAccountSubtitle": "An organisation you sell to — prospect or customer.",
+  "editAccountTitle": "Edit account",
+  "accountsTitle": "Accounts",
+  "accountsSubtitle": "Every prospect and customer, with contacts, deals and engagements.",
+  "accountColumns": {
+    "name": "Account",
+    "sector": "Sector",
+    "owner": "Owner",
+    "openDeals": "Open deals",
+    "status": "Status"
+  },
+  "accountStatus": {
+    "archived": "Archived",
+    "customer": "Customer",
+    "prospect": "Prospect"
+  },
+  "sections": {
+    "stage": "Stage",
+    "engagement": "Engagement",
+    "activity": "Activity",
+    "nextAction": "Next action",
+    "details": "Details",
+    "contacts": "Contacts",
+    "watchers": "Notifications",
+    "deals": "Deals",
+    "engagements": "Engagements",
+    "history": "History",
+    "customerOf": "Customer of"
+  },
+  "contacts": {
+    "none": "No contacts yet.",
+    "add": "Add contact",
+    "delete": "Delete contact",
+    "deleteConfirm": "Delete {name}?",
+    "makePrimary": "Make primary",
+    "noneOnAccount": "This account has no contacts yet.",
+    "addOnAccount": "Add them on the account",
+    "noneInvolved": "No contacts involved yet.",
+    "choose": "Choose involved contacts"
+  },
+  "watchers": {
+    "owner": "Owner",
+    "none": "No watchers."
+  },
+  "activity": {
+    "notePlaceholder": "Add a note — a call, a meeting, a decision…",
+    "addNote": "Add note",
+    "none": "No activity yet.",
+    "system": "System",
+    "created": "created the deal in {stage}",
+    "moved": "moved {from} → {to}",
+    "noted": "added a note",
+    "reason": "Reason",
+    "empty": "none",
+    "fields": {
+      "owner_id": "Owner",
+      "value_amount": "Value",
+      "currency": "Currency",
+      "expected_close": "Expected close",
+      "next_action": "Next action",
+      "next_action_date": "Next action date"
+    }
+  },
+  "engagements": {
+    "name": "Engagement name",
+    "notes": "Notes",
+    "fromDeal": "From deal",
+    "none": "No engagements yet. Winning a consultation deal opens one.",
+    "later": "Converting an engagement into a product comes with the products funnel in a later release."
+  },
+  "customerOf": {
+    "none": "Not a customer yet. Winning a product deal adds the product here.",
+    "since": "since {date}"
+  },
+  "archive": {
+    "archive": "Archive",
+    "unarchive": "Unarchive",
+    "confirm": "Archive this account? Its owner and watchers are notified."
+  },
+  "empty": {
+    "pipelineTitle": "No deals yet",
+    "pipelineBody": "Create an account, then add a deal for it. Every deal has an owner, a stage and a next action.",
+    "column": "No deals",
+    "deals": "No deals.",
+    "accountsTitle": "No accounts",
+    "accountsBody": "Add the organisations you are selling to."
+  },
+  "errors": {
+    "invalid": "Check the fields and try again.",
+    "forbidden": "You don't have access to do that.",
+    "generic": "Something went wrong. Try again.",
+    "notFound": "That record no longer exists.",
+    "reasonRequired": "A reason is required for this move.",
+    "ownershipRequired": "Choose who owns the code to win a consultation deal.",
+    "sameStage": "The deal is already in that stage.",
+    "archiveForbidden": "Only the account owner or an admin can archive it.",
+    "productRequired": "Product deals need a product.",
+    "contactAccount": "Involved contacts must belong to the deal's account."
+  }
+}

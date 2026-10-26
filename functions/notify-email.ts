@@ -56,7 +56,26 @@ const SUBJECTS: Record<string, string> = {
   task_updated: 'A task you follow was updated',
   task_completed: 'A task you follow was completed',
   task_reopened: 'A task you follow was reopened',
+  task_due: 'Due today',
+  task_overdue: 'Overdue',
+  deal_assigned: 'You own a deal',
+  deal_due: 'Next action due today',
+  deal_overdue: 'Next action overdue',
+  deal_closed: 'A deal closed',
+  account_assigned: 'You own an account',
+  account_archived: 'An account was archived',
 };
+
+// Where each notification leads. Mirrors notificationHref() in
+// lib/notifications.ts — change both together.
+function linkFor(row: any): { href: string; label: string } {
+  if (row.deal_id) return { href: `${APP_URL}/en/sales/deals/${row.deal_id}`, label: 'Open the deal' };
+  if (row.account_id) return { href: `${APP_URL}/en/sales/accounts/${row.account_id}`, label: 'Open the account' };
+  if (row.task_id && row.product_id) {
+    return { href: `${APP_URL}/en/products/${row.product_id}#task-${row.task_id}`, label: 'Open the task' };
+  }
+  return { href: `${APP_URL}/en/tasks`, label: 'Open the task' };
+}
 
 // Deliberately plain. This is an internal notification, not a campaign: the
 // less markup it carries the less likely it is to be filed as spam by a cold
@@ -65,19 +84,17 @@ const SUBJECTS: Record<string, string> = {
 function renderEmail(rows: any[]): { subject: string; html: string } {
   const single = rows.length === 1;
   const subject = single
-    ? `${SUBJECTS[rows[0].type] ?? 'Task update'}: ${rows[0].title}`
-    : `${rows.length} task updates on ${APP_NAME}`;
+    ? `${SUBJECTS[rows[0].type] ?? 'Update'}: ${rows[0].title}`
+    : `${rows.length} updates on ${APP_NAME}`;
 
   const items = rows
     .map((row) => {
-      const link = row.product_id
-        ? `${APP_URL}/en/products/${row.product_id}#task-${row.task_id}`
-        : `${APP_URL}/en/tasks`;
+      const link = linkFor(row);
       return [
         '<li style="margin:0 0 14px 0">',
         `<div style="font-weight:600">${escapeHtml(row.title)}</div>`,
         row.body ? `<div style="color:#555">${escapeHtml(row.body)}</div>` : '',
-        `<a href="${link}" style="color:#0b6">Open the task</a>`,
+        `<a href="${link.href}" style="color:#0b6">${link.label}</a>`,
         '</li>',
       ].join('');
     })
@@ -85,9 +102,9 @@ function renderEmail(rows: any[]): { subject: string; html: string } {
 
   const html = [
     '<div style="font-family:system-ui,-apple-system,Segoe UI,sans-serif;font-size:14px;line-height:1.5">',
-    `<p>${single ? 'There is an update on a task you follow.' : 'There are updates on tasks you follow.'}</p>`,
+    `<p>${single ? 'There is an update on work you own or follow.' : 'There are updates on work you own or follow.'}</p>`,
     `<ul style="padding-left:18px">${items}</ul>`,
-    `<p style="color:#888;font-size:12px">You are receiving this because task email is switched on in your ${escapeHtml(APP_NAME)} settings. Turn it off under Settings → Notifications.</p>`,
+    `<p style="color:#888;font-size:12px">You are receiving this because email is switched on in your ${escapeHtml(APP_NAME)} settings, or because it is a due-date reminder for work you own. Change what you receive under Settings → Notifications.</p>`,
     '</div>',
   ].join('');
 
@@ -155,17 +172,39 @@ export default async function (req: Request): Promise<Response> {
   const baseUrl = Deno.env.get('INSFORGE_BASE_URL')!;
   const admin = createAdminClient({ baseUrl, apiKey: Deno.env.get('API_KEY')! });
 
-  // Any active member may trigger a drain. It sends nothing of the caller's
-  // choosing — the queue decides who gets what — so the only thing this gate
-  // buys is keeping anonymous traffic from spinning the mailer.
-  const caller = await resolveCaller(req, admin, baseUrl);
-  if (!caller) {
-    return jsonResponse({ error: { code: 'forbidden', message: 'Unauthorized' } }, 401);
+  // Two callers. The InsForge schedule, holding CRON_SECRET, runs the daily
+  // pass: generate today's due and overdue reminders, then drain. Any active
+  // member may trigger a plain drain — it sends nothing of the caller's
+  // choosing (the queue decides who gets what), so that gate only keeps
+  // anonymous traffic from spinning the mailer.
+  const token = (req.headers.get('Authorization') || '').replace(/^Bearer\s+/i, '').trim();
+  const cronSecret = Deno.env.get('CRON_SECRET');
+  const isSchedule = Boolean(cronSecret) && token === cronSecret;
+  if (!isSchedule) {
+    const caller = await resolveCaller(req, admin, baseUrl);
+    if (!caller) {
+      return jsonResponse({ error: { code: 'forbidden', message: 'Unauthorized' } }, 401);
+    }
+  }
+
+  let enqueued = 0;
+  if (isSchedule) {
+    const body = await req.json().catch(() => ({}));
+    if (body?.mode === 'daily') {
+      const { data: count, error: dueError } = await admin.database.rpc('notification_enqueue_due');
+      if (dueError) {
+        return jsonResponse(
+          { error: { code: 'generic', message: `due generation failed: ${dueError.message}` } },
+          500,
+        );
+      }
+      enqueued = typeof count === 'number' ? count : 0;
+    }
   }
 
   const { data: pending, error: queueError } = await admin.database
     .from('notifications')
-    .select('id, user_id, type, task_id, product_id, title, body')
+    .select('id, user_id, type, task_id, product_id, deal_id, account_id, title, body')
     .eq('email_state', 'pending')
     .order('created_at', { ascending: true })
     .limit(BATCH_SIZE);
@@ -178,7 +217,7 @@ export default async function (req: Request): Promise<Response> {
   }
 
   const rows = pending ?? [];
-  if (rows.length === 0) return jsonResponse({ sent: 0, failed: 0, skipped: 0 });
+  if (rows.length === 0) return jsonResponse({ enqueued, sent: 0, failed: 0, skipped: 0 });
 
   // Claim the batch before sending. If two drains overlap, the second finds
   // these rows already out of 'pending' and does nothing with them — better a
@@ -251,5 +290,5 @@ export default async function (req: Request): Promise<Response> {
     }
   }
 
-  return jsonResponse({ sent, failed, skipped: rows.length - claimed.length });
+  return jsonResponse({ enqueued, sent, failed, skipped: rows.length - claimed.length });
 }

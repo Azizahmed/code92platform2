@@ -21,7 +21,8 @@ export default function ControlPanel({
   userEmail,
   isAdmin,
   signingOut,
-  onSignOut
+  onSignOut,
+  moreLinks = []
 }: {
   open: boolean;
   onClose: () => void;
@@ -30,6 +31,9 @@ export default function ControlPanel({
   isAdmin: boolean;
   signingOut: boolean;
   onSignOut: () => void;
+  // Navigation that does not fit the phone's bottom bar. Phones only: the
+  // desktop sidebar already lists every item.
+  moreLinks?: {href: string; label: string; icon: typeof X}[];
 }) {
   const t = useTranslations('common');
 
@@ -85,6 +89,25 @@ export default function ControlPanel({
             <X className="h-4 w-4" strokeWidth={1.75} />
           </button>
         </div>
+
+        {moreLinks.length > 0 ? (
+          <nav aria-label={t('nav.more')} className="mb-4 md:hidden">
+            <ul className="grid grid-cols-2 gap-2">
+              {moreLinks.map(({href, label, icon: Icon}) => (
+                <li key={href}>
+                  <Link
+                    href={href}
+                    onClick={onClose}
+                    className="flex min-h-11 items-center gap-2.5 rounded-md border border-hairline px-3 text-sm text-muted transition-colors hover:bg-raised hover:text-ink"
+                  >
+                    <Icon className="h-4 w-4 shrink-0" strokeWidth={1.75} />
+                    <span className="truncate">{label}</span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </nav>
+        ) : null}
 
         <div className="space-y-3">
           <LocaleSwitcher />

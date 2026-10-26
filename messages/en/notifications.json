@@ -22,16 +22,26 @@
     "intro": "Everything shows up in the bell. Email is optional, and off until you switch it on.",
     "emailEnabled": "Email me",
     "emailEnabledHint": "Send notifications to your account email as well as showing them here.",
-    "onAssign": "When a task is assigned to me",
-    "onAssignHint": "Someone puts a task in your name.",
+    "onAssign": "When something is assigned to me",
+    "onAssignHint": "Someone puts a task, deal or account in your name.",
     "onUpdate": "When a task I follow changes",
     "onUpdateHint": "A followed task is edited, completed, or reopened. Batched into one message per burst.",
     "saving": "Saving…",
-    "saved": "Saved"
+    "saved": "Saved",
+    "onDue": "Due and overdue reminders",
+    "onDueHint": "On the due date of a task, or the next-action date of a deal, that you follow — and once more if it slips.",
+    "onClosed": "When something I follow closes",
+    "onClosedHint": "A deal is won or lost, a task is completed, an account is archived.",
+    "ownerDueNote": "Due and overdue reminders for work you own are always emailed, whatever is set here — that is how nothing passes its date unnoticed."
   },
   "errors": {
     "generic": "Something went wrong. Please try again.",
     "invalid": "That request wasn't valid.",
     "forbidden": "You don't have permission to do that."
+  },
+  "watchRecord": {
+    "start": "Watch",
+    "stop": "Watching",
+    "ownerNote": "You own this — you are always notified."
   }
 }

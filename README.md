@@ -15,9 +15,11 @@ open but an admin must activate the account before it reads anything.
 |---|---|
 | **Product registry** | Stage, health, owner, keywords, review cadence. Health and stage are derived from status history, never typed directly. |
 | **Status timeline** | Append-only-by-content update history that drives each product's derived state. |
+| **My work** | One page for what's yours: assigned tasks across products (list or kanban), and what's waiting on you — gates, proposals, reviews, mentions, deals. |
+| **Sales** | Accounts, contacts and deals through a seven-stage pipeline, with reasons on backward moves and losses, customer-of and engagement on wins. |
 | **Work items** | Per-product tasks with sub-tasks, assignees, due dates and document attachments (markdown is read in place), plus a cross-product view. |
 | **Releases** | Per-product cycles with scoped work, a risk-tiered checklist, a waiver-gated ship step and an append-only transition log. |
-| **Notifications** | Database-driven task notifications — assignment, completion, edits — in an in-app bell, with opt-in email drained out of band. |
+| **Notifications** | Database-driven notifications for tasks, deals and accounts — assignment, due, overdue, completion, closing — in an in-app bell, with per-person email switches and a daily due-date run. |
 | **Knowledge base** | Articles, notes and sources — taggable, linkable to products, with search that works in both English and Arabic. |
 | **Market intelligence** | A scheduled AI pipeline that finds recent trend items per product and scores their relevance. |
 | **Implementation lifecycle** | Six phases (Ideation → Monitor) with risk-tiered gates and uploaded document evidence per phase. |

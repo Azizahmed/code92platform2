@@ -7,6 +7,7 @@ import {useTranslations} from 'next-intl';
 
 import {type Stage} from '@/components/StageChip';
 import {Link, useRouter} from '@/i18n/navigation';
+import {pushAfterAction} from '@/lib/navigation-guard';
 import {
   createProductAction,
   updateProductAction,
@@ -214,7 +215,7 @@ export default function ProductForm(props: Props) {
       }
       // revalidatePath already invalidated the client router cache, so this
       // push lands on a freshly fetched page.
-      router.push(`/products/${result.productId}`);
+      pushAfterAction(router, `/products/${result.productId}`);
     });
   }
 

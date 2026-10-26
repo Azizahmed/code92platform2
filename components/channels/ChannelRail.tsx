@@ -5,6 +5,7 @@ import {Hash, MessageSquare, Package, Plus, X} from 'lucide-react';
 import {useTranslations} from 'next-intl';
 
 import {Link, usePathname, useRouter} from '@/i18n/navigation';
+import {pushAfterAction} from '@/lib/navigation-guard';
 import {
   createChannelAction,
   type DmPeer,
@@ -123,7 +124,7 @@ export default function ChannelRail({
         setError(result.error);
         return;
       }
-      router.push(`/channels/${result.channelId}`);
+      pushAfterAction(router, `/channels/${result.channelId}`);
     });
   }
 
@@ -145,7 +146,7 @@ export default function ChannelRail({
       }
       setName('');
       setAddingUnder(undefined);
-      if (result.channelId) router.push(`/channels/${result.channelId}`);
+      if (result.channelId) pushAfterAction(router, `/channels/${result.channelId}`);
       else router.refresh();
     });
   }
@@ -170,7 +171,7 @@ export default function ChannelRail({
       // place and let that route fall through to the next default.
       if (!isActive(channel.id)) router.refresh();
       else if (pathname === '/channels') router.refresh();
-      else router.push('/channels');
+      else pushAfterAction(router, '/channels');
     });
   }
 

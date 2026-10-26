@@ -52,11 +52,19 @@ export default function RelativeTime({date}: {date: string | Date}) {
     text = formatter.relative.format(value, unit);
   }
 
+  // suppressHydrationWarning: the text depends on the clock and the title on
+  // the time zone, so the server's render (UTC, a moment earlier) and the
+  // browser's hydration can never be guaranteed to agree — "56 seconds ago"
+  // becomes "57 seconds ago". Without this, React treats that as a failed
+  // hydration and regenerates the whole page tree on the client, which also
+  // dropped updates arriving in that window (a revalidated server action
+  // render, a refresh). The client's value takes over on the next render.
   return (
     <time
       dateTime={then.toISOString()}
       title={absolute}
       className="font-mono text-xs text-muted"
+      suppressHydrationWarning
     >
       {text}
     </time>
