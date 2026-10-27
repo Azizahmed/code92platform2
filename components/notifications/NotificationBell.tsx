@@ -1,6 +1,7 @@
 'use client';
 
 import {useCallback, useEffect, useRef, useState, useTransition} from 'react';
+import {createPortal} from 'react-dom';
 import {
   AlarmClock,
   Archive,
@@ -237,7 +238,11 @@ export default function NotificationBell() {
         ) : null}
       </button>
 
-      {open ? (
+      {/* Portalled to <body>: both hosts (the desktop sidebar and the mobile
+          header) use backdrop-blur, and a backdrop-filter makes an ancestor the
+          containing block for `fixed` descendants — the overlay would be boxed
+          into a 240px sidebar or a 56px header instead of the viewport. */}
+      {open ? createPortal(
         <div
           role="dialog"
           aria-modal="true"
@@ -320,7 +325,8 @@ export default function NotificationBell() {
               </Link>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       ) : null}
     </>
   );
