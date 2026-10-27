@@ -25,44 +25,13 @@ SELECT test.assert_eq(
   (SELECT count(*) FROM public.my_waiting_on() WHERE source = 'review_overdue'),
   0::bigint, 'posting a status update resolves the overdue review');
 
--- ---------- gate_ready ----------
--- Jadawel is medium risk: requirements needs a PRD. Ideation needs nothing,
--- so an in-progress ideation phase is work, not a pending decision.
+-- ---------- retired lifecycle gate ----------
+-- gate_ready came from the product lifecycle, which 0.3 retires. Its successors
+-- (business_gate_pending, release_spec_approval, release_stage_ready) are tested
+-- in 50_business_track and 60_release_loop.
 SELECT test.assert_eq(
   (SELECT count(*) FROM public.my_waiting_on() WHERE source = 'gate_ready'),
-  0::bigint, 'a phase with no required evidence is not a pending gate');
-
-SELECT test.as_superuser();
-UPDATE public.product_lifecycle_phases SET state = 'in_progress', entered_at = now()
-WHERE product_id = '10000000-0000-4000-8000-000000000001' AND phase = 'requirements';
-SELECT test.as_user('alice');
-
-SELECT test.assert_eq(
-  (SELECT count(*) FROM public.my_waiting_on() WHERE source = 'gate_ready'),
-  0::bigint, 'missing PRD: not ready for the gate yet');
-
-INSERT INTO public.phase_artifacts (phase_id, artifact_type, title, url)
-SELECT id, 'prd', 'PRD v1', 'https://example.com/prd'
-FROM public.product_lifecycle_phases
-WHERE product_id = '10000000-0000-4000-8000-000000000001' AND phase = 'requirements';
-
-SELECT test.assert_eq(
-  (SELECT subtitle FROM public.my_waiting_on() WHERE source = 'gate_ready'),
-  'requirements', 'evidence filed: the gate waits on the owner');
-
-SELECT test.as_user('bob');
-SELECT test.assert_eq(
-  (SELECT count(*) FROM public.my_waiting_on() WHERE source = 'gate_ready'),
-  0::bigint, 'not shown to someone who cannot advance it');
-
-SELECT test.as_user('alice');
-SELECT public.advance_lifecycle_phase(
-  (SELECT id FROM public.product_lifecycle_phases
-   WHERE product_id = '10000000-0000-4000-8000-000000000001' AND phase = 'requirements'),
-  'complete');
-SELECT test.assert_eq(
-  (SELECT count(*) FROM public.my_waiting_on() WHERE source = 'gate_ready'),
-  0::bigint, 'advancing the phase resolves it');
+  0::bigint, 'the retired lifecycle gate no longer appears');
 
 -- ---------- proposal_pending ----------
 SELECT test.as_superuser();
