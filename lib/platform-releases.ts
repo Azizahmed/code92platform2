@@ -13,6 +13,40 @@ export type PlatformRelease = {
 
 export const RELEASES: PlatformRelease[] = [
   {
+    version: '0.3',
+    date: '2026-10-27',
+    title: {
+      en: 'One product, two tracks; consultation is a project',
+      ar: 'منتج بمسارين، والاستشارة مشروع'
+    },
+    items: {
+      en: [
+        'Projects: a consultation deal won in Sales opens a project in Kickoff, on the same account. Phases move with a log entry each time, and closing asks for the outcome. Every project has its own room, which closes and reopens with it.',
+        'Capture idea: a project can turn an idea into a product at Idea, linked both ways. Nothing else changes until the team decides to pursue it.',
+        'Business track: every product has a stage on the Code92 funnel (Idea, Concept, Build, Venture, Company, Board), with checklists for each stage, its origination, ownership, operator and business owner.',
+        'Gates are the only hard blocks. Gate 1 needs a named operator and a go from a founder, and passing it starts the development track. Gate 2 needs a founder’s PMF go with the criteria and the evidence.',
+        'Release loop: every release, the MVP included, moves through Plan, Design, Build, Test, Deploy and Maintain. A stage closes once the artifacts for it are filed, and each move is logged.',
+        'Artifact policy: admins set which artifacts each risk tier requires for the MVP and for cycles. A release keeps the policy it was created with. High-risk releases ship only with a written waiver for anything still open.',
+        'Product page: a header with both tracks, then tabs for Business, Development, Sales, Tasks, Knowledge and Channel. The market stage is no longer chosen in the product form.',
+        'Dashboard: the funnel and the release loop as four strips of counts, each linking to its list, and a list of what is waiting on someone.',
+        'Governance: one log of every stage move, gate decision, release stage, approval, status change and waiver, with evidence coverage for the releases still in flight.',
+        'Product lifecycle retired: existing products moved onto the new tracks, and their lifecycle history is kept read-only.'
+      ],
+      ar: [
+        'المشاريع: صفقة استشارية تُربح في المبيعات تفتح مشروعاً في مرحلة الانطلاق، على الحساب نفسه. تتحرك المراحل مع إدخال سجل في كل مرة، ويطلب الإغلاق النتيجة. لكل مشروع غرفة خاصة به تُغلق وتُفتح معه.',
+        'التقاط فكرة: يمكن للمشروع أن يحوّل فكرة إلى منتج في مرحلة الفكرة، مرتبط بالمشروع في الاتجاهين. لا يتغير شيء آخر حتى يقرر الفريق متابعتها.',
+        'مسار الأعمال: لكل منتج مرحلة على مسار كود 92 (فكرة، مفهوم، بناء، مشروع تجاري، شركة، مجلس الإدارة)، مع قائمة تحقق لكل مرحلة، ومصدر الفكرة والملكية والمشغّل ومالك الأعمال.',
+        'البوابات هي الحواجز الصارمة الوحيدة. تحتاج البوابة 1 إلى مشغّل مسمّى وقرار مضٍ من مؤسس، واجتيازها يبدأ مسار التطوير. تحتاج البوابة 2 إلى قرار مؤسس بالمضي لملاءمة السوق، مع المعايير والأدلة.',
+        'حلقة الإصدار: كل إصدار، بما فيه النسخة الأولى، يمر بالتخطيط والتصميم والبناء والاختبار والنشر والصيانة. تُغلق المرحلة بعد إيداع مخرجاتها، ويُسجَّل كل انتقال.',
+        'سياسة المخرجات: يحدد المسؤولون المخرجات التي يتطلبها كل مستوى مخاطر للنسخة الأولى وللدورات. يحتفظ الإصدار بالسياسة التي أُنشئ بها. الإصدارات عالية المخاطر لا تُنشر إلا باستثناء مكتوب لما ما زال مفتوحاً.',
+        'صفحة المنتج: رأس يعرض المسارين، ثم علامات تبويب للأعمال والتطوير والمبيعات والمهام والمعرفة والقناة. لم تعد المرحلة السوقية تُختار في نموذج المنتج.',
+        'لوحة التحكم: المسار وحلقة الإصدارات في أربعة صفوف من الأرقام، يقود كل منها إلى قائمته، مع قائمة بما ينتظر أحداً.',
+        'الحوكمة: سجل واحد لكل انتقال مرحلة وقرار بوابة ومرحلة إصدار واعتماد وتغيير حالة واستثناء، مع تغطية الأدلة للإصدارات الجارية.',
+        'تقاعد دورة حياة المنتج: انتقلت المنتجات القائمة إلى المسارات الجديدة، ويبقى سجل دورة حياتها للقراءة فقط.'
+      ]
+    }
+  },
+  {
     version: '0.2',
     date: '2026-10-26',
     title: {

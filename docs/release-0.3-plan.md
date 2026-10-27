@@ -11,6 +11,49 @@ mirror for the pre-submit UI.
 
 ---
 
+## Status
+
+Built on `release/0.3`. The schema is in `14491d7`, and the screens and the
+removal of the lifecycle follow it. The as-built record is in
+[IMPLEMENTATION_PLAN.md](../IMPLEMENTATION_PLAN.md), under M15–M17. This
+section lists where the build differs from the plan above, and which decisions
+were taken without the team.
+
+**Decisions taken with the recommended default** (change any of them in a
+migration, not in place):
+
+- Founders are a flag on the team member, set by admins in Settings → Members.
+  Gate decisions need it; nothing else does.
+- The operator is a name. It is required to pass Gate 1. A team member or a
+  contact may be linked as well.
+- Gate 1 is decided at Concept and Gate 2 at Venture. Stages move one step at a
+  time. Backward moves need a reason.
+- Business stage moves are open to the product owner, the business owner, and
+  admins. Gate decisions are founders only.
+- The Code92 equity share is stored as `code92_equity_pct`.
+- Stage status mapping: Plan is Planned; Design, Build and Test are In progress;
+  entering Deploy is Ready; entering Maintain is Released.
+- Closing Test needs a pass and no open findings. Closing Design needs the spec
+  approved only where the policy requires a spec. A stage also needs at least
+  one link filed at it, whatever the policy says.
+- At Deploy, unmet release checks and open tasks are recorded for medium and
+  low risk. High risk needs a written reason to ship with them. This is the
+  existing rule, kept.
+- The MVP's version label is `MVP`. The migration gives the first existing
+  release of a product the MVP's number.
+- Project notifications are not part of 0.3, since the proposal does not ask
+  for them.
+- The project room is archived when the project closes, and unarchived when it
+  reopens.
+- The sales dashboard sums open value in KWD only.
+- The MCP `lifecycle` grant keeps its name, so existing tokens keep working. It
+  now covers release evidence and project notes.
+
+**Not done by the build** (needs the team): founders, operators, origination,
+ownership and business owners for the six products; the 0.2 and 0.3 cycles for
+Code92 Platform (its 0.1 row is now its MVP); and a click-through of the signed-in
+screens.
+
 ## 1. What already exists — and changes the shape of the work
 
 The proposal reads as if Projects, releases and a gate log were new. Three of
