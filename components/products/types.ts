@@ -2,7 +2,7 @@ import type {RiskTier} from '@/lib/risk';
 
 // The product page's header and every tab read the same overview row, so they
 // share its shape. Mirrors public.product_overview; see
-// migrations/20261027103000_add-0.3-projections.sql.
+// migrations/20261027103000_add-0-3-projections.sql.
 export type ProductOverviewRow = {
   id: string;
   name: string;

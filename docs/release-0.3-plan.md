@@ -324,7 +324,7 @@ Migration `2026110…_add-projects.sql`:
 
 ### M15d — Projections for dashboard, governance and waiting-on · M
 
-Migration `2026110…_add-0.3-projections.sql`:
+Migration `2026110…_add-0-3-projections.sql`:
 
 - `governance_gate_log` (view, `security_invoker`). It unions:
   - business stage moves and gate decisions,
