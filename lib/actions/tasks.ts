@@ -5,7 +5,6 @@ import {z} from 'zod';
 
 import {getOwnMembership, getSessionUser} from '@/lib/auth';
 import {createInsForgeServerClient} from '@/lib/insforge/server';
-import {LIFECYCLE_PHASES, type LifecyclePhase} from '@/lib/lifecycle';
 
 export type TaskStatus = 'pending' | 'completed';
 
@@ -46,9 +45,9 @@ export type ProductTask = {
   // Stamped by the database from auth.uid() on the transition to completed, so
   // it cannot be claimed on someone else's behalf.
   completed_by: string | null;
-  // Which delivery phase this work serves. Only ever set on a product task: the
-  // phase names a row in product_lifecycle_phases, which is keyed by product.
-  lifecycle_phase: LifecyclePhase | null;
+  // The project this work belongs to, for project tasks. Product and project
+  // are mutually exclusive, and a project's task cannot change project.
+  project_id: string | null;
   attachments: TaskAttachment[];
   // Derived per viewer from task_watchers — not a column. Whoever is looking at
   // the row needs to know whether THEY are following it.
@@ -63,7 +62,8 @@ export type TaskInput = {
   notes: string | null;
   dueDate: string | null;
   assigneeId: string | null;
-  lifecyclePhase?: LifecyclePhase | null;
+  // Set for a project's task; leave null for a product or general task.
+  projectId?: string | null;
 };
 
 type TaskActionResult =
@@ -76,8 +76,6 @@ const nullableDate = z
   .regex(/^\d{4}-\d{2}-\d{2}$/)
   .nullable();
 
-const nullablePhase = z.enum(LIFECYCLE_PHASES).nullable();
-
 const createTaskSchema = z
   .object({
     productId: nullableUuid,
@@ -86,12 +84,11 @@ const createTaskSchema = z
     notes: z.string().trim().max(5000).nullable(),
     dueDate: nullableDate,
     assigneeId: nullableUuid,
-    lifecyclePhase: nullablePhase.optional()
+    projectId: nullableUuid.optional()
   })
-  // Mirrors the product_tasks_lifecycle_phase_needs_product CHECK. Caught here
-  // so the form gets 'phaseNeedsProduct' rather than a constraint name.
-  .refine((value) => !value.lifecyclePhase || value.productId !== null, {
-    path: ['lifecyclePhase']
+  // Mirrors product_tasks_one_scope: a task belongs to a product or a project.
+  .refine((value) => !(value.productId && value.projectId), {
+    path: ['projectId']
   });
 
 const updateTaskSchema = z.object({
@@ -100,9 +97,8 @@ const updateTaskSchema = z.object({
   dueDate: nullableDate,
   assigneeId: nullableUuid,
   status: z.enum(['pending', 'completed']),
-  // Both optional for the same reason as completionNote below: `undefined`
-  // means "leave it alone". The status toggle sends neither.
-  lifecyclePhase: nullablePhase.optional(),
+  // Optional for the same reason as completionNote below: `undefined` means
+  // "leave it alone". The status toggle sends neither.
   // Adopting a general task into a product. Never null — the database refuses
   // to hand a product task back to general, so there is nothing to send.
   productId: z.string().uuid().optional(),
@@ -145,12 +141,12 @@ function mapTaskError(error: unknown): string {
   if (message.includes('detach the subtasks')) return 'hasSubtasks';
   if (message.includes('move the parent task instead')) return 'isSubtask';
   if (message.includes('unscope the task from its release')) return 'inRelease';
-  if (message.includes('general task cannot join a release')) return 'inRelease';
+  if (message.includes('only a product task can join a release')) return 'inRelease';
+  if (message.includes('a task cannot change project')) return 'invalid';
+  if (message.includes('product_tasks_one_scope')) return 'invalid';
   if (message.includes('parent task must belong')) return 'parentMismatch';
   if (message.includes('one subtask level only')) return 'tooDeep';
   if (message.includes('parent task not found')) return 'notFound';
-  if (message.includes('lifecycle_phase_needs_product')) return 'phaseNeedsProduct';
-  if (message.includes('lifecycle_phase_known')) return 'invalid';
   return 'generic';
 }
 
@@ -171,7 +167,7 @@ export async function createTaskAction(
     notes,
     dueDate,
     assigneeId,
-    lifecyclePhase
+    projectId
   } = parsed.data;
   const {data, error} = await insforge.database
     .from('product_tasks')
@@ -183,7 +179,7 @@ export async function createTaskAction(
         notes: notes || null,
         due_date: dueDate,
         assignee_id: assigneeId,
-        lifecycle_phase: lifecyclePhase ?? null,
+        project_id: projectId ?? null,
         created_by: caller.user.id
       }
     ])
@@ -194,6 +190,7 @@ export async function createTaskAction(
   if (!data) return {ok: false, error: 'generic'};
 
   revalidateTask(productId);
+  if (projectId) revalidatePath(`/[locale]/projects/${projectId}`, 'page');
   return {ok: true, taskId: data.id as string};
 }
 
@@ -206,7 +203,6 @@ export async function updateTaskAction(
     assigneeId: string | null;
     status: TaskStatus;
     completionNote?: string | null;
-    lifecyclePhase?: LifecyclePhase | null;
     productId?: string;
   }
 ): Promise<TaskActionResult> {
@@ -235,9 +231,6 @@ export async function updateTaskAction(
   // with the field the form never had.
   if (parsed.data.completionNote !== undefined) {
     patch.completion_note = parsed.data.completionNote || null;
-  }
-  if (parsed.data.lifecyclePhase !== undefined) {
-    patch.lifecycle_phase = parsed.data.lifecyclePhase;
   }
   // Only sent when adopting a general task. The database is what decides
   // whether that is allowed; sending it on an unchanged product is a no-op
@@ -276,7 +269,7 @@ export async function patchTaskAction(
   const columns = {
     title: 'title', notes: 'notes', dueDate: 'due_date', assigneeId: 'assignee_id',
     status: 'status', completionNote: 'completion_note',
-    lifecyclePhase: 'lifecycle_phase', productId: 'product_id'
+    productId: 'product_id'
   } as const;
   const patch: Record<string, unknown> = {};
   for (const key of Object.keys(parsed.data) as (keyof typeof columns)[]) {

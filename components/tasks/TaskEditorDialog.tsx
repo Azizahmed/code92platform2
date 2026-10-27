@@ -17,7 +17,6 @@ import {
   updateTaskAction
 } from '@/lib/actions/tasks';
 import {DOCUMENT_ACCEPT} from '@/lib/attachments';
-import {LIFECYCLE_PHASES, type LifecyclePhase} from '@/lib/lifecycle';
 import {
   removeStoredImages,
   uploadAttachments,
@@ -67,7 +66,6 @@ export default function TaskEditorDialog({
   const [dueDate, setDueDate] = useState(task?.due_date ?? '');
   const [assigneeId, setAssigneeId] = useState(task?.assignee_id ?? '');
   const [productId, setProductId] = useState(task?.product_id ?? GENERAL);
-  const [phase, setPhase] = useState<string>(task?.lifecycle_phase ?? '');
   const [files, setFiles] = useState<File[]>([]);
   const [pending, startTransition] = useTransition();
 
@@ -84,10 +82,6 @@ export default function TaskEditorDialog({
 
   function changeProduct(next: string) {
     setProductId(next);
-    // A phase names a row in product_lifecycle_phases, which is keyed by
-    // product. Dropping back to General has to drop the phase with it or the
-    // CHECK rejects the save with a constraint name nobody can act on.
-    if (next === GENERAL) setPhase('');
   }
 
   function handleFiles(nextFiles: File[]) {
@@ -104,9 +98,6 @@ export default function TaskEditorDialog({
     event.preventDefault();
     onError('');
     startTransition(async () => {
-      const lifecyclePhase =
-        phase === '' ? null : (phase as LifecyclePhase);
-
       const result = task
         ? await updateTaskAction(task.id, {
             title,
@@ -114,7 +105,6 @@ export default function TaskEditorDialog({
             dueDate: dueDate || null,
             assigneeId: assigneeId || null,
             status: task.status,
-            lifecyclePhase,
             // Sent only when it actually changes, so an ordinary edit never
             // touches the column the trigger guards.
             ...(!productLocked && productId !== GENERAL ? {productId} : {})
@@ -125,8 +115,7 @@ export default function TaskEditorDialog({
             title,
             notes: notes.trim() || null,
             dueDate: dueDate || null,
-            assigneeId: assigneeId || null,
-            lifecyclePhase
+            assigneeId: assigneeId || null
           });
 
       if (!result.ok) {
@@ -222,27 +211,6 @@ export default function TaskEditorDialog({
           </span>
         </label>
 
-        <label className="block space-y-1.5">
-          <span className="text-xs text-muted">{t('form.lifecyclePhase')}</span>
-          <select
-            value={phase}
-            disabled={productId === GENERAL}
-            onChange={(event) => setPhase(event.target.value)}
-            className={`${INPUT_CLASS} disabled:opacity-60`}
-          >
-            <option value="">{t('form.noPhase')}</option>
-            {LIFECYCLE_PHASES.map((value) => (
-              <option key={value} value={value}>
-                {t(`phase.${value}`)}
-              </option>
-            ))}
-          </select>
-          <span className="block text-[11px] text-faint">
-            {productId === GENERAL
-              ? t('form.phaseNeedsProductHint')
-              : t('form.phaseHint')}
-          </span>
-        </label>
       </div>
 
       <label className="block space-y-1.5">

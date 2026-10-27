@@ -26,6 +26,9 @@ const NAMESPACES = [
   'assistant',
   'myWork',
   'sales',
+  'business',
+  'projects',
+  'governance',
   'changelog'
 ] as const;
 

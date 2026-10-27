@@ -1,66 +1,74 @@
-import {AlertTriangle, Plus, Radar} from 'lucide-react';
 import {getTranslations} from 'next-intl/server';
 
-import ProductCard from '@/components/dashboard/ProductCard';
-import Reveal from '@/components/dashboard/Reveal';
-import StatsStrip from '@/components/dashboard/StatsStrip';
-import type {ProductOverview} from '@/components/dashboard/types';
-import {Link} from '@/i18n/navigation';
+import AttentionList, {type AttentionRow} from '@/components/dashboard/AttentionList';
+import Strip, {type StripCell} from '@/components/dashboard/Strip';
 import {requireActiveMember} from '@/lib/auth';
+import {BUSINESS_STAGES} from '@/lib/business-track';
 import {createInsForgeServerClient} from '@/lib/insforge/server';
+import {PROJECT_PHASES} from '@/lib/projects';
+import {RELEASE_STAGES} from '@/lib/releases';
 
-// Overdue first; within a group, earliest review date first (nulls last).
-function sortProducts(rows: ProductOverview[]): ProductOverview[] {
-  return [...rows].sort((a, b) => {
-    const overdueDelta = Number(b.is_overdue) - Number(a.is_overdue);
-    if (overdueDelta !== 0) return overdueDelta;
-    const aTime = a.next_review_at ? Date.parse(a.next_review_at) : Infinity;
-    const bTime = b.next_review_at ? Date.parse(b.next_review_at) : Infinity;
-    return aTime - bTime;
-  });
-}
+type Strips = {
+  products: Record<string, number> & {gate1Pending: number; gate2Pending: number};
+  releases: Record<string, number> & {overdue: number};
+  projects: Record<string, number> & {stale: number};
+  sales: Record<string, number> & {openValueKwd: number; closingThisMonth: number; stale: number};
+};
 
+// The dashboard is the funnel and the loop at a glance: where every product sits,
+// what every release is waiting on, which engagements have gone quiet, and the
+// pipeline. Each count links to the list behind it.
 export default async function DashboardPage() {
   const insforge = await createInsForgeServerClient();
-  const [, t, {data, error}] = await Promise.all([
+  const [, t, {data: strips}, {data: attention}] = await Promise.all([
     requireActiveMember(),
     getTranslations('dashboard'),
-    insforge.database
-    .from('product_overview')
-    .select('id, name, slug, logo_url, category, stage, health, owner_name, next_review_at, is_overdue, staleness_days, last_update_summary, risk_tier, lifecycle_phase, lifecycle_state, lifecycle_complete_count')
-    .is('archived_at', null)
+    insforge.database.rpc('dashboard_strips'),
+    insforge.database.rpc('dashboard_attention')
   ]);
+  const s = (strips ?? {}) as unknown as Strips;
+  const attentionRows = ((attention ?? []) as unknown as AttentionRow[]);
 
-  if (error) {
-    console.error('dashboard product_overview query failed', error);
-    return (
-      <section className="space-y-6">
-        <header>
-          <h1 className="text-xl font-semibold">{t('title')}</h1>
-          <p className="mt-1 text-sm text-muted">{t('subtitle')}</p>
-        </header>
-        <div className="flex items-center gap-3 rounded-lg border border-danger/30 bg-danger/10 px-5 py-4">
-          <AlertTriangle className="h-5 w-5 shrink-0 text-danger" strokeWidth={1.75} />
-          <div>
-            <div className="text-sm font-medium">{t('error.title')}</div>
-            <p className="mt-0.5 text-xs text-muted">{t('error.body')}</p>
-          </div>
-        </div>
-      </section>
-    );
-  }
+  const productCells: StripCell[] = [
+    ...BUSINESS_STAGES.map((stage) => ({
+      label: t(`strips.stage.${stage}`),
+      value: s.products?.[stage] ?? 0,
+      href: `/products?business_stage=${stage}`
+    })),
+    {
+      label: t('strips.gatesPending'),
+      value: (s.products?.gate1Pending ?? 0) + (s.products?.gate2Pending ?? 0),
+      href: '/governance',
+      tone: 'attention'
+    }
+  ];
 
-  const products = sortProducts((data ?? []) as ProductOverview[]);
+  const releaseCells: StripCell[] = [
+    ...RELEASE_STAGES.map((stage) => ({
+      label: t(`strips.releaseStage.${stage}`),
+      value: s.releases?.[stage] ?? 0,
+      href: '/releases'
+    })),
+    {label: t('strips.overdue'), value: s.releases?.overdue ?? 0, href: '/releases', tone: 'attention'}
+  ];
 
-  const stats = products.reduce(
-    (acc, p) => {
-      acc.total += 1;
-      if (p.is_overdue) acc.overdue += 1;
-      acc[p.health] = (acc[p.health] ?? 0) + 1;
-      return acc;
-    },
-    {total: 0, overdue: 0, green: 0, yellow: 0, red: 0, unknown: 0}
-  );
+  const projectCells: StripCell[] = [
+    ...PROJECT_PHASES.filter((phase) => phase !== 'closed').map((phase) => ({
+      label: t(`strips.phase.${phase}`),
+      value: s.projects?.[phase] ?? 0,
+      href: `/projects?phase=${phase}`
+    })),
+    {label: t('strips.stale'), value: s.projects?.stale ?? 0, href: '/projects?stale=1', tone: 'attention'}
+  ];
+
+  const salesCells: StripCell[] = [
+    {label: t('strips.deals.lead'), value: s.sales?.lead ?? 0, href: '/sales'},
+    {label: t('strips.deals.meeting'), value: s.sales?.meeting ?? 0, href: '/sales'},
+    {label: t('strips.deals.discovery_demo'), value: s.sales?.discovery_demo ?? 0, href: '/sales'},
+    {label: t('strips.deals.proposal'), value: s.sales?.proposal ?? 0, href: '/sales'},
+    {label: t('strips.deals.negotiation'), value: s.sales?.negotiation ?? 0, href: '/sales'},
+    {label: t('strips.deals.stale'), value: s.sales?.stale ?? 0, href: '/sales', tone: 'attention'}
+  ];
 
   return (
     <section className="space-y-6">
@@ -69,47 +77,26 @@ export default async function DashboardPage() {
         <p className="mt-1 text-sm text-muted">{t('subtitle')}</p>
       </header>
 
-      {products.length === 0 ? (
-        <Reveal>
-          <div className="flex flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-hairline bg-panel/50 px-6 py-24 text-center">
-            <span className="flex h-11 w-11 items-center justify-center rounded-full border border-accent/20 bg-accent/10">
-              <Radar className="h-5 w-5 text-accent" strokeWidth={1.5} />
-            </span>
-            <div className="text-sm font-medium">{t('empty.title')}</div>
-            <p className="max-w-md text-sm leading-relaxed text-muted">
-              {t('empty.body')}
-            </p>
-            <Link
-              href="/products/new"
-              className="mt-2 inline-flex items-center gap-1.5 rounded-md bg-accent px-3.5 py-2 text-sm font-semibold text-bg transition-opacity hover:opacity-90"
-            >
-              <Plus className="h-4 w-4 rtl:rotate-180" strokeWidth={2} />
-              {t('empty.cta')}
-            </Link>
-          </div>
-        </Reveal>
-      ) : (
-        <>
-          <Reveal index={0}>
-            <StatsStrip
-              total={stats.total}
-              overdue={stats.overdue}
-              green={stats.green}
-              yellow={stats.yellow}
-              red={stats.red}
-              unknown={stats.unknown}
-            />
-          </Reveal>
+      <Strip title={t('strips.productsTitle')} cells={productCells} />
+      <Strip
+        title={t('strips.releasesTitle')}
+        cells={releaseCells}
+        footnote={t('strips.releasesFootnote')}
+      />
+      <Strip title={t('strips.projectsTitle')} cells={projectCells} />
+      <Strip
+        title={t('strips.salesTitle')}
+        cells={salesCells}
+        footnote={t('strips.salesFootnote', {
+          value: Math.round(Number(s.sales?.openValueKwd ?? 0)).toLocaleString(),
+          closing: s.sales?.closingThisMonth ?? 0
+        })}
+      />
 
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 2xl:grid-cols-3">
-            {products.map((product, index) => (
-              <Reveal key={product.id} index={index + 1} className="h-full">
-                <ProductCard product={product} />
-              </Reveal>
-            ))}
-          </div>
-        </>
-      )}
+      <div className="space-y-3">
+        <h2 className="text-sm font-medium">{t('attention.title')}</h2>
+        <AttentionList rows={attentionRows} />
+      </div>
     </section>
   );
 }

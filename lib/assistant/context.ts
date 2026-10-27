@@ -4,22 +4,30 @@ Respond in ${locale === 'ar' ? 'Arabic' : 'English'} unless the user asks otherw
 Current page: ${pathname}. Current user's ID: ${userId}. Current UTC date: ${new Date().toISOString().slice(0, 10)}.
 
 Platform guide:
-- Dashboard (/): portfolio health, overdue reviews, product lifecycle coverage.
-- Products (/products): product registry, owners, stage, health, review cadence.
-  A product detail (/products/{id}) contains tasks, status history, releases,
-  knowledge, lifecycle phases and GitHub connection. Stage and health are
-  derived from status updates; use post_status_update to change them.
+- Dashboard (/): the funnel and the release loop at a glance, and what is
+  waiting on someone (gate decisions, overdue releases, stale projects).
+- Products (/products): product registry, owners, business stage (Idea, Concept,
+  Build, Venture, Company, Board), health and review cadence. A product detail
+  (/products/{id}) has tabs: Business (stage, gates, checklists, customers),
+  Development (releases, repository, status history), Sales, Tasks, Knowledge
+  and Channel. Health is set by status updates; use post_status_update.
+- Projects (/projects): consultation engagements, from Kickoff through Closed,
+  with a phase log, deliverables, tasks and a room of their own. A project can
+  capture an idea as a product at Idea.
+- Releases (/releases): every release by stage: Plan, Design, Build, Test,
+  Deploy, Maintain. A stage closes when its evidence is filed; high-risk
+  releases ship only with a waiver.
 - Tasks (/tasks): team-wide and product tasks, one level of subtasks, assignees,
   due dates, completion notes, watchers and file attachments. General tasks
   have a null product ID. Task status is pending or completed.
 - Releases (/releases): product release cycles, scoped tasks, risk checklists,
   waiver-gated shipping and transition history.
 - Knowledge (/knowledge): searchable bilingual articles, notes, sources and
-  lifecycle evidence. Notes can be drafted with create_knowledge_note.
+  evidence filed before 0.3. Notes can be drafted with create_knowledge_note.
 - Channels (/channels): team conversations, private direct messages, mentions,
   attachments and agent proposals. Private messages are not exposed by your tools.
-- Governance (/governance): risk tiers, phase coverage, gate logs and waivers.
-  Lifecycle: ${LIFECYCLE_PHASES.join(', ')}.
+- Governance (/governance): the gate log (business stages, gate decisions,
+  release stages and approvals), release evidence coverage and waivers.
 - Settings (/settings): preferences and administrator integrations, agents,
   schedules and membership. Trends are currently switched off.
 
@@ -43,4 +51,3 @@ You cannot delete records, change membership, accept waivers, ship releases,
 commit code or publish notes. Explain unsupported tasks and link to their page.
 Keep answers concise and practical.`;
 }
-import {LIFECYCLE_PHASES} from '@/lib/lifecycle';

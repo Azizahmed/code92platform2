@@ -471,30 +471,3 @@ export async function addDealNoteAction(dealId: string, body: string): Promise<S
   await revalidateSales();
   return {ok: true, id: dealId};
 }
-
-export async function updateEngagementAction(
-  engagementId: string,
-  input: {name: string; ownership: Ownership; notes: string | null}
-): Promise<SalesActionResult> {
-  const parsed = z
-    .object({
-      name: z.string().trim().min(1).max(200),
-      ownership: z.enum(OWNERSHIP_OPTIONS),
-      notes: optionalText(5000)
-    })
-    .safeParse(input);
-  if (!uuid.safeParse(engagementId).success || !parsed.success) return {ok: false, error: 'invalid'};
-  const ctx = await requireCaller();
-  if (!ctx) return {ok: false, error: 'forbidden'};
-
-  const {data, error} = await ctx.insforge.database
-    .from('engagements')
-    .update(parsed.data)
-    .eq('id', engagementId)
-    .select('id');
-  if (error) return {ok: false, error: mapDbError(error.message)};
-  if (!data?.length) return {ok: false, error: 'notFound'};
-
-  await revalidateSales();
-  return {ok: true, id: engagementId};
-}

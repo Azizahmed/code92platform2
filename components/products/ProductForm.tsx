@@ -5,7 +5,6 @@ import {ImagePlus, Trash2} from 'lucide-react';
 import {useState, useTransition} from 'react';
 import {useTranslations} from 'next-intl';
 
-import {type Stage} from '@/components/StageChip';
 import {Link, useRouter} from '@/i18n/navigation';
 import {pushAfterAction} from '@/lib/navigation-guard';
 import {
@@ -36,15 +35,6 @@ export type ProductFormInitial = {
 };
 
 export type MemberOption = {userId: string; displayName: string};
-
-const STAGES: Stage[] = [
-  'idea',
-  'development',
-  'beta',
-  'live',
-  'paused',
-  'sunset'
-];
 
 const INPUT_CLASS =
   'w-full rounded-md border border-hairline bg-bg px-3 py-2 text-sm outline-none transition-colors placeholder:text-faint focus:border-accent/50';
@@ -102,7 +92,6 @@ export default function ProductForm(props: Props) {
   const [description, setDescription] = useState(initial.description ?? '');
   const [descriptionAr, setDescriptionAr] = useState(initial.descriptionAr ?? '');
   const [category, setCategory] = useState(initial.category ?? '');
-  const [stage, setStage] = useState<Stage>(initial.stage);
   const [keywordsText, setKeywordsText] = useState(initial.keywords.join(', '));
   const [linksText, setLinksText] = useState(
     Object.keys(initial.links).length
@@ -184,7 +173,6 @@ export default function ProductForm(props: Props) {
         description: description.trim() === '' ? null : description.trim(),
         descriptionAr: descriptionAr.trim() === '' ? null : descriptionAr.trim(),
         category: category.trim() === '' ? null : category.trim(),
-        stage: stage as ProductStage,
         keywords,
         links,
         reviewIntervalDays: interval,
@@ -370,20 +358,6 @@ export default function ProductForm(props: Props) {
           />
         </label>
 
-        <label className={LABEL_CLASS}>
-          <span className={LABEL_TEXT_CLASS}>{t('fields.stage')}</span>
-          <select
-            value={stage}
-            onChange={(e) => setStage(e.target.value as Stage)}
-            className={INPUT_CLASS}
-          >
-            {STAGES.map((s) => (
-              <option key={s} value={s}>
-                {tCommon(`stages.${s}`)}
-              </option>
-            ))}
-          </select>
-        </label>
       </div>
 
       <label className={LABEL_CLASS}>

@@ -5,11 +5,13 @@ import {ShieldCheck, ShieldOff, UserCheck, UserX} from 'lucide-react';
 import {useTranslations} from 'next-intl';
 
 import {setMemberAction} from '@/lib/actions/admin';
+import {setFounderAction} from '@/lib/actions/business';
 
 type Props = {
   userId: string;
   role: 'admin' | 'member';
   isActive: boolean;
+  isFounder: boolean;
 };
 
 const buttonClass =
@@ -17,7 +19,7 @@ const buttonClass =
 
 // Per-row member actions. RPC errors (e.g. last-active-admin protection)
 // surface as localized messages under the row's buttons.
-export default function MemberActions({userId, role, isActive}: Props) {
+export default function MemberActions({userId, role, isActive, isFounder}: Props) {
   const t = useTranslations('admin');
   const [pending, startTransition] = useTransition();
   const [errorKey, setErrorKey] = useState<string | null>(null);
@@ -74,6 +76,22 @@ export default function MemberActions({userId, role, isActive}: Props) {
             </>
           )}
         </button>
+        {isActive ? (
+          <button
+            type="button"
+            disabled={pending}
+            aria-pressed={isFounder}
+            onClick={() => {
+              startTransition(async () => {
+                const result = await setFounderAction(userId, !isFounder);
+                setErrorKey(result.ok ? null : result.error);
+              });
+            }}
+            className={`${buttonClass} ${isFounder ? 'border-accent/40 text-accent' : ''}`}
+          >
+            {isFounder ? t('members.removeFounder') : t('members.makeFounder')}
+          </button>
+        ) : null}
       </div>
       {errorKey ? (
         <span className="text-xs text-danger">

@@ -32,7 +32,9 @@ import {
 import {useServerAction} from '@/lib/use-server-action';
 
 export type WaitingSource =
-  | 'gate_ready'
+  | 'business_gate_pending'
+  | 'release_spec_approval'
+  | 'release_stage_ready'
   | 'proposal_pending'
   | 'review_overdue'
   | 'mention_unreplied'

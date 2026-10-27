@@ -17,7 +17,7 @@ import {
   type KnowledgeOrigin,
   type KnowledgeStatus
 } from '@/lib/knowledge';
-import type {LifecyclePhase} from '@/lib/lifecycle';
+import type {LegacyLifecyclePhase} from '@/lib/knowledge';
 
 type ServerClient = Awaited<ReturnType<typeof createInsForgeServerClient>>;
 
@@ -52,7 +52,7 @@ export type KnowledgeProvenance = {
   artifact_type: string;
   generated_by: 'human' | 'agent';
   phase_id: string;
-  phase: LifecyclePhase;
+  phase: LegacyLifecyclePhase;
   cycle: number;
   phase_state: string;
   product_id: string;
@@ -87,7 +87,7 @@ export type KnowledgeSearchRow = {
   // the search row so the list can show provenance without a second query per
   // card.
   source_artifact_type: string | null;
-  source_phase: LifecyclePhase | null;
+  source_phase: LegacyLifecyclePhase | null;
   source_product_id: string | null;
   source_product_name: string | null;
 };

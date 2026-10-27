@@ -4,7 +4,8 @@
   "sections": {
     "products": "Products",
     "standing": "Channels",
-    "direct": "Direct messages"
+    "direct": "Direct messages",
+    "projects": "Projects"
   },
   "empty": {
     "noChannels": "No channels yet.",

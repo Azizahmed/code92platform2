@@ -112,7 +112,8 @@
       "overdue": "Overdue",
       "completed": "Done"
     },
-    "allPhases": "All phases"
+    "allPhases": "All phases",
+    "projectTask": "Project"
   },
   "errors": {
     "generic": "Something went wrong. Please try again.",

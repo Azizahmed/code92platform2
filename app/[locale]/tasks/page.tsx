@@ -29,7 +29,7 @@ export default async function AllTasksPage({
         insforge.database
           .from('product_tasks')
           .select(
-            'id, product_id, parent_task_id, title, notes, due_date, assignee_id, status, position, created_by, completed_at, created_at, updated_at, release_id, completion_note, completed_by, lifecycle_phase'
+            'id, product_id, parent_task_id, title, notes, due_date, assignee_id, status, position, created_by, completed_at, created_at, updated_at, release_id, completion_note, completed_by, project_id'
           )
           .order('due_date', {ascending: true, nullsFirst: false})
           .order('created_at', {ascending: false}),

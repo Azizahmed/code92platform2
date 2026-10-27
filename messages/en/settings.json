@@ -55,7 +55,7 @@
     "permissions": {
       "read": {
         "label": "Read",
-        "hint": "Products, tasks, members, releases, knowledge, lifecycle and channels. Always included."
+        "hint": "Products, tasks, members, releases, knowledge, delivery and channels. Always included."
       },
       "tasks": {
         "label": "Tasks",
@@ -66,8 +66,8 @@
         "hint": "Create and edit products, post status updates, set risk tiers."
       },
       "lifecycle": {
-        "label": "Lifecycle",
-        "hint": "Edit phase owners and notes, move phases (including waivers), add evidence."
+        "label": "Delivery",
+        "hint": "File release evidence (artifact links for each stage) and add notes to project logs."
       },
       "knowledge": {
         "label": "Knowledge",

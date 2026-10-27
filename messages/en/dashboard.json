@@ -1,30 +1,56 @@
 {
   "title": "Dashboard",
-  "subtitle": "All Code 92 products at a glance",
-  "stats": {
-    "products": "Products",
-    "overdue": "Overdue reviews",
-    "health": "Health",
-    "trends": "New trends · 7d"
+  "subtitle": "Where every product stands, what every release is waiting on, and what needs a look.",
+  "strips": {
+    "productsTitle": "Products by business stage",
+    "stage": {
+      "idea": "Idea",
+      "concept": "Concept",
+      "build": "Build",
+      "venture": "Venture",
+      "company": "Company",
+      "board": "Board"
+    },
+    "gatesPending": "Gates waiting",
+    "releasesTitle": "Releases in flight, by stage",
+    "releaseStage": {
+      "plan": "Plan",
+      "design": "Design",
+      "build": "Build",
+      "test": "Test",
+      "deploy": "Deploy",
+      "maintain": "Maintain"
+    },
+    "overdue": "Past target",
+    "releasesFootnote": "Counts are live releases. Each one links to the release board.",
+    "projectsTitle": "Projects by phase",
+    "phase": {
+      "kickoff": "Kickoff",
+      "discovery": "Discovery",
+      "delivery": "Delivery",
+      "handover": "Handover"
+    },
+    "stale": "Stale",
+    "salesTitle": "Sales",
+    "deals": {
+      "lead": "Lead",
+      "meeting": "Meeting",
+      "discovery_demo": "Discovery / demo",
+      "proposal": "Proposal",
+      "negotiation": "Negotiation",
+      "stale": "Stale"
+    },
+    "salesFootnote": "Open value: {value} KWD · Closing this month: {closing}"
   },
-  "card": {
-    "viewProduct": "View product",
-    "updated": "Since update",
-    "daysSinceUpdate": "{count, plural, =0 {Updated today} one {<num>#</num> day since update} other {<num>#</num> days since update}}",
-    "noUpdates": "No updates yet",
-    "nextReview": "Next review",
-    "noReview": "Not scheduled",
-    "trendsLabel": "Trends · 7d",
-    "trendsTitle": "New trends in the last 7 days",
-    "noSummary": "No status updates yet — post the first one from the product page."
-  },
-  "empty": {
-    "title": "No products yet",
-    "body": "Register the first Code 92 product to start tracking health, review cadence, and market trends from one console.",
-    "cta": "Register a product"
-  },
-  "error": {
-    "title": "Could not load the dashboard",
-    "body": "The product overview query failed. Refresh the page or try again shortly."
+  "attention": {
+    "title": "Needs attention",
+    "empty": "Nothing is waiting on anyone right now.",
+    "kinds": {
+      "gate_pending": "Gate decision",
+      "release_overdue": "Past target",
+      "project_stale": "Stale project",
+      "product_no_business_owner": "No business owner",
+      "product_no_operator": "No operator"
+    }
   }
 }

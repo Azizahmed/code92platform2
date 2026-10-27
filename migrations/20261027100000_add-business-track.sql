@@ -41,6 +41,41 @@ $$;
 
 GRANT EXECUTE ON FUNCTION public.is_founder() TO authenticated;
 
+-- get_me() is the one call every page makes for identity and membership. It
+-- returns the founder flag too, so the UI can show gate decisions to founders
+-- without a second query. The return shape changes, so the function is dropped
+-- and recreated; nothing depends on it.
+DROP FUNCTION public.get_me();
+
+CREATE FUNCTION public.get_me()
+RETURNS TABLE (
+  user_id UUID,
+  email TEXT,
+  display_name TEXT,
+  role TEXT,
+  is_active BOOLEAN,
+  is_founder BOOLEAN
+)
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = pg_catalog, public, auth, pg_temp
+AS $$
+  SELECT
+    u.id,
+    u.email,
+    tm.display_name,
+    tm.role,
+    COALESCE(tm.is_active, false),
+    COALESCE(tm.is_founder, false)
+  FROM auth.users u
+  LEFT JOIN public.team_members tm ON tm.user_id = u.id
+  WHERE u.id = (SELECT auth.uid());
+$$;
+
+REVOKE ALL ON FUNCTION public.get_me() FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.get_me() TO authenticated;
+
 CREATE OR REPLACE FUNCTION public.admin_set_founder(
   target UUID,
   new_founder BOOLEAN

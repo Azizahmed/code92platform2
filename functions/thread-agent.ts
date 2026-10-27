@@ -81,7 +81,6 @@ const PROPOSAL_ACTIONS = [
   'task_create',
   'task_update',
   'status_update',
-  'lifecycle_advance',
   'repo_patch',
 ] as const;
 
@@ -385,10 +384,10 @@ function truncate(s: string | null | undefined, n: number): string {
 // as compact prose rather than raw JSON: models follow a briefing better than
 // they follow a dump, and it keeps the prompt cheap.
 async function buildProductContext(admin: any, productId: string): Promise<string> {
-  const [products, tasks, phases, updates] = await Promise.all([
+  const [products, tasks, releases, updates] = await Promise.all([
     admin.database
       .from('products')
-      .select('name, slug, stage, health, description, keywords, next_review_at, last_status_update_at')
+      .select('name, slug, business_stage, health, description, keywords, next_review_at, last_status_update_at')
       .eq('id', productId)
       .limit(1),
     admin.database
@@ -398,10 +397,11 @@ async function buildProductContext(admin: any, productId: string): Promise<strin
       .eq('status', 'pending')
       .limit(25),
     admin.database
-      .from('product_lifecycle_phases')
-      .select('id, phase, state, entered_at')
+      .from('release_overview')
+      .select('version, release_number, stage, status, goal')
       .eq('product_id', productId)
-      .limit(12),
+      .order('release_number', { ascending: false })
+      .limit(6),
     admin.database
       .from('status_updates')
       .select('health, stage, summary, created_at')
@@ -421,11 +421,11 @@ async function buildProductContext(admin: any, productId: string): Promise<strin
   if (p.next_review_at) lines.push(`Next review due: ${p.next_review_at}`);
   lines.push(`Last status update: ${p.last_status_update_at ?? 'never'}`);
 
-  if (phases.data?.length) {
+  if (releases.data?.length) {
     lines.push('');
-    lines.push('### Lifecycle phases');
-    for (const ph of phases.data) {
-      lines.push(`- ${ph.phase}: ${ph.state} (phase_id ${ph.id})`);
+    lines.push('### Releases');
+    for (const r of releases.data) {
+      lines.push(`- ${r.version} (${r.release_number === 0 ? 'MVP' : 'cycle'}): stage ${r.stage}, status ${r.status}${r.goal ? ` — ${r.goal}` : ''}`);
     }
   }
 
@@ -605,8 +605,6 @@ function buildSystemPrompt(agent: any, allowed: string[]): string {
       '{"action":"task_update","reasoning":"why","payload":{"task_id":"uuid","title":"...","status":"pending|completed","due_date":"YYYY-MM-DD"}}',
     status_update:
       '{"action":"status_update","reasoning":"why","payload":{"health":"green|yellow|red","stage":"idea|development|beta|live|paused|sunset","summary":"one line","details":"markdown"}}',
-    lifecycle_advance:
-      '{"action":"lifecycle_advance","reasoning":"why","payload":{"phase_id":"uuid","state":"in_progress|blocked|complete"}}',
   };
 
   return [
@@ -638,9 +636,6 @@ function buildSystemPrompt(agent: any, allowed: string[]): string {
       ? `You may propose only these actions: ${allowed.join(', ')}.`
       : 'You may not propose any actions. Answer in prose only.',
     '',
-    allowed.includes('lifecycle_advance')
-      ? 'For lifecycle_advance: never write a waiver or justification for skipping a required\nartifact. If a gate is missing evidence, say so plainly and let the admin decide. The\nwaiver wording must be theirs.'
-      : '',
     '',
     '## Output format',
     '',

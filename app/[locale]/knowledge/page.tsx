@@ -12,7 +12,7 @@ import {
   KNOWLEDGE_ORIGINS,
   KNOWLEDGE_STATUSES
 } from '@/lib/knowledge';
-import {LIFECYCLE_PHASES} from '@/lib/lifecycle';
+import {LEGACY_LIFECYCLE_PHASES} from '@/lib/knowledge';
 
 const RESULT_LIMIT = 60;
 const UUID_PATTERN =
@@ -53,7 +53,7 @@ export default async function KnowledgePage({
   const status = readOneOf(params, 'status', KNOWLEDGE_STATUSES);
   const tag = readUuid(params, 'tag');
   const product = readUuid(params, 'product');
-  const phase = readOneOf(params, 'phase', LIFECYCLE_PHASES);
+  const phase = readOneOf(params, 'phase', LEGACY_LIFECYCLE_PHASES);
   // A phase filter only ever matches lifecycle-derived items, so asking for one
   // implies the other. Making that implicit keeps "Requirements" from silently
   // returning nothing while Origin still says "All".

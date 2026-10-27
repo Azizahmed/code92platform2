@@ -2,7 +2,7 @@ import {GitBranch} from 'lucide-react';
 import {useTranslations} from 'next-intl';
 
 import {Link} from '@/i18n/navigation';
-import type {LifecyclePhase} from '@/lib/lifecycle';
+import type {LegacyLifecyclePhase} from '@/lib/knowledge';
 
 // "Where is this information coming from."
 //
@@ -20,7 +20,7 @@ export default function ProvenanceChip({
 }: {
   productId: string;
   productName: string;
-  phase: LifecyclePhase;
+  phase: LegacyLifecyclePhase;
   artifactType: string;
   compact?: boolean;
 }) {
@@ -34,7 +34,7 @@ export default function ProvenanceChip({
 
   return (
     <Link
-      href={`/products/${productId}#lifecycle`}
+      href={`/products/${productId}?tab=knowledge`}
       title={t('provenance.tooltip', {
         type: tl(`artifacts.types.${artifactType}`)
       })}

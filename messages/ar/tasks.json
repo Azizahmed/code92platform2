@@ -112,7 +112,8 @@
       "overdue": "متأخرة",
       "completed": "مكتملة"
     },
-    "allPhases": "كل المراحل"
+    "allPhases": "كل المراحل",
+    "projectTask": "مشروع"
   },
   "errors": {
     "generic": "حدث خطأ ما. حاول مرة أخرى.",

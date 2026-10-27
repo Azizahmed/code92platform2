@@ -203,7 +203,9 @@
     "notes": "Notes",
     "fromDeal": "From deal",
     "none": "No engagements yet. Winning a consultation deal opens one.",
-    "later": "Converting an engagement into a product comes with the products funnel in a later release."
+    "later": "Converting an engagement into a product comes with the products funnel in a later release.",
+    "stale": "Stale",
+    "newProject": "Open a project for this account"
   },
   "customerOf": {
     "none": "Not a customer yet. Winning a product deal adds the product here.",

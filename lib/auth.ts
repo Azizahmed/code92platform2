@@ -15,6 +15,8 @@ export type TeamMember = {
   display_name: string;
   role: 'admin' | 'member';
   is_active: boolean;
+  // Gate decisions are a founder's to make; see migrations/20261027100000.
+  is_founder: boolean;
 };
 
 type MeRow = {
@@ -23,6 +25,7 @@ type MeRow = {
   display_name: string | null;
   role: 'admin' | 'member' | null;
   is_active: boolean;
+  is_founder: boolean | null;
 };
 
 // Identity + membership in ONE round trip.
@@ -74,7 +77,8 @@ export const getOwnMembership = cache(async (): Promise<TeamMember | null> => {
     user_id: me.user_id,
     display_name: me.display_name,
     role: me.role,
-    is_active: me.is_active
+    is_active: me.is_active,
+    is_founder: me.is_founder === true
   };
 });
 

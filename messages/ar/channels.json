@@ -4,7 +4,8 @@
   "sections": {
     "products": "المنتجات",
     "standing": "القنوات",
-    "direct": "الرسائل المباشرة"
+    "direct": "الرسائل المباشرة",
+    "projects": "المشاريع"
   },
   "empty": {
     "noChannels": "لا توجد قنوات بعد.",

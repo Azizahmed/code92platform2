@@ -37,6 +37,18 @@ export function isStatusForKind(
 // artifact by the mirror_artifact_to_knowledge() trigger — nobody writes one by
 // hand, and no client role can insert or forge the origin columns.
 export const KNOWLEDGE_ORIGINS = ['manual', 'lifecycle'] as const;
+
+// The six phases of the lifecycle 0.3 retired. Items filed under them keep the
+// phase, so the filter stays; nothing new is filed under one.
+export const LEGACY_LIFECYCLE_PHASES = [
+  'ideation',
+  'requirements',
+  'plan',
+  'code_test',
+  'deploy',
+  'monitor'
+] as const;
+export type LegacyLifecyclePhase = (typeof LEGACY_LIFECYCLE_PHASES)[number];
 export type KnowledgeOrigin = (typeof KNOWLEDGE_ORIGINS)[number];
 
 // A mirrored item points at the artifact's object in the lifecycle bucket

@@ -9,7 +9,6 @@ export const PROPOSAL_ACTIONS = [
   'task_create',
   'task_update',
   'status_update',
-  'lifecycle_advance',
   // The harness's only route into a repository. Approving it does not write
   // anything by itself: decide_agent_proposal records the decision, and
   // github-sync commits under the approver's own authority afterwards.
@@ -22,8 +21,6 @@ export type ProposalAction = (typeof PROPOSAL_ACTIONS)[number];
 // A strict subset of PROPOSAL_ACTIONS. Knowledge notes remain proposal-only
 // because their model-authored content needs a human confidentiality review.
 // The other omissions are the point too:
-// lifecycle_advance can require a waiver, and a waiver is a person accepting
-// responsibility — there is nobody to accept it when nobody is asked.
 // repo_patch commits to a repository under the org PAT. Both stay
 // propose-only however an agent is configured, which the CHECK on
 // agents.autonomous_actions enforces rather than this constant.
@@ -105,15 +102,10 @@ export const TERMINAL_PHASES: ReadonlySet<ExecutionPhase> = new Set([
   'skipped'
 ]);
 
-// Which actions need an admin to approve them. The database is the authority —
-// decide_agent_proposal delegates to advance_lifecycle_phase, which re-derives
-// the approver's rights itself. This mirror exists so the card can disable the
-// button and say why, rather than letting a member click into an exception.
-//
-// Both must change together, exactly as the lifecycle gate matrix does.
-export const ADMIN_ONLY_ACTIONS: ReadonlySet<ProposalAction> = new Set([
-  'lifecycle_advance'
-]);
+// Which actions need an admin to approve them. Nothing needs one today: the
+// lifecycle gate that did is retired. The set stays so the card keeps its
+// check in one place when a future action needs it.
+export const ADMIN_ONLY_ACTIONS: ReadonlySet<ProposalAction> = new Set();
 
 // Actions whose approval is not finished when decide_agent_proposal returns.
 // A repo_patch still has to be committed through github-sync, so the card has
@@ -124,9 +116,7 @@ export const DEFERRED_ACTIONS: ReadonlySet<ProposalAction> = new Set(['repo_patc
 // Never pre-filled from the proposal payload: an AI-drafted justification for
 // waiving a security gate, recorded as an admin's own words, would make the
 // waiver register worthless.
-export const WAIVER_ACTIONS: ReadonlySet<ProposalAction> = new Set([
-  'lifecycle_advance'
-]);
+export const WAIVER_ACTIONS: ReadonlySet<ProposalAction> = new Set();
 
 export type Agent = {
   user_id: string;

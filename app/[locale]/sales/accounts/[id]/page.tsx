@@ -6,13 +6,14 @@ import ActivityLog from '@/components/sales/ActivityLog';
 import ArchiveAccountButton from '@/components/sales/ArchiveAccountButton';
 import ContactsPanel from '@/components/sales/ContactsPanel';
 import DealsTable from '@/components/sales/DealsTable';
-import EngagementsPanel from '@/components/sales/EngagementsPanel';
+import ProjectsPanel from '@/components/sales/ProjectsPanel';
 import WatchersPanel from '@/components/sales/WatchersPanel';
 import {Link} from '@/i18n/navigation';
 import {requireActiveMember} from '@/lib/auth';
 import {businessDate, formatDay} from '@/lib/dates';
 import {createInsForgeServerClient} from '@/lib/insforge/server';
 import {getActiveMembers} from '@/lib/sales/queries';
+import type {ProjectOverview} from '@/lib/projects';
 import {
   ACCOUNT_OVERVIEW_COLUMNS,
   DEAL_OVERVIEW_COLUMNS,
@@ -20,7 +21,6 @@ import {
   type Contact,
   type DealActivity,
   type DealRow,
-  type Engagement
 } from '@/lib/sales/types';
 
 function Panel({id, title, children, action}: {id?: string; title: string; children: React.ReactNode; action?: React.ReactNode}) {
@@ -64,10 +64,10 @@ export default async function AccountPage({params}: {params: Promise<{locale: st
       .eq('account_id', id)
       .order('created_at', {ascending: false}),
     insforge.database
-      .from('engagements')
-      .select('id, account_id, deal_id, name, ownership, started_at, notes')
+      .from('project_overview')
+      .select('*')
       .eq('account_id', id)
-      .order('started_at', {ascending: false}),
+      .order('start_date', {ascending: false}),
     insforge.database.from('account_products').select('product_id, since, won_deal_id').eq('account_id', id),
     insforge.database.from('account_watchers').select('user_id').eq('account_id', id),
     getActiveMembers()
@@ -156,7 +156,7 @@ export default async function AccountPage({params}: {params: Promise<{locale: st
           </Panel>
 
           <Panel id="engagements" title={t('sections.engagements')}>
-            <EngagementsPanel engagements={(engagements ?? []) as Engagement[]} locale={locale} />
+            <ProjectsPanel projects={(engagements ?? []) as unknown as ProjectOverview[]} accountId={id} locale={locale} />
           </Panel>
 
           <Panel title={t('sections.history')}>

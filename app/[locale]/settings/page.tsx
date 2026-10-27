@@ -62,7 +62,7 @@ export default async function SettingsPage() {
     const [{data: memberRows}, {data: status}] = await Promise.all([
       insforge.database
         .from('team_members')
-        .select('user_id, display_name, role, is_active, created_at')
+        .select('user_id, display_name, role, is_active, is_founder, created_at')
         .order('created_at', {ascending: true}),
       insforge.database.rpc('github_connection_status')
     ]);

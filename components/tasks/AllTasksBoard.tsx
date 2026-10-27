@@ -28,7 +28,6 @@ import {removeStoredImages} from '@/lib/media-upload';
 import {drainNotificationEmailsAction} from '@/lib/actions/notifications';
 import type {ProductTask, TaskStatus} from '@/lib/actions/tasks';
 import {deleteTaskAction, updateTaskAction} from '@/lib/actions/tasks';
-import {LIFECYCLE_PHASES} from '@/lib/lifecycle';
 
 export type AllTaskItem = ProductTask & {
   product_name: string | null;
@@ -106,7 +105,6 @@ export default function AllTasksBoard({
   const [error, setError] = useState<string | null>(null);
   // null = closed, 'new' = the create form, otherwise the task being edited.
   const [editing, setEditing] = useState<'new' | AllTaskItem | null>(null);
-  const [phaseFilter, setPhaseFilter] = useState('all');
   const [, startTransition] = useTransition();
   const [optimisticTasks, applyOptimistic] = useOptimistic(
     tasks,
@@ -154,9 +152,6 @@ export default function AllTasksBoard({
       } else if (productId !== 'all' && task.product_id !== productId) {
         return false;
       }
-      if (phaseFilter !== 'all' && task.lifecycle_phase !== phaseFilter) {
-        return false;
-      }
       if (mineOnly && task.assignee_id !== currentUserId) return false;
       if (
         normalizedQuery &&
@@ -171,7 +166,6 @@ export default function AllTasksBoard({
     locale,
     mineOnly,
     optimisticTasks,
-    phaseFilter,
     productId,
     deferredQuery,
     searchTextById,
@@ -365,20 +359,6 @@ export default function AllTasksBoard({
           </select>
         </label>
 
-        <label className="flex items-center gap-2 text-xs text-muted">
-          <select
-            value={phaseFilter}
-            onChange={(event) => setPhaseFilter(event.target.value)}
-            className={SELECT_CLASS}
-          >
-            <option value="all">{t('all.allPhases')}</option>
-            {LIFECYCLE_PHASES.map((value) => (
-              <option key={value} value={value}>
-                {t(`phase.${value}`)}
-              </option>
-            ))}
-          </select>
-        </label>
 
         <label className="flex cursor-pointer items-center gap-2 rounded-md border border-hairline bg-bg px-2.5 py-2 text-xs text-muted">
           <input
@@ -496,9 +476,9 @@ export default function AllTasksBoard({
                         ) : (
                           <span>{t('all.general')}</span>
                         )}
-                        {task.lifecycle_phase ? (
-                          <span className="rounded border border-hairline bg-raised px-1.5 py-0.5 text-[10px] text-muted">
-                            {t(`phase.${task.lifecycle_phase}`)}
+                        {task.project_id ? (
+                          <span className="rounded border border-accent/25 bg-accent/5 px-1.5 py-0.5 text-[10px] text-accent">
+                            {t('all.projectTask')}
                           </span>
                         ) : null}
                         {task.parent_title ? (

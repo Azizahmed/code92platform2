@@ -40,15 +40,13 @@ const PROPOSAL_ACTIONS = [
   'task_create',
   'task_update',
   'status_update',
-  'lifecycle_advance',
   'repo_patch',
 ] as const;
 
 // Actions that may run without a human approving them, when the operator has
 // put them in an agent's autonomous_actions. Strictly narrower than the list
 // above: knowledge_note remains proposal-only because its content may be
-// proprietary; lifecycle_advance can require a waiver, which is a person
-// accepting responsibility; and repo_patch commits under the org PAT. Mirrors
+// proprietary; and repo_patch commits under the org PAT. Mirrors
 // the forward-only CHECK in migrations/20260828170000_require-approval-for-knowledge-notes.sql.
 const AUTONOMOUS_ACTIONS = [
   'task_create',
@@ -318,8 +316,6 @@ function buildSystemPrompt(agent: any, allowed: string[], unattended: string[] =
       '{"action":"task_update","reasoning":"why","payload":{"task_id":"uuid","title":"...","status":"pending|completed","due_date":"YYYY-MM-DD"}}',
     status_update:
       '{"action":"status_update","reasoning":"why","payload":{"health":"green|yellow|red","stage":"idea|development|beta|live|paused|sunset","summary":"one line","details":"markdown"}}',
-    lifecycle_advance:
-      '{"action":"lifecycle_advance","reasoning":"why","payload":{"phase_id":"uuid","state":"in_progress|blocked|complete"}}',
     repo_patch:
       '{"action":"repo_patch","reasoning":"why","payload":{"message":"commit subject","files":[{"path":"docs/lifecycle/…","content":"full new file contents"}]}}',
   };
@@ -405,10 +401,10 @@ async function buildProductKnowledge(admin: any, productId: string): Promise<str
 }
 
 async function buildProductContext(admin: any, productId: string): Promise<string> {
-  const [products, tasks, phases, updates] = await Promise.all([
-    admin.database.from('products').select('name, slug, stage, health, description, keywords, next_review_at, last_status_update_at').eq('id', productId).limit(1),
+  const [products, tasks, releases, updates] = await Promise.all([
+    admin.database.from('products').select('name, slug, business_stage, health, description, keywords, next_review_at, last_status_update_at').eq('id', productId).limit(1),
     admin.database.from('product_tasks').select('id, title, status, due_date, assignee_id').eq('product_id', productId).eq('status', 'pending').limit(25),
-    admin.database.from('product_lifecycle_phases').select('id, phase, state, entered_at').eq('product_id', productId).limit(12),
+    admin.database.from('release_overview').select('version, release_number, stage, status, goal').eq('product_id', productId).order('release_number', { ascending: false }).limit(6),
     admin.database.from('status_updates').select('health, stage, summary, created_at').eq('product_id', productId).order('created_at', {ascending: false}).limit(5),
   ]);
   const product = products.data?.[0];
@@ -416,15 +412,15 @@ async function buildProductContext(admin: any, productId: string): Promise<strin
 
   const lines = [
     `## Bound product: ${product.name} (${product.slug})`,
-    `Stage: ${product.stage} · Health: ${product.health}`,
+    `Business stage: ${product.business_stage} · Health: ${product.health}`,
     product.description ? `Description: ${truncate(product.description, 500)}` : '',
     product.keywords?.length ? `Keywords: ${product.keywords.join(', ')}` : '',
     product.next_review_at ? `Next review due: ${product.next_review_at}` : '',
     `Last status update: ${product.last_status_update_at ?? 'never'}`,
   ].filter(Boolean);
 
-  if (phases.data?.length) {
-    lines.push('', '### Lifecycle phases', ...phases.data.map((phase: any) => `- ${phase.phase}: ${phase.state} (phase_id ${phase.id})`));
+  if (releases.data?.length) {
+    lines.push('', '### Releases', ...releases.data.map((r: any) => `- ${r.version} (${r.release_number === 0 ? 'MVP' : 'cycle'}): stage ${r.stage}, status ${r.status}${r.goal ? ` — ${r.goal}` : ''}`));
   }
   if (tasks.data?.length) {
     lines.push('', '### Open work items', ...tasks.data.map((task: any) => `- ${task.title}${task.due_date ? ` (due ${task.due_date})` : ''} — task_id ${task.id}`));

@@ -4,21 +4,28 @@ import {getTranslations} from 'next-intl/server';
 import ProductsTable, {type ProductRow} from '@/components/products/ProductsTable';
 import {Link} from '@/i18n/navigation';
 import {requireActiveMember} from '@/lib/auth';
+import {isBusinessStage, type BusinessStage} from '@/lib/business-track';
 import {createInsForgeServerClient} from '@/lib/insforge/server';
+import {isRiskTier} from '@/lib/risk';
 
-export default async function ProductsPage() {
+export default async function ProductsPage({
+  searchParams
+}: {
+  searchParams: Promise<{business_stage?: string}>;
+}) {
+  const {business_stage: stageParam} = await searchParams;
   const insforge = await createInsForgeServerClient();
-  // product_overview already joins the owner name and carries the lifecycle
-  // columns, so this is one round trip instead of products + team_members.
+  // product_overview carries the owner, the business stage and the current
+  // release, so this is one round trip instead of several.
   const [, t, {data: products}] = await Promise.all([
     requireActiveMember(),
     getTranslations('products'),
     insforge.database
-    .from('product_overview')
-    .select(
-      'id, name, slug, logo_url, stage, health, owner_name, next_review_at, last_status_update_at, archived_at, risk_tier, lifecycle_phase, lifecycle_state, lifecycle_complete_count, created_at'
-    )
-    .order('created_at', {ascending: false})
+      .from('product_overview')
+      .select(
+        'id, name, slug, logo_url, health, owner_name, next_review_at, last_status_update_at, archived_at, risk_tier, business_stage, current_release_version, current_release_stage, checklist_done, checklist_total, created_at'
+      )
+      .order('created_at', {ascending: false})
   ]);
 
   const rows: ProductRow[] = (products ?? []).map((p) => ({
@@ -26,17 +33,20 @@ export default async function ProductsPage() {
     name: p.name as string,
     slug: p.slug as string,
     logoUrl: (p.logo_url as string | null) ?? null,
-    stage: p.stage as ProductRow['stage'],
     health: p.health as ProductRow['health'],
     ownerName: (p.owner_name as string | null) ?? null,
     nextReviewAt: (p.next_review_at as string | null) ?? null,
     lastStatusUpdateAt: (p.last_status_update_at as string | null) ?? null,
     archivedAt: (p.archived_at as string | null) ?? null,
-    riskTier: p.risk_tier as ProductRow['riskTier'],
-    lifecyclePhase: (p.lifecycle_phase as ProductRow['lifecyclePhase']) ?? null,
-    lifecycleState: (p.lifecycle_state as ProductRow['lifecycleState']) ?? null,
-    lifecycleCompleteCount: (p.lifecycle_complete_count as number | null) ?? 0
+    riskTier: isRiskTier(p.risk_tier as string) ? (p.risk_tier as ProductRow['riskTier']) : 'medium',
+    businessStage: isBusinessStage(p.business_stage as string) ? (p.business_stage as BusinessStage) : 'idea',
+    currentReleaseVersion: (p.current_release_version as string | null) ?? null,
+    currentReleaseStage: (p.current_release_stage as string | null) ?? null,
+    checklistDone: (p.checklist_done as number | null) ?? 0,
+    checklistTotal: (p.checklist_total as number | null) ?? 0
   }));
+
+  const initialStage = isBusinessStage(stageParam ?? '') ? (stageParam as BusinessStage) : null;
 
   return (
     <section className="space-y-6">
@@ -54,7 +64,7 @@ export default async function ProductsPage() {
         </Link>
       </header>
 
-      <ProductsTable products={rows} />
+      <ProductsTable products={rows} initialStage={initialStage} />
     </section>
   );
 }

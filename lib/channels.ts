@@ -3,7 +3,7 @@
 //
 // Mirrors migrations/20260825090000_add-channels.sql.
 
-export const CHANNEL_KINDS = ['standing', 'product', 'dm'] as const;
+export const CHANNEL_KINDS = ['standing', 'product', 'project', 'dm'] as const;
 export type ChannelKind = (typeof CHANNEL_KINDS)[number];
 
 export const MESSAGE_KINDS = ['human', 'agent', 'system'] as const;
@@ -15,8 +15,7 @@ export type NotificationLevel = (typeof NOTIFICATION_LEVELS)[number];
 export const PROMOTION_TYPES = [
   'status_update',
   'product_task',
-  'knowledge_item',
-  'lifecycle_phase'
+  'knowledge_item'
 ] as const;
 export type PromotionType = (typeof PROMOTION_TYPES)[number];
 

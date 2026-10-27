@@ -182,15 +182,16 @@ function loadTools(actions = {}) {
       updateKnowledgeItemAction: record('updateKnowledgeItemAction', ok), setKnowledgeArchivedAction: record('x', ok),
       createTagAction: record('x', ok), signKnowledgeFileAction: record('x', ok),
       deleteKnowledgeItemAction: record('deleteKnowledgeItemAction', {ok: true, fileKey: 'sources/f.pdf'})},
-    '@/lib/actions/lifecycle': {addPhaseArtifactAction: record('addPhaseArtifactAction', ok), advanceLifecyclePhaseAction: record('x', ok),
-      deletePhaseArtifactAction: record('x', ok), setLifecyclePhaseDetailsAction: record('x', ok), setProductRiskTierAction: record('x', ok)},
     '@/lib/actions/media': {addTaskAttachmentsAction: record('addTaskAttachmentsAction', ok),
       addStatusUpdateAttachmentsAction: record('x', ok), setProductLogoAction: record('x', ok)},
     '@/lib/actions/products': {createProductAction: record('createProductAction', {ok: true, productId}),
-      updateProductAction: record('updateProductAction', ok), setProductArchivedAction: record('x', ok)},
-    '@/lib/actions/releases': {advanceReleaseStatusAction: record('x', ok), createReleaseAction: record('x', ok),
+      updateProductAction: record('updateProductAction', ok), setProductArchivedAction: record('x', ok),
+      setProductRiskTierAction: record('x', ok)},
+    '@/lib/actions/projects': {addProjectNoteAction: record('addProjectNoteAction', ok)},
+    '@/lib/actions/releases': {exitReleaseAction: record('x', ok), createCycleReleaseAction: record('x', ok),
       deleteReleaseAction: record('x', ok), setReleaseCheckAction: record('x', ok), setTaskReleaseAction: record('x', ok),
-      updateReleaseAction: record('x', ok)},
+      updateReleaseAction: record('x', ok), addReleaseArtifactAction: record('addReleaseArtifactAction', {ok: true, releaseId: 'r1', artifactId: 'a1'}),
+      removeReleaseArtifactAction: record('x', ok)},
     '@/lib/actions/status-updates': {deleteStatusUpdateAction: record('x', ok), postStatusUpdateAction: record('x', ok)},
     '@/lib/actions/tasks': {createTaskAction: record('createTaskAction', {ok: true, taskId}), patchTaskAction: record('patchTaskAction', ok),
       deleteTaskAction: record('deleteTaskAction', {ok: true, taskId, storageKeys: ['mcp/tasks/a.png', 'mcp/tasks/b.pdf']})},
@@ -213,7 +214,7 @@ test('the tool list is exactly what the token was granted, with honest annotatio
   assert.ok(readOnly.some((tool) => tool.name === 'get_product'));
   const full = tools.mcpToolList(ALL);
   const names = full.map((tool) => tool.name);
-  for (const name of ['create_task', 'update_product', 'advance_lifecycle_phase', 'create_knowledge_item', 'create_release',
+  for (const name of ['create_task', 'update_product', 'add_release_artifact', 'add_project_note', 'create_knowledge_item', 'create_release',
     'post_message', 'upload_file', 'create_upload_link', 'attach_files_to_task', 'delete_task']) assert.ok(names.includes(name), name);
   for (const tool of full) {
     assert.equal(tool.inputSchema.type, 'object', tool.name);

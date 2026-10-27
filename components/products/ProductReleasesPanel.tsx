@@ -1,117 +1,81 @@
-'use client';
+import {ChevronRight, Rocket} from 'lucide-react';
+import {getTranslations} from 'next-intl/server';
 
-import {useState} from 'react';
-import {CalendarDays, ListChecks, Plus, Rocket} from 'lucide-react';
-import {useTranslations} from 'next-intl';
-
-import ReleaseForm, {
-  type ReleaseMemberOption
-} from '@/components/releases/ReleaseForm';
+import NewCycleButton from '@/components/releases/NewCycleButton';
 import ReleaseStatusChip from '@/components/releases/ReleaseStatusChip';
+import RiskTierChip from '@/components/risk/RiskTierChip';
 import {Link} from '@/i18n/navigation';
 import type {ReleaseOverview} from '@/lib/releases';
 
-// The product's own cycles, compact. The full picture — checklist, scope,
-// history — lives on /releases/[id]; this is the "what is in flight here"
-// summary and the place you start a new one from.
-export default function ProductReleasesPanel({
+// Every release of a product, the MVP first, with the stage it is in and how much
+// of the evidence for that stage has been filed.
+export default async function ProductReleasesPanel({
   productId,
   releases,
-  members,
-  locale,
-  canManage
+  canCreate,
+  canCreateReason,
+  locale
 }: {
   productId: string;
   releases: ReleaseOverview[];
-  members: ReleaseMemberOption[];
+  canCreate: boolean;
+  canCreateReason: 'gate' | null;
   locale: string;
-  canManage: boolean;
 }) {
-  const t = useTranslations('releases');
-  const [creating, setCreating] = useState(false);
-
-  const dateFormat = new Intl.DateTimeFormat(locale, {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric'
-  });
+  const t = await getTranslations('releases');
+  const dateFormat = new Intl.DateTimeFormat(locale, {year: 'numeric', month: 'short', day: 'numeric'});
+  const ordered = [...releases].sort((a, b) => a.release_number - b.release_number);
+  const defaultTarget = new Date(Date.now() + 1000 * 60 * 60 * 24 * 30).toISOString().slice(0, 10);
 
   return (
-    <section id="releases" className="scroll-mt-8 space-y-4">
-      <header className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2">
-            <Rocket className="h-4 w-4 text-accent" strokeWidth={1.75} />
-            <h2 className="text-sm font-medium">{t('panel.title')}</h2>
-          </div>
-          <p className="mt-1 text-xs text-muted">{t('panel.subtitle')}</p>
-        </div>
-        {canManage && !creating ? (
-          <button
-            type="button"
-            onClick={() => setCreating(true)}
-            className="inline-flex items-center gap-2 rounded-md border border-hairline px-3 py-2 text-xs text-muted transition-colors hover:bg-raised hover:text-ink"
-          >
-            <Plus className="h-3.5 w-3.5" strokeWidth={2} />
-            {t('newRelease')}
-          </button>
+    <section className="space-y-3">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h2 className="text-sm font-medium">{t('panel.title')}</h2>
+        {canCreate ? (
+          <NewCycleButton productId={productId} defaultTargetDate={defaultTarget} />
+        ) : canCreateReason === 'gate' ? (
+          <p className="text-[11px] text-faint">{t('panel.needsGate')}</p>
         ) : null}
-      </header>
+      </div>
 
-      {creating ? (
-        <ReleaseForm
-          productId={productId}
-          members={members}
-          onDone={() => setCreating(false)}
-        />
-      ) : null}
-
-      {releases.length === 0 && !creating ? (
-        <p className="rounded-lg border border-dashed border-hairline bg-panel/50 px-4 py-6 text-center text-xs text-muted">
-          {t('panel.empty')}
-        </p>
+      {ordered.length === 0 ? (
+        <div className="flex flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-hairline bg-panel/50 px-6 py-10 text-center">
+          <span className="flex h-10 w-10 items-center justify-center rounded-full border border-accent/30 bg-accent/10">
+            <Rocket className="h-4 w-4 text-accent" strokeWidth={1.5} />
+          </span>
+          <div className="text-sm font-medium">{t('panel.emptyTitle')}</div>
+          <p className="max-w-sm text-sm leading-relaxed text-muted">{t('panel.emptyBody')}</p>
+        </div>
       ) : (
-        <ul className="divide-y divide-hairline overflow-hidden rounded-lg border border-hairline bg-panel">
-          {releases.map((release) => {
-            const target = release.target_date
-              ? dateFormat.format(new Date(`${release.target_date}T00:00:00`))
-              : null;
-            return (
-              <li key={release.id}>
-                <Link
-                  href={`/releases/${release.id}`}
-                  className="flex flex-wrap items-center gap-x-3 gap-y-1.5 px-4 py-3 transition-colors hover:bg-raised/35"
-                >
-                  <span
-                    dir="ltr"
-                    className="font-mono text-sm font-medium text-ink"
-                  >
-                    {release.version}
+        <ul className="space-y-2">
+          {ordered.map((release) => (
+            <li key={release.id}>
+              <Link
+                href={`/releases/${release.id}`}
+                className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-lg border border-hairline bg-panel px-4 py-3 transition-colors hover:border-accent/30"
+              >
+                <span className="font-mono text-xs text-faint">
+                  {release.is_mvp ? t('panel.mvp') : `#${release.release_number}`}
+                </span>
+                <span dir="ltr" className="font-mono text-sm font-semibold">{release.version}</span>
+                <ReleaseStatusChip status={release.status} />
+                <span className="rounded border border-hairline bg-raised px-1.5 py-0.5 text-[10px] uppercase tracking-wider text-muted">
+                  {t(`stage.${release.stage}`)}
+                </span>
+                <RiskTierChip riskTier={release.risk_tier} />
+                <span className="min-w-0 flex-1 truncate text-xs text-muted">{release.goal ?? t('panel.noGoal')}</span>
+                <span className="font-mono text-[11px] text-faint">
+                  {t('panel.filed', {filed: release.artifacts_filed, required: release.artifacts_required})}
+                </span>
+                {release.target_date ? (
+                  <span className="text-[11px] text-faint">
+                    {dateFormat.format(new Date(`${release.target_date}T00:00:00`))}
                   </span>
-                  {release.name ? (
-                    <span className="min-w-0 flex-1 truncate text-xs text-muted">
-                      {release.name}
-                    </span>
-                  ) : (
-                    <span className="flex-1" />
-                  )}
-                  <span className="inline-flex items-center gap-1 font-mono text-[11px] text-faint">
-                    <ListChecks className="h-3 w-3" strokeWidth={1.75} />
-                    {release.checks_done}/{release.checks_required}
-                  </span>
-                  <span
-                    className={`inline-flex items-center gap-1 font-mono text-[11px] ${
-                      release.is_overdue ? 'text-amber' : 'text-faint'
-                    }`}
-                  >
-                    <CalendarDays className="h-3 w-3" strokeWidth={1.75} />
-                    {target ?? t('noTargetDate')}
-                  </span>
-                  <ReleaseStatusChip status={release.status} />
-                </Link>
-              </li>
-            );
-          })}
+                ) : null}
+                <ChevronRight className="h-3.5 w-3.5 text-faint rtl:rotate-180" strokeWidth={2} />
+              </Link>
+            </li>
+          ))}
         </ul>
       )}
     </section>

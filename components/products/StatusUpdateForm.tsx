@@ -5,7 +5,6 @@ import {useRef, useState, useTransition} from 'react';
 import {useTranslations} from 'next-intl';
 
 import {type Health} from '@/components/HealthBadge';
-import {type Stage} from '@/components/StageChip';
 import {addStatusUpdateAttachmentsAction} from '@/lib/actions/media';
 import {postStatusUpdateAction} from '@/lib/actions/status-updates';
 import {
@@ -15,14 +14,6 @@ import {
 } from '@/lib/media-upload';
 
 const HEALTHS: Health[] = ['green', 'yellow', 'red', 'unknown'];
-const STAGES: Stage[] = [
-  'idea',
-  'development',
-  'beta',
-  'live',
-  'paused',
-  'sunset'
-];
 
 const INPUT_CLASS =
   'w-full rounded-md border border-hairline bg-bg px-3 py-2 text-sm outline-none transition-colors placeholder:text-faint focus:border-accent/50';
@@ -33,7 +24,6 @@ export default function StatusUpdateForm({productId}: {productId: string}) {
   const tCommon = useTranslations('common');
 
   const [health, setHealth] = useState<Health>('green');
-  const [stage, setStage] = useState<'' | Stage>('');
   const [summary, setSummary] = useState('');
   const [details, setDetails] = useState('');
   const [files, setFiles] = useState<File[]>([]);
@@ -51,7 +41,7 @@ export default function StatusUpdateForm({productId}: {productId: string}) {
       const result = await postStatusUpdateAction({
         productId,
         health,
-        stage: stage === '' ? null : stage,
+        stage: null,
         summary,
         details: details.trim() === '' ? null : details
       });
@@ -92,8 +82,7 @@ export default function StatusUpdateForm({productId}: {productId: string}) {
       setDetails('');
       setFiles([]);
       if (fileInput.current) fileInput.current.value = '';
-      setStage('');
-      setPosted(true);
+          setPosted(true);
     });
   }
 
@@ -115,21 +104,6 @@ export default function StatusUpdateForm({productId}: {productId: string}) {
             {HEALTHS.map((h) => (
               <option key={h} value={h}>
                 {tCommon(`health.${h}`)}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="block space-y-1.5">
-          <span className="text-xs text-muted">{t('update.stage')}</span>
-          <select
-            value={stage}
-            onChange={(e) => setStage(e.target.value as '' | Stage)}
-            className={INPUT_CLASS}
-          >
-            <option value="">{t('update.stageUnchanged')}</option>
-            {STAGES.map((s) => (
-              <option key={s} value={s}>
-                {tCommon(`stages.${s}`)}
               </option>
             ))}
           </select>

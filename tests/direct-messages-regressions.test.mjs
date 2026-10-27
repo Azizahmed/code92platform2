@@ -7,7 +7,7 @@ const read = (path) => readFile(new URL(`../${path}`, import.meta.url), 'utf8');
 test('direct messages are a first-class channel kind with viewer-specific labels', async () => {
   const source = await read('lib/channels.ts');
 
-  assert.match(source, /CHANNEL_KINDS = \['standing', 'product', 'dm'\]/);
+  assert.match(source, /CHANNEL_KINDS = \['standing', 'product', 'project', 'dm'\]/);
   assert.match(source, /channel\.kind === 'dm' && viewer/);
   assert.match(source, /dm_user_a/);
   assert.match(source, /dm_user_b/);

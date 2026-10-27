@@ -1,0 +1,198 @@
+{
+  "stages": {
+    "idea": "Idea",
+    "concept": "Concept",
+    "build": "Build",
+    "venture": "Venture",
+    "company": "Company",
+    "board": "Board"
+  },
+  "gate": {
+    "title": "Gates",
+    "founderOnly": "Only founders record a gate decision.",
+    "badge": "Gate {gate}",
+    "name": {
+      "1": "Gate 1 · Operator and go",
+      "2": "Gate 2 · Product-market fit"
+    },
+    "decision": {
+      "go": "Go",
+      "no_go": "No go"
+    },
+    "decisionHint": {
+      "go": "Pass the gate and move the product on.",
+      "no_go": "Record that the gate was not passed. The product stays where it is."
+    },
+    "decisionLabel": "Decision",
+    "note": "Reasoning",
+    "notePlaceholder": "Why this decision, in a sentence or two.",
+    "pmfCriteria": "PMF criteria used",
+    "pmfCriteriaHint": "The measures the team agreed would show product-market fit.",
+    "evidence": "Evidence",
+    "evidenceHint": "Links to Knowledge items or the metrics that show the criteria were met.",
+    "recordTitle": "Record gate {gate} decision",
+    "recordAction": "Record decision",
+    "submit": "Record decision",
+    "saving": "Recording…",
+    "notDecided": "Not decided",
+    "noDecisionYet": "No decision recorded yet.",
+    "decidedBy": "Decided by",
+    "history": "Decision history ({count})"
+  },
+  "move": {
+    "title": "Move to {stage}",
+    "backTitle": "Move back a stage",
+    "blockedTitle": "This move is blocked until:",
+    "blockers": {
+      "operator": "A named operator is set on the Business details.",
+      "gate1Go": "Gate 1 has a go decision from a founder.",
+      "gate2Go": "Gate 2 has a PMF go decision from a founder, with criteria and evidence."
+    },
+    "reason": "Why is the product going back?",
+    "reasonHint": "Required when moving backward. It stays in the log.",
+    "confirm": "Move",
+    "confirmBack": "Move back",
+    "moving": "Moving…",
+    "next": "Move to {stage}",
+    "back": "Back to {stage}"
+  },
+  "details": {
+    "title": "Business details",
+    "origination": "Origination",
+    "originations": {
+      "discovery": "Discovery",
+      "operator_brought": "Brought by an operator",
+      "bench_built": "Built on the bench"
+    },
+    "ownership": "Ownership",
+    "ownerships": {
+      "code92_full": "Code92 full",
+      "co_owned": "Co-owned",
+      "client": "Client"
+    },
+    "equity": "Code92 equity share (%)",
+    "equityHint": "Code92’s share of the equity, in percent.",
+    "sector": "Sector",
+    "operatorName": "Operator",
+    "operatorNamePlaceholder": "Who runs this product day to day",
+    "operatorHint": "Required to pass Gate 1. Name the person even if they are not on the team.",
+    "operatorUser": "Operator on the team",
+    "operatorContact": "Operator as a contact",
+    "businessOwner": "Business owner",
+    "notSet": "Not set",
+    "noOperator": "No operator yet",
+    "saving": "Saving…",
+    "save": "Save details",
+    "saved": "Saved"
+  },
+  "checklist": {
+    "title": "Checklist",
+    "guidance": "Guides the work; never blocks a move.",
+    "current": "current",
+    "empty": "Nothing here yet.",
+    "doneBy": "Ticked by {name}",
+    "removeConfirm": "Remove this item from the checklist?",
+    "remove": "Remove item",
+    "add": "Add",
+    "addPlaceholder": "Add an item…",
+    "defaults": {
+      "problem_statement": "Problem statement",
+      "source": "Source of the idea",
+      "first_screen_decision": "First-screen decision",
+      "problem_validated": "Problem validated",
+      "business_case": "Business case",
+      "operator_identified": "Operator identified",
+      "ownership_agreed": "Ownership agreed",
+      "gtm_plan": "Go-to-market plan",
+      "pricing": "Pricing",
+      "first_customer_target": "First customer target",
+      "contracts_template": "Contracts template",
+      "first_customers": "First customers",
+      "revenue_tracking": "Revenue tracking",
+      "pmf_criteria_defined": "PMF criteria defined",
+      "own_team_plan": "Own team plan",
+      "own_pnl": "Own P&L",
+      "bench_exit_plan": "Bench exit plan",
+      "board_seat_recorded": "Board seat recorded",
+      "reporting_cadence": "Reporting cadence"
+    }
+  },
+  "customers": {
+    "title": "Customers",
+    "empty": "No customers yet. An account becomes one when a product deal is won."
+  },
+  "documents": {
+    "title": "Business documents",
+    "hint": "Knowledge items filed to the business track.",
+    "empty": "No business documents linked yet."
+  },
+  "history": {
+    "title": "Recent moves",
+    "empty": "No stage moves yet."
+  },
+  "origin": {
+    "from": "Originated from the project"
+  },
+  "watch": {
+    "watch": "Watch",
+    "watching": "Watching"
+  },
+  "sales": {
+    "deals": "Deals for this product",
+    "newDeal": "New deal",
+    "customers": "Customers",
+    "noCustomers": "No customers from this product yet."
+  },
+  "knowledge": {
+    "filter": {
+      "all": "All",
+      "business": "Business",
+      "development": "Development"
+    },
+    "allReleases": "All releases",
+    "track": "Track",
+    "trackNone": "No track",
+    "release": "Release",
+    "releaseNone": "No release",
+    "tracks": {
+      "business": "Business",
+      "development": "Development"
+    }
+  },
+  "release": {
+    "stage": {
+      "plan": "Plan",
+      "design": "Design",
+      "build": "Build",
+      "test": "Test",
+      "deploy": "Deploy",
+      "maintain": "Maintain"
+    }
+  },
+  "list": {
+    "checklist": "Checklist {done}/{total}"
+  },
+  "errors": {
+    "forbidden": "Only the product owner, its business owner or an admin can do that.",
+    "notFounder": "Only founders can record a gate decision.",
+    "operatorRequired": "Name the operator before passing Gate 1.",
+    "gate1Required": "Gate 1 needs a go decision from a founder.",
+    "gate2Required": "Gate 2 needs a PMF go decision from a founder.",
+    "pmfRequired": "Add the PMF criteria and the evidence for them.",
+    "wrongStageForGate": "That gate is decided at a different stage.",
+    "noteRequired": "Add a note explaining the decision.",
+    "oneStepAtATime": "Move one stage at a time.",
+    "reasonRequired": "Say why the product is moving back.",
+    "alreadyInStage": "The product is already in that stage.",
+    "archived": "An archived product cannot change.",
+    "equityRequired": "A co-owned product needs Code92’s equity share.",
+    "equityNeedsCoOwned": "The equity share applies only to co-owned products.",
+    "tooLong": "That text is too long.",
+    "duplicate": "That already exists.",
+    "generic": "Something went wrong. Please try again.",
+    "invalid": "Check the details and try again."
+  },
+  "actions": {
+    "cancel": "Cancel"
+  }
+}
