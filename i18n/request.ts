@@ -9,6 +9,7 @@ import {routing} from './routing';
 // the namespace name here.
 const NAMESPACES = [
   'common',
+  'ui',
   'auth',
   'dashboard',
   'products',
@@ -26,6 +27,9 @@ const NAMESPACES = [
   'assistant',
   'myWork',
   'sales',
+  'business',
+  'projects',
+  'governance',
   'changelog'
 ] as const;
 

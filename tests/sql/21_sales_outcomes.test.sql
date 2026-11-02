@@ -36,17 +36,17 @@ SELECT public.move_deal_stage('40000000-0000-4000-8000-000000000003', 'closed_wo
 SELECT test.assert(
   (SELECT ownership = 'code92_full' AND name = 'Data platform build'
      AND account_id = '30000000-0000-4000-8000-000000000002'
-   FROM public.engagements WHERE deal_id = '40000000-0000-4000-8000-000000000003'),
-  'consultation win opens an engagement');
+   FROM public.projects WHERE deal_id = '40000000-0000-4000-8000-000000000003'),
+  'consultation win opens a project');
 
 -- Reopen and re-win keeps one engagement, updates ownership.
 SELECT public.move_deal_stage('40000000-0000-4000-8000-000000000003', 'negotiation', 'scope change');
 SELECT public.move_deal_stage('40000000-0000-4000-8000-000000000003', 'closed_won', NULL, 'client');
 SELECT test.assert_eq(
-  (SELECT count(*) FROM public.engagements WHERE deal_id = '40000000-0000-4000-8000-000000000003'),
-  1::bigint, 'one engagement per deal');
+  (SELECT count(*) FROM public.projects WHERE deal_id = '40000000-0000-4000-8000-000000000003'),
+  1::bigint, 'one project per deal');
 SELECT test.assert_eq(
-  (SELECT ownership FROM public.engagements WHERE deal_id = '40000000-0000-4000-8000-000000000003'),
+  (SELECT ownership FROM public.projects WHERE deal_id = '40000000-0000-4000-8000-000000000003'),
   'client', 're-win updates ownership');
 
 -- Users cannot write outcomes directly.

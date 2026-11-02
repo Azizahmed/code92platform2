@@ -1,0 +1,71 @@
+{
+  "confirm": {
+    "title": "Are you sure?",
+    "cancel": "Cancel",
+    "confirm": "Confirm"
+  },
+  "toast": {
+    "dismiss": "Dismiss"
+  },
+  "palette": {
+    "label": "Command menu",
+    "placeholder": "Search tasks, products, projects, channels…",
+    "newTask": "New task",
+    "newMyTask": "New task for me",
+    "projects": "Projects",
+    "kinds": {
+      "task": "Task",
+      "product": "Product",
+      "project": "Project",
+      "channel": "Channel"
+    },
+    "groups": {
+      "actions": "Actions",
+      "pages": "Go to",
+      "results": "Results"
+    },
+    "searching": "Searching…",
+    "empty": "Nothing matches. Try another word.",
+    "hintMove": "to move",
+    "hintOpen": "to open"
+  },
+  "glossary": {
+    "what": "What is “{term}”?",
+    "businessStage": {
+      "title": "Business stage",
+      "body": "Where a product sits in the Code 92 funnel: Idea → Concept → Build → Venture → Company → Board. Moving forward past Concept and Venture needs a gate decision."
+    },
+    "gate": {
+      "title": "Gate",
+      "body": "A go / no-go decision by the founders. Gate 1 (after Concept) confirms an operator and a go; Gate 2 (after Venture) confirms product-market fit. A product cannot move past a gate without a “go”."
+    },
+    "release": {
+      "title": "Release",
+      "body": "One version of a product being shipped. It moves through stages, and each stage closes only when its evidence is attached."
+    },
+    "releaseStage": {
+      "title": "Release stage",
+      "body": "The step a release is on: Plan → Design → Build → Test → Deploy → Maintain. Each stage lists the documents (evidence) needed to close it."
+    },
+    "evidence": {
+      "title": "Evidence",
+      "body": "The documents that prove a release stage was done properly, such as a spec, a test report or a deploy record. Governance shows which ones are still missing."
+    },
+    "projectPhase": {
+      "title": "Project phase",
+      "body": "Where a consultation engagement stands: Kickoff → Discovery → Delivery → Handover → Closed. A project with no activity for a while is marked stale."
+    },
+    "taskStatus": {
+      "title": "Task status",
+      "body": "Every task is To do, In progress, Blocked or Done. It is the same status on every screen: change it anywhere and it changes everywhere."
+    },
+    "waitingOnMe": {
+      "title": "Waiting on me",
+      "body": "Things that need your decision or reply: gate decisions, spec approvals, agent proposals, unanswered mentions and deals that need a next step."
+    },
+    "follow": {
+      "title": "Following",
+      "body": "Follow a task to get a notification when it changes or is completed. You follow tasks you create or are assigned automatically."
+    }
+  }
+}

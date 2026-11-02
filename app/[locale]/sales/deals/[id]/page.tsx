@@ -18,7 +18,6 @@ import {
   type Contact,
   type DealActivity,
   type DealRow,
-  type Engagement
 } from '@/lib/sales/types';
 
 function Panel({title, children, action}: {title: string; children: React.ReactNode; action?: React.ReactNode}) {
@@ -52,8 +51,8 @@ export default async function DealPage({params}: {params: Promise<{locale: strin
         .limit(200),
       insforge.database.from('deal_watchers').select('user_id').eq('deal_id', id),
       insforge.database
-        .from('engagements')
-        .select('id, account_id, deal_id, name, ownership, started_at, notes')
+        .from('projects')
+        .select('id, account_id, deal_id, name, ownership, start_date, notes')
         .eq('deal_id', id)
         .maybeSingle(),
       getActiveMembers()
@@ -74,7 +73,7 @@ export default async function DealPage({params}: {params: Promise<{locale: strin
     actor_name: entry.actor_id ? names[entry.actor_id] ?? null : null
   }));
   const today = businessDate();
-  const won = engagement as Engagement | null;
+  const won = engagement as {id: string; name: string; ownership: string | null} | null;
 
   const facts: [string, React.ReactNode][] = [
     [t('fields.owner'), deal.owner_name ?? '—'],
@@ -120,10 +119,10 @@ export default async function DealPage({params}: {params: Promise<{locale: strin
 
           {won ? (
             <Panel title={t('sections.engagement')}>
-              <Link href={`/sales/accounts/${deal.account_id}#engagements`} className="text-sm text-ink hover:text-accent">
+              <Link href={`/projects/${won.id}`} className="text-sm text-ink hover:text-accent">
                 {won.name}
               </Link>
-              <p className="mt-1 text-xs text-muted">{t(`ownership.${won.ownership}`)}</p>
+              <p className="mt-1 text-xs text-muted">{t(`ownership.${won.ownership ?? 'client'}`)}</p>
             </Panel>
           ) : null}
 

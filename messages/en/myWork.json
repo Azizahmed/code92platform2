@@ -57,7 +57,10 @@
       "deal_closing": "Deal expected to close this week",
       "gate_ready": "Gate ready for your decision",
       "proposal_pending": "Agent proposal waiting",
-      "mention_unreplied": "Mentioned you — no reply yet"
+      "mention_unreplied": "Mentioned you — no reply yet",
+      "business_gate_pending": "Gate decision",
+      "release_spec_approval": "Spec approval",
+      "release_stage_ready": "Stage ready to close"
     },
     "when": {
       "review_overdue": "Due {date}",
@@ -65,7 +68,10 @@
       "deal_closing": "Closes {date}",
       "gate_ready": "Since {date}",
       "proposal_pending": "{date}",
-      "mention_unreplied": "{date}"
+      "mention_unreplied": "{date}",
+      "business_gate_pending": "Waiting",
+      "release_spec_approval": "Waiting",
+      "release_stage_ready": "Target {date}"
     },
     "actions": {
       "review_overdue": "Post update",
@@ -73,7 +79,10 @@
       "deal_closing": "Open deal",
       "gate_ready": "Review gate",
       "proposal_pending": "Decide",
-      "mention_unreplied": "Reply"
+      "mention_unreplied": "Reply",
+      "business_gate_pending": "Decide",
+      "release_spec_approval": "Review spec",
+      "release_stage_ready": "Close stage"
     },
     "gatePhase": "{phase} — all required evidence filed",
     "proposalActions": {
@@ -82,7 +91,10 @@
       "task_update": "Task change",
       "status_update": "Status update",
       "lifecycle_advance": "Advance a phase"
-    }
+    },
+    "gateDecision": "Decision due at {gate}",
+    "specApproval": "The owner approves this spec",
+    "stageReady": "{stage} can be closed now"
   },
   "errors": {
     "invalid": "Check the fields and try again.",

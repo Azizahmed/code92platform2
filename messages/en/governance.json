@@ -1,0 +1,142 @@
+{
+  "title": "Governance",
+  "subtitle": "Every decision the platform records, and the evidence that is still missing.",
+  "gapsSummary": "{count} live releases are waiting on evidence for their current stage.",
+  "waitingGates": {
+    "title": "Waiting on a gate decision",
+    "empty": "No product is waiting on a gate.",
+    "gate": "{gate} decision due"
+  },
+  "coverage": {
+    "title": "Release evidence",
+    "empty": "No live releases.",
+    "release": "Release",
+    "stage": "Stage",
+    "status": "Status",
+    "filed": "Filed",
+    "gaps": "Still needed",
+    "gapCount": "{count} to close the stage",
+    "ready": "Ready to close"
+  },
+  "policy": {
+    "title": "Required evidence by risk",
+    "hint": "Changes apply to releases created from now on. A release keeps the rules it was created with.",
+    "artifact": "Evidence"
+  },
+  "waivers": {
+    "title": "Waivers",
+    "empty": "No waivers recorded."
+  },
+  "log": {
+    "title": "Decision log",
+    "empty": "Nothing has been recorded yet.",
+    "when": "When",
+    "what": "What",
+    "product": "Product",
+    "change": "Change",
+    "by": "By",
+    "why": "Why",
+    "kinds": {
+      "business_stage": "Stage move",
+      "gate_decision": "Gate decision",
+      "release_stage": "Release stage",
+      "release_approval": "Spec approval",
+      "release_status": "Release status",
+      "lifecycle_retired": "Lifecycle (retired)"
+    },
+    "decision": {
+      "go": "Go",
+      "no_go": "No go"
+    },
+    "waiver": "Waiver",
+    "selfApproved": "Self-approved",
+    "missing": "Missing at the time: {items}"
+  },
+  "risk": {
+    "low": "Low",
+    "medium": "Medium",
+    "high": "High"
+  },
+  "kind": {
+    "mvp": "MVP",
+    "cycle": "Cycle"
+  },
+  "stage": {
+    "plan": "Plan",
+    "design": "Design",
+    "build": "Build",
+    "test": "Test",
+    "deploy": "Deploy",
+    "maintain": "Maintain"
+  },
+  "stages": {
+    "idea": "Idea",
+    "concept": "Concept",
+    "build": "Build",
+    "venture": "Venture",
+    "company": "Company",
+    "board": "Board"
+  },
+  "status": {
+    "planned": "Planned",
+    "in_progress": "In progress",
+    "ready": "Ready",
+    "released": "Released",
+    "rolled_back": "Rolled back",
+    "cancelled": "Cancelled"
+  },
+  "artifacts": {
+    "intent": "Intent",
+    "spec": "Spec",
+    "plan": "Plan document",
+    "threat_model": "Threat model",
+    "pull_request": "Pull request",
+    "test_results": "Test results",
+    "review_findings": "Review findings",
+    "security_review": "Security review",
+    "release_tag": "Release tag",
+    "deploy_checklist": "Deploy checklist",
+    "security_scan": "Security scan",
+    "incident": "Incident",
+    "metric": "Metric",
+    "runbook": "Runbook"
+  },
+  "gap": {
+    "link": "Nothing filed at this stage yet",
+    "specApproval": "Spec not yet approved",
+    "testPass": "Tests not passed",
+    "findingsClosed": "Open review findings",
+    "openTasks": "Open tasks in the release",
+    "unknown": "Something else",
+    "checks": {
+      "release_notes": "Release notes",
+      "qa_signoff": "QA sign-off",
+      "rollback_plan": "Rollback plan",
+      "security_signoff": "Security sign-off",
+      "change_approval": "Change approval"
+    },
+    "artifacts": {
+      "intent": "Intent",
+      "spec": "Spec",
+      "plan": "Plan document",
+      "threat_model": "Threat model",
+      "pull_request": "Pull request",
+      "test_results": "Test results",
+      "review_findings": "Review findings",
+      "security_review": "Security review",
+      "release_tag": "Release tag",
+      "deploy_checklist": "Deploy checklist",
+      "security_scan": "Security scan",
+      "incident": "Incident",
+      "metric": "Metric",
+      "runbook": "Runbook"
+    }
+  },
+  "errors": {
+    "generic": "Something went wrong. Please try again.",
+    "forbidden": "Only admins can change this.",
+    "invalid": "Check the details and try again.",
+    "notFound": "Not found.",
+    "adminRequired": "Only admins can do this."
+  }
+}

@@ -36,7 +36,8 @@
     "lifecyclePhase": "Lifecycle phase",
     "noPhase": "No phase",
     "phaseHint": "Which delivery phase this work serves.",
-    "phaseNeedsProductHint": "Pick a product first — phases belong to a product."
+    "phaseNeedsProductHint": "Pick a product first — phases belong to a product.",
+    "productFixedHint": "Added to this product."
   },
   "task": {
     "subtasks": "{count, plural, =1 {1 subtask} other {# subtasks}}",
@@ -53,7 +54,12 @@
     "assignedTo": "Assigned to {name}",
     "unassigned": "Unassigned",
     "noNotes": "No notes",
-    "addFiles": "Attach files"
+    "addFiles": "Attach files",
+    "deleteTitle": "Delete task?",
+    "actions": "Task actions",
+    "open": "Open task",
+    "watch": "Follow task",
+    "unwatch": "Stop following"
   },
   "phase": {
     "ideation": "Ideation",
@@ -99,7 +105,8 @@
       "open": "Open",
       "dueToday": "Due today",
       "overdue": "Overdue",
-      "completed": "Completed"
+      "completed": "Completed",
+      "blocked": "Blocked"
     },
     "columns": {
       "task": "Task",
@@ -112,7 +119,8 @@
       "overdue": "Overdue",
       "completed": "Done"
     },
-    "allPhases": "All phases"
+    "allPhases": "All phases",
+    "projectTask": "Project"
   },
   "errors": {
     "generic": "Something went wrong. Please try again.",
@@ -154,6 +162,95 @@
     "noNote": "No note recorded",
     "noNoteBody": "This task was completed without a note.",
     "by": "Completed by {name}",
-    "byUnknown": "Completed"
+    "byUnknown": "Completed",
+    "noteTitle": "What was done"
+  },
+  "status": {
+    "todo": "To do",
+    "in_progress": "In progress",
+    "blocked": "Blocked",
+    "done": "Done",
+    "change": "Change status"
+  },
+  "due": {
+    "none": "No date",
+    "overdue": "{count, plural, =1 {1 day overdue} other {# days overdue}}",
+    "today": "Today",
+    "tomorrow": "Tomorrow",
+    "inDays": "{count, plural, =1 {In 1 day} other {In # days}}"
+  },
+  "feedback": {
+    "completed": "Task completed",
+    "undo": "Undo",
+    "addNote": "Add a note",
+    "statusChanged": "Moved to {status}",
+    "deleted": "Task deleted",
+    "noteSaved": "Note saved",
+    "created": "Task added",
+    "open": "Open",
+    "filesAdded": "{count, plural, =1 {1 file attached} other {# files attached}}",
+    "linkCopied": "Link copied",
+    "saved": "Changes saved",
+    "watching": "You'll get updates on this task",
+    "unwatched": "You stopped following this task"
+  },
+  "drawer": {
+    "close": "Close task",
+    "title": "Task",
+    "copyLink": "Copy link",
+    "status": "Status",
+    "release": "Release",
+    "created": "Created",
+    "addNotes": "Add notes…",
+    "editNote": "Edit note",
+    "noCompletionNote": "No note was left when this was completed.",
+    "subtasks": "Subtasks",
+    "addSubtask": "Add a subtask…",
+    "noFiles": "No files attached."
+  },
+  "quickAdd": {
+    "placeholder": "Add a task… press Enter to save",
+    "placeholderMine": "Add a task for yourself… press Enter to save",
+    "more": "More options",
+    "add": "Add"
+  },
+  "filters": {
+    "status": "Status",
+    "anyStatus": "Any status",
+    "anyone": "Anyone",
+    "due": "Due date",
+    "anyDate": "Any date",
+    "groupBy": "Group by",
+    "groups": {
+      "due": "Due date",
+      "status": "Status",
+      "product": "Product",
+      "assignee": "Owner",
+      "none": "No grouping"
+    },
+    "clear": "Clear filters"
+  },
+  "groups": {
+    "due": {
+      "overdue": "Overdue",
+      "today": "Today",
+      "week": "Next 7 days",
+      "later": "Later",
+      "none": "No date"
+    },
+    "me": "{name} (you)"
+  },
+  "views": {
+    "list": "List",
+    "board": "Board"
+  },
+  "board": {
+    "doneWindow": "Completed in the last {days} days",
+    "emptyColumn": "Drop tasks here",
+    "instructions": "To move a task, press space or enter to pick it up, use the arrow keys to choose a column, then press space or enter to drop it. Press escape to cancel."
+  },
+  "empty": {
+    "mineTitle": "Nothing assigned to you",
+    "mineBody": "Tasks assigned to you on any product or project show up here. Add one above."
   }
 }

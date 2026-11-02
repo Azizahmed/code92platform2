@@ -1,191 +1,122 @@
-import {ChevronLeft, ExternalLink, Pencil} from 'lucide-react';
-import Image from 'next/image';
 import {notFound} from 'next/navigation';
-import {getFormatter, getTranslations} from 'next-intl/server';
+import Image from 'next/image';
+import {ChevronLeft, ExternalLink, Pencil} from 'lucide-react';
+import {getTranslations} from 'next-intl/server';
 
+import BusinessTab from '@/components/products/tabs/BusinessTab';
+import DevelopmentTab from '@/components/products/tabs/DevelopmentTab';
+import KnowledgeTab from '@/components/products/tabs/KnowledgeTab';
+import SalesTab from '@/components/products/tabs/SalesTab';
+import TasksTab from '@/components/products/tabs/TasksTab';
+import ProductChannelsPanel from '@/components/products/ProductChannelsPanel';
+import type {ProductOverviewRow} from '@/components/products/types';
 import HealthBadge from '@/components/HealthBadge';
 import OverdueBadge from '@/components/OverdueBadge';
-import StageChip from '@/components/StageChip';
-import StatusUpdateForm from '@/components/products/StatusUpdateForm';
-import StatusTimeline, {
-  type StatusUpdateAttachment,
-  type TimelineEntry
-} from '@/components/products/StatusTimeline';
-import LifecycleSection from '@/components/lifecycle/LifecycleSection';
-import RepoConnectCard from '@/components/lifecycle/RepoConnectCard';
-import RiskTierChip from '@/components/lifecycle/RiskTierChip';
-import ProductChannelsPanel from '@/components/products/ProductChannelsPanel';
-import ProductKnowledgePanel from '@/components/products/ProductKnowledgePanel';
-import ProductReleasesPanel from '@/components/products/ProductReleasesPanel';
-import ProductTasksPanel, {
-  type TaskMemberOption
-} from '@/components/products/ProductTasksPanel';
+import RiskTierChip from '@/components/risk/RiskTierChip';
+import WatchButton from '@/components/watch/WatchButton';
 import {Link} from '@/i18n/navigation';
 import {requireActiveMember} from '@/lib/auth';
-import type {Product} from '@/lib/actions/products';
-import type {
-  ProductTask,
-  TaskAttachment
-} from '@/lib/actions/tasks';
+import {setProductWatchingAction} from '@/lib/actions/business';
+import {BUSINESS_STAGES, isBusinessStage} from '@/lib/business-track';
 import {createInsForgeServerClient} from '@/lib/insforge/server';
-import {loadProductLifecycle} from '@/lib/lifecycle-queries';
-import type {ReleaseOverview} from '@/lib/releases';
+import type {TaskMemberOption} from '@/components/products/ProductTasksPanel';
+import type {ProductRepoLink} from '@/lib/github';
+
+const TABS = ['business', 'development', 'sales', 'tasks', 'knowledge', 'channel'] as const;
+type Tab = (typeof TABS)[number];
 
 export default async function ProductDetailPage({
-  params
+  params,
+  searchParams
 }: {
   params: Promise<{locale: string; id: string}>;
+  searchParams: Promise<{tab?: string; track?: string; release?: string}>;
 }) {
   const {locale, id} = await params;
+  const query = await searchParams;
   const insforge = await createInsForgeServerClient();
-  const [{user, member}, [t, format], {data: product}] = await Promise.all([
+  // Auth, translations and the product lookup start together; the rest of the
+  // page waits on the product's owner and visibility, not on each other.
+  const [{user, member}, [t, tb], {data: product}] = await Promise.all([
     requireActiveMember(),
-    Promise.all([getTranslations('products'), getFormatter()]),
+    Promise.all([getTranslations('products'), getTranslations('business')]),
     insforge.database.from('products').select('*').eq('id', id).maybeSingle()
   ]);
-
   if (!product) notFound();
-
-  const p = product as unknown as Product;
-  const isAdmin = member.role === 'admin';
-  const isOwner = p.owner_id === user.id;
-
-  // Archived products stay viewable for owner/admin; everyone else gets 404.
-  if (p.archived_at && !isOwner && !isAdmin) notFound();
 
   const [
     {data: members},
-    {data: updates},
-    {data: tasks},
-    lifecycle,
-    {data: knowledgeItems},
-    {data: githubConfigured},
-    {data: releases}
+    {data: overview},
+    {data: watching},
+    {data: githubConfigured}
   ] = await Promise.all([
-    insforge.database
-      .from('team_members')
-      .select('user_id, display_name')
-      .eq('is_active', true)
-      .order('display_name'),
-    insforge.database
-      .from('status_updates')
-      .select('id, health, stage, summary, details, author_id, created_at')
-      .eq('product_id', id)
-      .order('created_at', {ascending: false}),
-    insforge.database
-      .from('product_tasks')
-      .select(
-        'id, product_id, parent_task_id, title, notes, due_date, assignee_id, status, position, created_by, completed_at, created_at, updated_at, release_id, completion_note, completed_by'
-      )
-      .eq('product_id', id)
-      .order('position', {ascending: true})
-      .order('created_at', {ascending: true}),
-    loadProductLifecycle(id),
-    // Options for citing an existing knowledge item as a phase artifact
-    // instead of re-uploading the same document.
-    insforge.database
-      .from('knowledge_items')
-      .select('id, title')
-      .is('archived_at', null)
-      .order('title'),
-    // One bit — whether a credential exists at all — so a product owner who is
-    // not an admin can be told to ask for setup instead of hitting an error.
-    insforge.database.rpc('github_is_configured'),
-    insforge.database
-      .from('release_overview')
-      .select('*')
-      .eq('product_id', id)
-      .order('target_date', {ascending: true, nullsFirst: false})
-      .order('created_at', {ascending: false})
+    insforge.database.from('team_members').select('user_id, display_name').eq('is_active', true).order('display_name'),
+    insforge.database.from('product_overview').select('*').eq('id', id).maybeSingle(),
+    insforge.database.from('product_watchers').select('user_id').eq('product_id', id).eq('user_id', user.id),
+    insforge.database.rpc('github_is_configured')
   ]);
 
-  const taskIds = (tasks ?? []).map((task) => task.id as string);
-  const updateIds = (updates ?? []).map((update) => update.id as string);
-  const [{data: taskAttachments}, {data: updateAttachments}, {data: watched}] =
-    await Promise.all([
-      taskIds.length > 0
-        ? insforge.database
-            .from('task_attachments')
-            .select(
-              'id, task_id, storage_url, storage_key, file_name, mime_type, size_bytes, created_at'
-            )
-            .in('task_id', taskIds)
-            .order('created_at', {ascending: true})
-        : Promise.resolve({data: []}),
-      updateIds.length > 0
-        ? insforge.database
-            .from('status_update_attachments')
-            .select(
-              'id, status_update_id, storage_url, storage_key, file_name, mime_type, size_bytes, created_at'
-            )
-            .in('status_update_id', updateIds)
-            .order('created_at', {ascending: true})
-        : Promise.resolve({data: []}),
-      // Which of these the CURRENT viewer is following. RLS lets any member
-      // read the watcher table, so this is filtered to the caller explicitly.
-      taskIds.length > 0
-        ? insforge.database
-            .from('task_watchers')
-            .select('task_id')
-            .eq('user_id', user.id)
-            .in('task_id', taskIds)
-        : Promise.resolve({data: []})
-    ]);
+  if (!overview) notFound();
 
-  const memberNames = new Map<string, string>(
-    (members ?? []).map((m) => [m.user_id as string, m.display_name as string])
-  );
-  const taskAttachmentMap = new Map<string, TaskAttachment[]>();
-  for (const attachment of (taskAttachments ?? []) as unknown as TaskAttachment[]) {
-    const list = taskAttachmentMap.get(attachment.task_id) ?? [];
-    list.push(attachment);
-    taskAttachmentMap.set(attachment.task_id, list);
-  }
-  const watchedTaskIds = new Set(
-    (watched ?? []).map((row) => row.task_id as string)
-  );
-  const workItems: ProductTask[] = (
-    (tasks ?? []) as unknown as Omit<
-      ProductTask,
-      'attachments' | 'is_watching'
-    >[]
-  ).map((task) => ({
-    ...task,
-    attachments: taskAttachmentMap.get(task.id) ?? [],
-    is_watching: watchedTaskIds.has(task.id)
-  }));
+  const p = product as unknown as {
+    id: string;
+    health: 'green' | 'yellow' | 'red' | 'unknown';
+    owner_id: string;
+    archived_at: string | null;
+    next_review_at: string | null;
+    review_interval_days: number;
+    category: string | null;
+    keywords: string[];
+    links: Record<string, string>;
+    description: string | null;
+    description_ar: string | null;
+    name: string;
+    slug: string;
+    logo_url: string | null;
+    github_repo: string | null;
+    github_repo_id: number | null;
+    github_default_branch: string | null;
+    github_linked_by: string | null;
+    github_linked_at: string | null;
+  };
+  const o = overview as unknown as ProductOverviewRow;
+  const isAdmin = member.role === 'admin';
+  const isOwner = p.owner_id === user.id;
+  const canManage = !p.archived_at && (isOwner || isAdmin || o.business_owner_id === user.id);
+  const canEditProduct = !p.archived_at && (isOwner || isAdmin);
 
-  const updateAttachmentMap = new Map<string, StatusUpdateAttachment[]>();
-  for (const attachment of (updateAttachments ??
-    []) as unknown as StatusUpdateAttachment[]) {
-    const list = updateAttachmentMap.get(attachment.status_update_id) ?? [];
-    list.push(attachment);
-    updateAttachmentMap.set(attachment.status_update_id, list);
-  }
-  const timeline: TimelineEntry[] = (
-    (updates ?? []) as unknown as Omit<TimelineEntry, 'attachments'>[]
-  ).map((update) => ({
-    ...update,
-    attachments: updateAttachmentMap.get(update.id) ?? []
-  }));
-  // StatusTimeline is a Client Component, so the lookup crosses the RSC
-  // boundary and has to be a plain object — a Map is not serializable.
-  const authorNames = Object.fromEntries(memberNames);
+  if (p.archived_at && !isOwner && !isAdmin) notFound();
+
+  const memberNames = new Map((members ?? []).map((m) => [m.user_id as string, m.display_name as string]));
   const memberOptions: TaskMemberOption[] = (members ?? []).map((m) => ({
     userId: m.user_id as string,
     displayName: m.display_name as string
   }));
-  const overdue =
-    p.next_review_at !== null && new Date(p.next_review_at).getTime() < Date.now();
+  const memberList = memberOptions.map((m) => ({id: m.userId, name: m.displayName}));
+  const authorNames = Object.fromEntries(memberNames);
+
+  const activeTab: Tab = (TABS as readonly string[]).includes(query.tab ?? '')
+    ? (query.tab as Tab)
+    : 'business';
+  const repo: ProductRepoLink = {
+    github_repo: p.github_repo,
+    github_repo_id: p.github_repo_id,
+    github_default_branch: p.github_default_branch,
+    github_linked_by: p.github_linked_by,
+    github_linked_at: p.github_linked_at
+  };
+
+  const dateFormat = new Intl.DateTimeFormat(locale, {year: 'numeric', month: 'short', day: 'numeric'});
+  const overdue = p.next_review_at !== null && new Date(p.next_review_at).getTime() < Date.now();
+  const stage = isBusinessStage(o.business_stage) ? o.business_stage : BUSINESS_STAGES[0];
   const links = Object.entries(p.links ?? {});
+
+  const tabHref = (tab: Tab) => `?tab=${tab}`;
 
   return (
     <section className="space-y-6">
       <div>
-        <Link
-          href="/products"
-          className="inline-flex items-center gap-1 text-xs text-muted transition-colors hover:text-ink"
-        >
+        <Link href="/products" className="inline-flex items-center gap-1 text-xs text-muted transition-colors hover:text-ink">
           <ChevronLeft className="h-3.5 w-3.5 rtl:rotate-180" strokeWidth={2} />
           {t('detail.back')}
         </Link>
@@ -196,15 +127,7 @@ export default async function ProductDetailPage({
           <div className="flex min-w-0 items-center gap-4">
             {p.logo_url ? (
               <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-xl border border-hairline bg-raised">
-                <Image
-                  src={p.logo_url}
-                  alt={p.name}
-                  fill
-                  unoptimized
-                  sizes="56px"
-                  className="object-cover"
-                  priority
-                />
+                <Image src={p.logo_url} alt={p.name} fill unoptimized sizes="56px" className="object-cover" priority />
               </div>
             ) : (
               <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl border border-hairline bg-raised font-mono text-lg font-semibold text-faint">
@@ -214,74 +137,74 @@ export default async function ProductDetailPage({
             <div className="min-w-0 space-y-2">
               <div className="flex flex-wrap items-center gap-3">
                 <h1 className="text-xl font-semibold">{p.name}</h1>
-                <StageChip stage={p.stage} />
-                <HealthBadge health={p.health} />
-                <RiskTierChip riskTier={p.risk_tier} />
+                <span className="rounded border border-accent/30 bg-accent/10 px-2 py-0.5 text-[11px] font-medium text-accent">
+                  {tb(`stages.${stage}`)}
+                </span>
+                {o.current_release_version ? (
+                  <span dir="ltr" className="rounded border border-hairline bg-raised px-2 py-0.5 font-mono text-[11px] text-muted">
+                    {o.current_release_version}
+                    {o.current_release_stage ? ` · ${tb(`release.stage.${o.current_release_stage}`)}` : ''}
+                  </span>
+                ) : null}
+                <HealthBadge health={p.health as 'green' | 'yellow' | 'red' | 'unknown'} />
+                <RiskTierChip riskTier={o.risk_tier} />
                 {p.archived_at ? (
                   <span className="rounded border border-hairline bg-raised px-1.5 py-0.5 text-[10px] uppercase tracking-wider text-faint">
                     {t('detail.archivedTag')}
                   </span>
                 ) : null}
               </div>
-              <div dir="ltr" className="font-mono text-xs text-faint">
-                {p.slug}
-              </div>
+              <div dir="ltr" className="font-mono text-xs text-faint">{p.slug}</div>
             </div>
           </div>
-          {isOwner || isAdmin ? (
-            <Link
-              href={`/products/${p.id}/edit`}
-              className="inline-flex items-center gap-2 rounded-md border border-hairline px-3 py-2 text-sm text-muted transition-colors hover:bg-raised hover:text-ink"
-            >
-              <Pencil className="h-4 w-4" strokeWidth={1.75} />
-              {t('detail.edit')}
-            </Link>
-          ) : null}
+          <div className="flex flex-wrap items-center gap-2">
+            <WatchButton
+              watching={(watching ?? []).length > 0}
+              action={setProductWatchingAction.bind(null, p.id)}
+              labels={{watch: tb('watch.watch'), watching: tb('watch.watching')}}
+            />
+            {canEditProduct ? (
+              <Link
+                href={`/products/${p.id}/edit`}
+                className="inline-flex items-center gap-2 rounded-md border border-hairline px-3 py-2 text-sm text-muted transition-colors hover:bg-raised hover:text-ink"
+              >
+                <Pencil className="h-4 w-4" strokeWidth={1.75} />
+                {t('detail.edit')}
+              </Link>
+            ) : null}
+          </div>
         </div>
 
         {p.description || p.description_ar ? (
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
             {p.description ? (
-              <p dir="ltr" className="text-start text-sm leading-relaxed text-muted">
-                {p.description}
-              </p>
+              <p dir="ltr" className="text-start text-sm leading-relaxed text-muted">{p.description}</p>
             ) : null}
             {p.description_ar ? (
-              <p dir="rtl" className="text-start text-sm leading-relaxed text-muted">
-                {p.description_ar}
-              </p>
+              <p dir="rtl" className="text-start text-sm leading-relaxed text-muted">{p.description_ar}</p>
             ) : null}
           </div>
         ) : null}
 
         <dl className="mt-5 grid grid-cols-2 gap-x-6 gap-y-4 border-t border-hairline pt-5 sm:grid-cols-4">
           <div>
-            <dt className="text-[10px] uppercase tracking-widest text-faint">
-              {t('detail.owner')}
-            </dt>
+            <dt className="text-[10px] uppercase tracking-widest text-faint">{t('detail.owner')}</dt>
             <dd className="mt-1 text-sm">{memberNames.get(p.owner_id) ?? '—'}</dd>
           </div>
           <div>
-            <dt className="text-[10px] uppercase tracking-widest text-faint">
-              {t('detail.category')}
-            </dt>
-            <dd className="mt-1 text-sm">{p.category ?? '—'}</dd>
+            <dt className="text-[10px] uppercase tracking-widest text-faint">{tb('details.operatorName')}</dt>
+            <dd className="mt-1 text-sm">{o.operator_name ?? tb('details.noOperator')}</dd>
           </div>
           <div>
-            <dt className="text-[10px] uppercase tracking-widest text-faint">
-              {t('detail.nextReview')}
-            </dt>
+            <dt className="text-[10px] uppercase tracking-widest text-faint">{tb('details.businessOwner')}</dt>
+            <dd className="mt-1 text-sm">{o.business_owner_name ?? '—'}</dd>
+          </div>
+          <div>
+            <dt className="text-[10px] uppercase tracking-widest text-faint">{t('detail.nextReview')}</dt>
             <dd className="mt-1 flex items-center gap-2 text-sm">
               {p.next_review_at ? (
-                <time
-                  dateTime={p.next_review_at}
-                  className="font-mono text-xs text-muted"
-                >
-                  {format.dateTime(new Date(p.next_review_at), {
-                    year: 'numeric',
-                    month: 'short',
-                    day: 'numeric'
-                  })}
+                <time dateTime={p.next_review_at} className="font-mono text-xs text-muted">
+                  {dateFormat.format(new Date(p.next_review_at))}
                 </time>
               ) : (
                 '—'
@@ -289,54 +212,27 @@ export default async function ProductDetailPage({
               {overdue && !p.archived_at ? <OverdueBadge /> : null}
             </dd>
           </div>
-          <div>
-            <dt className="text-[10px] uppercase tracking-widest text-faint">
-              {t('fields.reviewInterval')}
-            </dt>
-            <dd className="mt-1 text-sm text-muted">
-              {t('detail.reviewEvery', {days: p.review_interval_days})}
-            </dd>
-          </div>
         </dl>
 
-        {p.keywords.length > 0 || links.length > 0 ? (
+        {links.length > 0 || p.keywords.length > 0 ? (
           <div className="mt-5 flex flex-wrap items-start gap-6 border-t border-hairline pt-5">
             {p.keywords.length > 0 ? (
-              <div>
-                <div className="text-[10px] uppercase tracking-widest text-faint">
-                  {t('detail.keywords')}
-                </div>
-                <div className="mt-2 flex flex-wrap gap-1.5">
-                  {p.keywords.map((kw) => (
-                    <span
-                      key={kw}
-                      className="rounded border border-hairline bg-raised px-1.5 py-0.5 font-mono text-[11px] text-muted"
-                    >
-                      {kw}
-                    </span>
-                  ))}
-                </div>
+              <div className="flex flex-wrap gap-1.5">
+                {p.keywords.map((kw) => (
+                  <span key={kw} className="rounded border border-hairline bg-raised px-1.5 py-0.5 font-mono text-[11px] text-muted">
+                    {kw}
+                  </span>
+                ))}
               </div>
             ) : null}
             {links.length > 0 ? (
-              <div>
-                <div className="text-[10px] uppercase tracking-widest text-faint">
-                  {t('detail.links')}
-                </div>
-                <div className="mt-2 flex flex-wrap gap-3">
-                  {links.map(([label, url]) => (
-                    <a
-                      key={label}
-                      href={url}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="inline-flex items-center gap-1 text-xs text-accent hover:underline"
-                    >
-                      <ExternalLink className="h-3 w-3" strokeWidth={1.75} />
-                      {label}
-                    </a>
-                  ))}
-                </div>
+              <div className="flex flex-wrap gap-3">
+                {links.map(([label, url]) => (
+                  <a key={label} href={url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-xs text-accent hover:underline">
+                    <ExternalLink className="h-3 w-3" strokeWidth={1.75} />
+                    {label}
+                  </a>
+                ))}
               </div>
             ) : null}
           </div>
@@ -344,86 +240,72 @@ export default async function ProductDetailPage({
       </header>
 
       {p.archived_at ? (
-        <p className="rounded-lg border border-amber/30 bg-amber/10 px-4 py-3 text-xs text-amber">
-          {t('edit.archivedNotice')}
-        </p>
+        <p className="rounded-lg border border-amber/30 bg-amber/10 px-4 py-3 text-xs text-amber">{t('edit.archivedNotice')}</p>
       ) : null}
 
-      <RepoConnectCard
-        productId={p.id}
-        link={{
-          github_repo: p.github_repo,
-          github_repo_id: p.github_repo_id,
-          github_default_branch: p.github_default_branch,
-          github_linked_by: p.github_linked_by,
-          github_linked_at: p.github_linked_at
-        }}
-        canEdit={!p.archived_at && (isOwner || isAdmin)}
-        githubConfigured={Boolean(githubConfigured)}
-      />
+      <nav aria-label={t('tabs.label')} className="-mx-1 flex gap-1 overflow-x-auto border-b border-hairline px-1">
+        {TABS.map((tab) => (
+          <Link
+            key={tab}
+            href={tabHref(tab)}
+            aria-current={activeTab === tab ? 'page' : undefined}
+            className={`whitespace-nowrap border-b-2 px-3 py-2.5 text-sm transition-colors ${
+              activeTab === tab
+                ? 'border-accent font-medium text-ink'
+                : 'border-transparent text-muted hover:text-ink'
+            }`}
+          >
+            {t(`tabs.${tab}`)}
+          </Link>
+        ))}
+      </nav>
 
-      <LifecycleSection
-        productId={p.id}
-        riskTier={p.risk_tier}
-        isAdmin={isAdmin}
-        canEdit={
-          !p.archived_at &&
-          (isOwner || isAdmin) &&
-          (p.risk_tier !== 'high' || isAdmin)
-        }
-        phases={lifecycle.phases}
-        artifacts={lifecycle.artifacts}
-        knowledgeOptions={(knowledgeItems ?? []).map((item) => ({
-          id: item.id as string,
-          title: item.title as string
-        }))}
-        memberNames={authorNames}
-        repo={p.github_repo}
-        repoBranch={p.github_default_branch}
-      />
+      {activeTab === 'business' ? (
+        <BusinessTab
+          product={o}
+          members={memberList}
+          founder={member.is_founder}
+          canManage={canManage}
+          locale={locale}
+        />
+      ) : null}
 
-      <ProductReleasesPanel
-        productId={p.id}
-        releases={(releases ?? []) as unknown as ReleaseOverview[]}
-        members={memberOptions.map((option) => ({
-          userId: option.userId,
-          displayName: option.displayName
-        }))}
-        locale={locale}
-        canManage={
-          !p.archived_at &&
-          (isOwner || isAdmin) &&
-          (p.risk_tier !== 'high' || isAdmin)
-        }
-      />
+      {activeTab === 'development' ? (
+        <DevelopmentTab
+          product={o}
+          repo={repo}
+          canManage={canEditProduct}
+          canCreateRelease={canManage && ['build', 'venture', 'company', 'board'].includes(o.business_stage)}
+          githubConfigured={Boolean(githubConfigured)}
+          currentUserId={user.id}
+          isAdmin={isAdmin}
+          authorNames={authorNames}
+          locale={locale}
+        />
+      ) : null}
 
-      <ProductTasksPanel
-        productId={p.id}
-        tasks={workItems}
-        members={memberOptions}
-        locale={locale}
-        disabled={Boolean(p.archived_at)}
-      />
+      {activeTab === 'sales' ? <SalesTab productId={p.id} locale={locale} /> : null}
 
-      <div className="grid gap-6 lg:grid-cols-3">
-        <div className="space-y-4 lg:col-span-2">
-          <h2 className="text-sm font-medium">{t('detail.timelineTitle')}</h2>
-          <StatusTimeline
-            updates={timeline}
-            authorNames={authorNames}
-            currentUserId={user.id}
-            isAdmin={isAdmin}
-            disabled={Boolean(p.archived_at)}
-          />
+      {activeTab === 'tasks' ? (
+        <TasksTab
+          productId={p.id}
+          productName={p.name}
+          currentUserId={user.id}
+          members={memberOptions}
+          disabled={Boolean(p.archived_at)}
+          locale={locale}
+        />
+      ) : null}
 
-        </div>
+      {activeTab === 'knowledge' ? (
+        <KnowledgeTab
+          productId={p.id}
+          track={query.track === 'business' || query.track === 'development' ? query.track : 'all'}
+          releaseId={query.release ?? null}
+        />
+      ) : null}
 
-        <div>{p.archived_at ? null : <StatusUpdateForm productId={p.id} />}</div>
-      </div>
-
-      <ProductChannelsPanel productId={p.id} />
-
-      <ProductKnowledgePanel productId={p.id} />
+      {activeTab === 'channel' ? <ProductChannelsPanel productId={p.id} /> : null}
     </section>
   );
 }

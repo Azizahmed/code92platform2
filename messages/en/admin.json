@@ -26,7 +26,9 @@
     "deactivate": "Deactivate",
     "makeAdmin": "Make admin",
     "makeMember": "Make member",
-    "empty": "No team members found."
+    "empty": "No team members found.",
+    "makeFounder": "Make founder",
+    "removeFounder": "Remove founder"
   },
   "scans": {
     "title": "Scan runs",

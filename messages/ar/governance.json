@@ -1,0 +1,142 @@
+{
+  "title": "الحوكمة",
+  "subtitle": "كل قرار تسجّله المنصة، والأدلة التي ما زالت ناقصة.",
+  "gapsSummary": "{count} إصدارات حية تنتظر أدلة لمرحلتها الحالية.",
+  "waitingGates": {
+    "title": "بانتظار قرار بوابة",
+    "empty": "لا يوجد منتج ينتظر بوابة.",
+    "gate": "قرار البوابة {gate} مستحق"
+  },
+  "coverage": {
+    "title": "أدلة الإصدارات",
+    "empty": "لا توجد إصدارات حية.",
+    "release": "الإصدار",
+    "stage": "المرحلة",
+    "status": "الحالة",
+    "filed": "المُودَع",
+    "gaps": "ما زال مطلوباً",
+    "gapCount": "{count} لإغلاق المرحلة",
+    "ready": "جاهز للإغلاق"
+  },
+  "policy": {
+    "title": "الأدلة المطلوبة حسب المخاطر",
+    "hint": "تنطبق التغييرات على الإصدارات التي تُنشأ من الآن. يحتفظ الإصدار بالقواعد التي أُنشئ بها.",
+    "artifact": "الدليل"
+  },
+  "waivers": {
+    "title": "الاستثناءات",
+    "empty": "لم يُسجَّل أي استثناء."
+  },
+  "log": {
+    "title": "سجل القرارات",
+    "empty": "لم يُسجَّل شيء بعد.",
+    "when": "متى",
+    "what": "ما",
+    "product": "المنتج",
+    "change": "التغيير",
+    "by": "بواسطة",
+    "why": "السبب",
+    "kinds": {
+      "business_stage": "انتقال مرحلة أعمال",
+      "gate_decision": "قرار بوابة",
+      "release_stage": "مرحلة إصدار",
+      "release_approval": "اعتماد المواصفات",
+      "release_status": "حالة الإصدار",
+      "lifecycle_retired": "دورة الحياة (متقاعدة)"
+    },
+    "decision": {
+      "go": "المضي قدماً",
+      "no_go": "عدم المضي"
+    },
+    "waiver": "استثناء",
+    "selfApproved": "اعتماد ذاتي",
+    "missing": "الناقص وقتها: {items}"
+  },
+  "risk": {
+    "low": "منخفضة",
+    "medium": "متوسطة",
+    "high": "عالية"
+  },
+  "kind": {
+    "mvp": "النسخة الأولى",
+    "cycle": "دورة"
+  },
+  "stage": {
+    "plan": "التخطيط",
+    "design": "التصميم",
+    "build": "البناء",
+    "test": "الاختبار",
+    "deploy": "النشر",
+    "maintain": "الصيانة"
+  },
+  "stages": {
+    "idea": "فكرة",
+    "concept": "مفهوم",
+    "build": "بناء",
+    "venture": "مشروع تجاري",
+    "company": "شركة",
+    "board": "مجلس الإدارة"
+  },
+  "status": {
+    "planned": "مخطط",
+    "in_progress": "قيد العمل",
+    "ready": "جاهز",
+    "released": "منشور",
+    "rolled_back": "تم التراجع عنه",
+    "cancelled": "ملغى"
+  },
+  "artifacts": {
+    "intent": "النية",
+    "spec": "المواصفات",
+    "plan": "وثيقة الخطة",
+    "threat_model": "نموذج التهديدات",
+    "pull_request": "طلب الدمج",
+    "test_results": "نتائج الاختبار",
+    "review_findings": "ملاحظات المراجعة",
+    "security_review": "مراجعة الأمان",
+    "release_tag": "وسم الإصدار",
+    "deploy_checklist": "قائمة التحقق من النشر",
+    "security_scan": "فحص الأمان",
+    "incident": "حادثة",
+    "metric": "مقياس",
+    "runbook": "دليل التشغيل"
+  },
+  "gap": {
+    "link": "لم يُودَع شيء في هذه المرحلة بعد",
+    "specApproval": "المواصفات لم تُعتمد بعد",
+    "testPass": "الاختبارات لم تنجح بعد",
+    "findingsClosed": "ملاحظات مراجعة مفتوحة",
+    "openTasks": "مهام مفتوحة في الإصدار",
+    "unknown": "شيء آخر",
+    "checks": {
+      "release_notes": "ملاحظات الإصدار",
+      "qa_signoff": "اعتماد ضمان الجودة",
+      "rollback_plan": "خطة التراجع",
+      "security_signoff": "اعتماد الأمان",
+      "change_approval": "اعتماد التغيير"
+    },
+    "artifacts": {
+      "intent": "النية",
+      "spec": "المواصفات",
+      "plan": "وثيقة الخطة",
+      "threat_model": "نموذج التهديدات",
+      "pull_request": "طلب الدمج",
+      "test_results": "نتائج الاختبار",
+      "review_findings": "ملاحظات المراجعة",
+      "security_review": "مراجعة الأمان",
+      "release_tag": "وسم الإصدار",
+      "deploy_checklist": "قائمة التحقق من النشر",
+      "security_scan": "فحص الأمان",
+      "incident": "حادثة",
+      "metric": "مقياس",
+      "runbook": "دليل التشغيل"
+    }
+  },
+  "errors": {
+    "generic": "حدث خطأ. حاول مرة أخرى.",
+    "forbidden": "للمسؤولين فقط تغيير هذا.",
+    "invalid": "راجع التفاصيل وحاول مرة أخرى.",
+    "notFound": "غير موجود.",
+    "adminRequired": "للمسؤولين فقط فعل هذا."
+  }
+}

@@ -1,273 +1,137 @@
 'use client';
 
 import {useMemo, useState} from 'react';
-import Image from 'next/image';
-import {CalendarDays, ListChecks, ListTodo, Plus, Search} from 'lucide-react';
+import {AlertTriangle} from 'lucide-react';
 import {useTranslations} from 'next-intl';
 
-import ReleaseForm, {
-  type ReleaseMemberOption,
-  type ReleaseProductOption
-} from '@/components/releases/ReleaseForm';
+import NewCycleButton from '@/components/releases/NewCycleButton';
 import ReleaseStatusChip from '@/components/releases/ReleaseStatusChip';
+import RiskTierChip from '@/components/risk/RiskTierChip';
 import {Link} from '@/i18n/navigation';
-import {
-  ACTIVE_RELEASE_STATUSES,
-  type ReleaseOverview,
-  type ReleaseStatus
-} from '@/lib/releases';
+import {releaseKind, RELEASE_STAGES, type ReleaseOverview, type ReleaseStage} from '@/lib/releases';
 
-type Scope = 'active' | 'all' | 'released';
+type Scope = 'active' | 'shipped' | 'all';
 
-const SCOPES: Scope[] = ['active', 'all', 'released'];
+const ACTIVE = ['planned', 'in_progress', 'ready'];
+const SHIPPED = ['released', 'rolled_back'];
 
-function matchesScope(release: ReleaseOverview, scope: Scope): boolean {
-  if (scope === 'all') return true;
-  if (scope === 'released') {
-    return release.status === 'released' || release.status === 'rolled_back';
-  }
-  return (ACTIVE_RELEASE_STATUSES as readonly string[]).includes(
-    release.status
-  );
-}
-
+// Every release across every product, by the stage it is in. The question people
+// ask is "what is in design, and what is going out", and a column answers it.
 export default function ReleasesBoard({
   releases,
   products,
-  members,
   locale,
-  canCreate
+  canCreate,
+  defaultTargetDate
 }: {
   releases: ReleaseOverview[];
-  products: ReleaseProductOption[];
-  members: ReleaseMemberOption[];
+  products: {id: string; name: string}[];
   locale: string;
   canCreate: boolean;
+  defaultTargetDate: string;
 }) {
   const t = useTranslations('releases');
   const [scope, setScope] = useState<Scope>('active');
-  const [productId, setProductId] = useState('');
-  const [query, setQuery] = useState('');
-  const [creating, setCreating] = useState(false);
+  const dateFormat = useMemo(
+    () => new Intl.DateTimeFormat(locale, {month: 'short', day: 'numeric'}),
+    [locale]
+  );
 
-  const filtered = useMemo(() => {
-    const needle = query.trim().toLowerCase();
-    return releases.filter((release) => {
-      if (!matchesScope(release, scope)) return false;
-      if (productId && release.product_id !== productId) return false;
-      if (!needle) return true;
-      return [
-        release.version,
-        release.name ?? '',
-        release.product_name,
-        release.owner_name ?? ''
-      ]
-        .join(' ')
-        .toLowerCase()
-        .includes(needle);
-    });
-  }, [releases, scope, productId, query]);
-
-  const stats = useMemo(() => {
-    const active = releases.filter((r) =>
-      (ACTIVE_RELEASE_STATUSES as readonly string[]).includes(r.status)
-    );
-    return {
-      active: active.length,
-      overdue: releases.filter((r) => r.is_overdue).length,
-      released: releases.filter((r) => r.status === 'released').length,
-      // Work still open inside releases that have not shipped — the number
-      // that says whether the next cycle is actually close.
-      openWork: active.reduce((sum, r) => sum + r.open_task_count, 0)
-    };
-  }, [releases]);
-
-  const dateFormat = new Intl.DateTimeFormat(locale, {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric'
+  const visible = releases.filter((release) => {
+    if (scope === 'active') return ACTIVE.includes(release.status);
+    if (scope === 'shipped') return SHIPPED.includes(release.status);
+    return true;
   });
 
+  const overdue = visible.filter((release) => release.is_overdue).length;
+
   return (
-    <div className="space-y-5">
-      <dl className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        {(
-          [
-            ['active', stats.active],
-            ['overdue', stats.overdue],
-            ['openWork', stats.openWork],
-            ['released', stats.released]
-          ] as const
-        ).map(([key, value]) => (
-          <div
-            key={key}
-            className="rounded-lg border border-hairline bg-panel px-4 py-3"
-          >
-            <dt className="text-[10px] uppercase tracking-widest text-faint">
-              {t(`stats.${key}`)}
-            </dt>
-            <dd
-              className={`mt-1 font-mono text-xl ${
-                key === 'overdue' && value > 0 ? 'text-amber' : 'text-ink'
-              }`}
-            >
-              {value}
-            </dd>
-          </div>
-        ))}
-      </dl>
-
-      <div className="flex flex-wrap items-center gap-2">
-        <div className="relative min-w-0 flex-1">
-          <Search className="pointer-events-none absolute inset-y-0 start-3 my-auto h-4 w-4 text-faint" />
-          <input
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            placeholder={t('searchPlaceholder')}
-            className="w-full rounded-md border border-hairline bg-bg py-2 pe-3 ps-9 text-sm outline-none transition-colors placeholder:text-faint focus:border-accent/50"
-          />
-        </div>
-
-        <select
-          value={productId}
-          onChange={(event) => setProductId(event.target.value)}
-          className="rounded-md border border-hairline bg-bg px-3 py-2 text-sm outline-none focus:border-accent/50"
-        >
-          <option value="">{t('allProducts')}</option>
-          {products.map((product) => (
-            <option key={product.id} value={product.id}>
-              {product.name}
-            </option>
-          ))}
-        </select>
-
-        <div className="flex rounded-md border border-hairline p-0.5">
-          {SCOPES.map((option) => (
+    <section className="space-y-5">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex gap-1.5">
+          {(['active', 'shipped', 'all'] as const).map((option) => (
             <button
               key={option}
               type="button"
               onClick={() => setScope(option)}
-              className={`rounded px-2.5 py-1.5 text-xs transition-colors ${
-                scope === option
-                  ? 'bg-accent/10 text-accent'
-                  : 'text-muted hover:text-ink'
+              className={`rounded-md border px-2.5 py-1.5 text-xs transition-colors ${
+                scope === option ? 'border-accent/40 bg-accent/10 text-accent' : 'border-hairline text-muted hover:bg-raised hover:text-ink'
               }`}
             >
               {t(`scope.${option}`)}
             </button>
           ))}
+          {overdue > 0 ? (
+            <span className="ms-2 inline-flex items-center gap-1 self-center text-xs text-danger">
+              <AlertTriangle className="h-3.5 w-3.5" strokeWidth={2} />
+              {t('stats.overdue', {count: overdue})}
+            </span>
+          ) : null}
         </div>
-
         {canCreate && products.length > 0 ? (
-          <button
-            type="button"
-            onClick={() => setCreating(true)}
-            className="inline-flex items-center gap-2 rounded-md bg-accent px-3.5 py-2 text-sm font-semibold text-bg transition-opacity hover:opacity-90"
-          >
-            <Plus className="h-4 w-4" strokeWidth={2} />
-            {t('newRelease')}
-          </button>
+          <NewCycleButton products={products} defaultTargetDate={defaultTargetDate} />
         ) : null}
       </div>
 
-      {creating ? (
-        <ReleaseForm
-          products={products}
-          members={members}
-          onDone={() => setCreating(false)}
-        />
-      ) : null}
-
-      {filtered.length === 0 ? (
-        <div className="rounded-lg border border-dashed border-hairline bg-panel/50 px-6 py-12 text-center">
-          <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-full border border-accent/20 bg-accent/10 text-accent">
-            <ListChecks className="h-5 w-5" strokeWidth={1.75} />
-          </div>
-          <h3 className="mt-3 text-sm font-medium">{t('emptyTitle')}</h3>
-          <p className="mx-auto mt-1 max-w-md text-sm leading-relaxed text-muted">
-            {t('emptyBody')}
-          </p>
-        </div>
+      {visible.length === 0 ? (
+        <p className="rounded-lg border border-dashed border-hairline px-4 py-10 text-center text-xs text-faint">{t('emptyBody')}</p>
       ) : (
-        <ul className="overflow-hidden rounded-lg border border-hairline bg-panel">
-          {filtered.map((release) => {
-            const target = release.target_date
-              ? dateFormat.format(new Date(`${release.target_date}T00:00:00`))
-              : null;
-
+        <div className="grid gap-3 overflow-x-auto pb-2 lg:grid-cols-6">
+          {RELEASE_STAGES.map((stage) => {
+            const items = visible.filter((release) => release.stage === stage);
             return (
-              <li
-                key={release.id}
-                className="border-b border-hairline last:border-0"
-              >
-                <Link
-                  href={`/releases/${release.id}`}
-                  className="flex flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3 transition-colors hover:bg-raised/35"
-                >
-                  <span className="flex min-w-0 flex-1 items-center gap-3">
-                    <span className="relative flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded border border-hairline bg-raised font-mono text-[9px]">
-                      {release.product_logo_url ? (
-                        <Image
-                          src={release.product_logo_url}
-                          alt={release.product_name}
-                          fill
-                          unoptimized
-                          sizes="28px"
-                          className="object-cover"
-                        />
-                      ) : (
-                        release.product_name.slice(0, 1).toUpperCase()
-                      )}
-                    </span>
-                    <span className="min-w-0">
-                      <span className="flex items-baseline gap-2">
-                        <span
-                          dir="ltr"
-                          className="truncate font-mono text-sm font-medium text-ink"
-                        >
-                          {release.version}
-                        </span>
-                        {release.name ? (
-                          <span className="truncate text-xs text-muted">
-                            {release.name}
-                          </span>
-                        ) : null}
-                      </span>
-                      <span className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-faint">
-                        <span className="truncate">{release.product_name}</span>
-                        <span className="inline-flex items-center gap-1">
-                          <ListChecks className="h-3 w-3" strokeWidth={1.75} />
-                          {release.checks_done}/{release.checks_required}
-                        </span>
-                        {release.task_count > 0 ? (
-                          <span className="inline-flex items-center gap-1">
-                            <ListTodo className="h-3 w-3" strokeWidth={1.75} />
-                            {t('openOfTotal', {
-                              open: release.open_task_count,
-                              total: release.task_count
-                            })}
-                          </span>
-                        ) : null}
-                      </span>
-                    </span>
-                  </span>
-
-                  <span
-                    className={`inline-flex items-center gap-1 font-mono text-[11px] ${
-                      release.is_overdue ? 'text-amber' : 'text-muted'
-                    }`}
-                  >
-                    <CalendarDays className="h-3 w-3" strokeWidth={1.75} />
-                    {target ?? t('noTargetDate')}
-                  </span>
-
-                  <ReleaseStatusChip status={release.status as ReleaseStatus} />
-                </Link>
-              </li>
+              <div key={stage} className="min-w-[200px] space-y-2 rounded-lg border border-hairline bg-panel/60 p-2.5">
+                <div className="flex items-center justify-between px-1">
+                  <span className="text-[11px] font-medium uppercase tracking-wider text-muted">{t(`stage.${stage}`)}</span>
+                  <span className="font-mono text-[10px] text-faint">{items.length}</span>
+                </div>
+                {items.length === 0 ? <p className="px-1 py-3 text-[11px] text-faint">{t('board.none')}</p> : null}
+                {items.map((release) => (
+                  <BoardCard key={release.id} release={release} stage={stage} dateFormat={dateFormat} />
+                ))}
+              </div>
             );
           })}
-        </ul>
+        </div>
       )}
-    </div>
+    </section>
+  );
+}
+
+function BoardCard({
+  release,
+  stage,
+  dateFormat
+}: {
+  release: ReleaseOverview;
+  stage: ReleaseStage;
+  dateFormat: Intl.DateTimeFormat;
+}) {
+  const t = useTranslations('releases');
+  return (
+    <Link
+      href={`/releases/${release.id}`}
+      className="block space-y-2 rounded-md border border-hairline bg-bg p-2.5 transition-colors hover:border-accent/30"
+      aria-label={`${release.product_name} ${release.version} ${t(`stage.${stage}`)}`}
+    >
+      <div className="flex items-center justify-between gap-2">
+        <span dir="ltr" className="font-mono text-xs font-semibold">{release.version}</span>
+        <span className="text-[9px] uppercase tracking-wider text-faint">{t(`kind.${releaseKind(release.release_number)}`)}</span>
+      </div>
+      <p className="truncate text-xs text-muted">{release.product_name}</p>
+      <p className="line-clamp-2 min-h-[2.25rem] text-[11px] text-faint">{release.goal ?? t('panel.noGoal')}</p>
+      <div className="flex flex-wrap items-center gap-1.5">
+        <ReleaseStatusChip status={release.status} />
+        <RiskTierChip riskTier={release.risk_tier} />
+      </div>
+      <div className="flex items-center justify-between font-mono text-[10px] text-faint">
+        <span>{t('panel.filed', {filed: release.artifacts_filed, required: release.artifacts_required})}</span>
+        {release.target_date ? (
+          <span className={release.is_overdue ? 'text-danger' : ''}>
+            {dateFormat.format(new Date(`${release.target_date}T00:00:00`))}
+          </span>
+        ) : null}
+      </div>
+    </Link>
   );
 }

@@ -4,6 +4,8 @@ import {useState, useTransition} from 'react';
 import {Bot, Pencil, Plus, Trash2} from 'lucide-react';
 import {useTranslations} from 'next-intl';
 
+import {useConfirm} from '@/components/ui/ConfirmProvider';
+
 import {
   archiveAgentAction,
   createAgentAction,
@@ -26,6 +28,7 @@ import {
 
 export default function AgentRosterPanel({agents}: {agents: Agent[]}) {
   const t = useTranslations('agents');
+  const confirm = useConfirm();
   // null = closed, 'create' = new agent, otherwise the user_id being edited.
   const [mode, setMode] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -150,8 +153,8 @@ export default function AgentRosterPanel({agents}: {agents: Agent[]}) {
   // Removal keeps the row and sets archived_at, so everything the agent ever
   // proposed stays attributable. The confirm says so rather than implying a
   // delete that is not happening.
-  function remove(agent: Agent) {
-    if (!window.confirm(t('roster.removeConfirm', {name: agent.display_name}))) {
+  async function remove(agent: Agent) {
+    if (!await confirm(t('roster.removeConfirm', {name: agent.display_name}))) {
       return;
     }
     setError(null);

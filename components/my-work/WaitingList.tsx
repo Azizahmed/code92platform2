@@ -1,9 +1,11 @@
 import {
   AtSign,
   CalendarClock,
-  DoorOpen,
+  FileCheck,
   Hourglass,
+  Landmark,
   PartyPopper,
+  Rocket,
   Sparkles,
   Timer
 } from 'lucide-react';
@@ -15,7 +17,9 @@ import {formatDay} from '@/lib/dates';
 import type {WaitingItem, WaitingSource} from './MyWorkView';
 
 const SOURCES: Record<WaitingSource, {icon: typeof Sparkles; tone: string}> = {
-  gate_ready: {icon: DoorOpen, tone: 'border-accent/30 bg-accent/10 text-accent'},
+  business_gate_pending: {icon: Landmark, tone: 'border-accent/30 bg-accent/10 text-accent'},
+  release_spec_approval: {icon: FileCheck, tone: 'border-accent/30 bg-accent/10 text-accent'},
+  release_stage_ready: {icon: Rocket, tone: 'border-accent/30 bg-accent/10 text-accent'},
   proposal_pending: {icon: Sparkles, tone: 'border-accent/30 bg-accent/10 text-accent'},
   review_overdue: {icon: CalendarClock, tone: 'border-amber/30 bg-amber/10 text-amber'},
   mention_unreplied: {icon: AtSign, tone: 'border-hairline bg-raised text-muted'},
@@ -25,8 +29,11 @@ const SOURCES: Record<WaitingSource, {icon: typeof Sparkles; tone: string}> = {
 
 function hrefFor(item: WaitingItem): string {
   switch (item.source) {
-    case 'gate_ready':
-      return `/products/${item.context_id}`;
+    case 'business_gate_pending':
+      return `/products/${item.record_id}?tab=business`;
+    case 'release_spec_approval':
+    case 'release_stage_ready':
+      return `/releases/${item.record_id}`;
     case 'review_overdue':
       return `/products/${item.record_id}`;
     case 'proposal_pending':
@@ -51,7 +58,7 @@ export default function WaitingList({
   locale: string;
 }) {
   const t = useTranslations('myWork');
-  const tLifecycle = useTranslations('lifecycle');
+  const tReleases = useTranslations('releases');
 
   if (items.length === 0) {
     return (
@@ -67,9 +74,13 @@ export default function WaitingList({
 
   function detail(item: WaitingItem): string | null {
     switch (item.source) {
-      case 'gate_ready':
+      case 'business_gate_pending':
+        return item.subtitle ? t('waiting.gateDecision', {gate: item.subtitle}) : null;
+      case 'release_spec_approval':
+        return t('waiting.specApproval');
+      case 'release_stage_ready':
         return item.subtitle
-          ? t('waiting.gatePhase', {phase: tLifecycle(`phases.${item.subtitle}`)})
+          ? t('waiting.stageReady', {stage: tReleases(`stage.${item.subtitle.toLowerCase()}`)})
           : null;
       case 'proposal_pending':
         return item.subtitle ? t(`waiting.proposalActions.${item.subtitle}`) : null;

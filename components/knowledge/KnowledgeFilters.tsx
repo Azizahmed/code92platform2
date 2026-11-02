@@ -2,7 +2,7 @@ import {Search} from 'lucide-react';
 import {useTranslations} from 'next-intl';
 
 import {SOURCE_STATUSES, WRITING_STATUSES, KNOWLEDGE_KINDS} from '@/lib/knowledge';
-import {LIFECYCLE_PHASES} from '@/lib/lifecycle';
+import {LEGACY_LIFECYCLE_PHASES} from '@/lib/knowledge';
 
 type Props = {
   tags: {id: string; name: string}[];
@@ -159,7 +159,7 @@ export default function KnowledgeFilters({tags, products, current}: Props) {
           className={CONTROL_CLASS}
         >
           <option value="">{t('filters.allPhases')}</option>
-          {LIFECYCLE_PHASES.map((phase) => (
+          {LEGACY_LIFECYCLE_PHASES.map((phase) => (
             <option key={phase} value={phase}>
               {tl(`phases.${phase}`)}
             </option>

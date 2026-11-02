@@ -49,12 +49,13 @@ test('product detail starts auth, translations, and product lookup together', as
   assert.match(firstWave, /getTranslations\('products'\)/);
   assert.match(firstWave, /from\('products'\)/);
 
+  // The release list moved into the Development tab, which loads its own data.
   const dataWaveStart = source.indexOf('const [\n    {data: members}');
-  const dataWaveEnd = source.indexOf('const taskIds');
+  const dataWaveEnd = source.indexOf('const isAdmin');
   const dataWave = source.slice(dataWaveStart, dataWaveEnd);
 
   assert.match(dataWave, /rpc\('github_is_configured'\)/);
-  assert.match(dataWave, /from\('release_overview'\)/);
+  assert.match(dataWave, /from\('product_overview'\)/);
   assert.equal((dataWave.match(/await Promise\.all\(\[/g) ?? []).length, 1);
 });
 

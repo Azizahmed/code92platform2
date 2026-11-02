@@ -165,3 +165,40 @@ tasks and deals, idempotent per day) and then drains the outbox. Without the
 schedule everything else in 0.2 works; only due/overdue reminders are missing.
 Run it once by hand after deploying to confirm it answers `{"enqueued": n, ...}`.
 
+## Release 0.3 — projects, business track, release loop
+
+Four functions change, no secret and no schedule.
+
+```bash
+# Backup first. Backups are not available on this backend, so export the schema and data.
+npx -y @insforge/cli db export --include-functions --include-sequences --include-views -o "$(pwd)/../backups/pre-release-0.3-$(date +%Y%m%d-%H%M).sql"
+
+npx -y @insforge/cli db migrations up --all -y   # 20261027100000 → 20261027104000
+npx -y @insforge/cli functions deploy thread-agent --file functions/thread-agent.ts
+npx -y @insforge/cli functions deploy agent-runtime --file functions/agent-runtime.ts
+npx -y @insforge/cli deployments deploy .
+```
+
+`20261027104000` moves existing products onto the new tracks and is safe to run
+twice. It also expires any agent proposal still pending for the retired
+`lifecycle_advance` action. After it runs, `lifecycle_backfill_0_3()` is no
+longer needed; it stays in the schema, and no client role can call it.
+
+`notify-email` does not change in 0.3, and no schedule was added.
+
+### What the backfill decides
+
+- A product with development started (Plan or later) moves to Build, with a
+  Gate 1 go recorded against the first admin. The decision's note says it was
+  backfilled.
+- A product with Requirements started moves to Concept. Anything else stays
+  at Idea.
+- The first release a product already has is its MVP (release 0). A product
+  with development started and no release gets one at the stage of its earliest
+  unfinished phase. Monitor reached means shipped.
+- Lifecycle artifacts are filed against the MVP at the stage that owns them.
+  Files are linked through their Knowledge mirror.
+
+Operators, origination, ownership, business owners and founders are left empty
+for the team to set. Until they are set, the dashboard lists the gaps.
+

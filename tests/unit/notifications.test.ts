@@ -9,11 +9,11 @@ describe('notificationHref (mirrored by linkFor in functions/notify-email.ts)', 
     expect(notificationHref({...base, channel_id: 'c1'})).toBe('/channels/c1');
     expect(notificationHref({...base, deal_id: 'd1', account_id: 'a1', product_id: 'p1'})).toBe('/sales/deals/d1');
     expect(notificationHref({...base, account_id: 'a1'})).toBe('/sales/accounts/a1');
-    expect(notificationHref({...base, task_id: 't1', product_id: 'p1'})).toBe('/products/p1#task-t1');
+    expect(notificationHref({...base, task_id: 't1', product_id: 'p1'})).toBe('/products/p1?tab=tasks&task=t1');
   });
 
   it('sends General tasks to All tasks, and nothing to a dead link', () => {
-    expect(notificationHref({...base, task_id: 't1'})).toBe('/tasks');
+    expect(notificationHref({...base, task_id: 't1'})).toBe('/tasks?task=t1');
     expect(notificationHref(base)).toBeNull();
   });
 

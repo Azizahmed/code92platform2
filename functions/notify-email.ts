@@ -72,8 +72,9 @@ function linkFor(row: any): { href: string; label: string } {
   if (row.deal_id) return { href: `${APP_URL}/en/sales/deals/${row.deal_id}`, label: 'Open the deal' };
   if (row.account_id) return { href: `${APP_URL}/en/sales/accounts/${row.account_id}`, label: 'Open the account' };
   if (row.task_id && row.product_id) {
-    return { href: `${APP_URL}/en/products/${row.product_id}#task-${row.task_id}`, label: 'Open the task' };
+    return { href: `${APP_URL}/en/products/${row.product_id}?tab=tasks&task=${row.task_id}`, label: 'Open the task' };
   }
+  if (row.task_id) return { href: `${APP_URL}/en/tasks?task=${row.task_id}`, label: 'Open the task' };
   return { href: `${APP_URL}/en/tasks`, label: 'Open the task' };
 }
 

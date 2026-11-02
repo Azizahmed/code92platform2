@@ -19,7 +19,9 @@
     "noUpdates": "No updates",
     "emptyTitle": "No products yet",
     "emptyBody": "Register the first product to start tracking its health, review cadence, and market trends.",
-    "emptyFiltered": "No products match these filters."
+    "emptyFiltered": "No products match these filters.",
+    "colRelease": "Release",
+    "noRelease": "No release yet"
   },
   "new": {
     "title": "New product",
@@ -100,5 +102,14 @@
     "slugTaken": "That slug is already in use.",
     "invalid": "Check the required fields and try again.",
     "linksInvalid": "Links must be a valid JSON object of label → URL."
+  },
+  "tabs": {
+    "label": "Product sections",
+    "business": "Business",
+    "development": "Development",
+    "sales": "Sales",
+    "tasks": "Tasks",
+    "knowledge": "Knowledge",
+    "channel": "Channel"
   }
 }

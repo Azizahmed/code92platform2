@@ -5,9 +5,10 @@ import {z} from 'zod';
 
 import {getOwnMembership, getSessionUser} from '@/lib/auth';
 import {createInsForgeServerClient} from '@/lib/insforge/server';
-import {LIFECYCLE_PHASES, type LifecyclePhase} from '@/lib/lifecycle';
 
 export type TaskStatus = 'pending' | 'completed';
+
+export type TaskWorkflowStatus = 'todo' | 'in_progress' | 'blocked' | 'done';
 
 export type TaskAttachment = {
   id: string;
@@ -31,6 +32,9 @@ export type ProductTask = {
   due_date: string | null;
   assignee_id: string | null;
   status: TaskStatus;
+  // The four-state status every screen shows. Kept in step with `status` by
+  // validate_product_task(). Optional only for rows read by older queries.
+  workflow_status?: TaskWorkflowStatus;
   position: number;
   created_by: string;
   completed_at: string | null;
@@ -46,9 +50,9 @@ export type ProductTask = {
   // Stamped by the database from auth.uid() on the transition to completed, so
   // it cannot be claimed on someone else's behalf.
   completed_by: string | null;
-  // Which delivery phase this work serves. Only ever set on a product task: the
-  // phase names a row in product_lifecycle_phases, which is keyed by product.
-  lifecycle_phase: LifecyclePhase | null;
+  // The project this work belongs to, for project tasks. Product and project
+  // are mutually exclusive, and a project's task cannot change project.
+  project_id: string | null;
   attachments: TaskAttachment[];
   // Derived per viewer from task_watchers — not a column. Whoever is looking at
   // the row needs to know whether THEY are following it.
@@ -63,7 +67,8 @@ export type TaskInput = {
   notes: string | null;
   dueDate: string | null;
   assigneeId: string | null;
-  lifecyclePhase?: LifecyclePhase | null;
+  // Set for a project's task; leave null for a product or general task.
+  projectId?: string | null;
 };
 
 type TaskActionResult =
@@ -76,8 +81,6 @@ const nullableDate = z
   .regex(/^\d{4}-\d{2}-\d{2}$/)
   .nullable();
 
-const nullablePhase = z.enum(LIFECYCLE_PHASES).nullable();
-
 const createTaskSchema = z
   .object({
     productId: nullableUuid,
@@ -86,12 +89,11 @@ const createTaskSchema = z
     notes: z.string().trim().max(5000).nullable(),
     dueDate: nullableDate,
     assigneeId: nullableUuid,
-    lifecyclePhase: nullablePhase.optional()
+    projectId: nullableUuid.optional()
   })
-  // Mirrors the product_tasks_lifecycle_phase_needs_product CHECK. Caught here
-  // so the form gets 'phaseNeedsProduct' rather than a constraint name.
-  .refine((value) => !value.lifecyclePhase || value.productId !== null, {
-    path: ['lifecyclePhase']
+  // Mirrors product_tasks_one_scope: a task belongs to a product or a project.
+  .refine((value) => !(value.productId && value.projectId), {
+    path: ['projectId']
   });
 
 const updateTaskSchema = z.object({
@@ -100,9 +102,8 @@ const updateTaskSchema = z.object({
   dueDate: nullableDate,
   assigneeId: nullableUuid,
   status: z.enum(['pending', 'completed']),
-  // Both optional for the same reason as completionNote below: `undefined`
-  // means "leave it alone". The status toggle sends neither.
-  lifecyclePhase: nullablePhase.optional(),
+  // Optional for the same reason as completionNote below: `undefined` means
+  // "leave it alone". The status toggle sends neither.
   // Adopting a general task into a product. Never null — the database refuses
   // to hand a product task back to general, so there is nothing to send.
   productId: z.string().uuid().optional(),
@@ -145,12 +146,12 @@ function mapTaskError(error: unknown): string {
   if (message.includes('detach the subtasks')) return 'hasSubtasks';
   if (message.includes('move the parent task instead')) return 'isSubtask';
   if (message.includes('unscope the task from its release')) return 'inRelease';
-  if (message.includes('general task cannot join a release')) return 'inRelease';
+  if (message.includes('only a product task can join a release')) return 'inRelease';
+  if (message.includes('a task cannot change project')) return 'invalid';
+  if (message.includes('product_tasks_one_scope')) return 'invalid';
   if (message.includes('parent task must belong')) return 'parentMismatch';
   if (message.includes('one subtask level only')) return 'tooDeep';
   if (message.includes('parent task not found')) return 'notFound';
-  if (message.includes('lifecycle_phase_needs_product')) return 'phaseNeedsProduct';
-  if (message.includes('lifecycle_phase_known')) return 'invalid';
   return 'generic';
 }
 
@@ -171,7 +172,7 @@ export async function createTaskAction(
     notes,
     dueDate,
     assigneeId,
-    lifecyclePhase
+    projectId
   } = parsed.data;
   const {data, error} = await insforge.database
     .from('product_tasks')
@@ -183,7 +184,7 @@ export async function createTaskAction(
         notes: notes || null,
         due_date: dueDate,
         assignee_id: assigneeId,
-        lifecycle_phase: lifecyclePhase ?? null,
+        project_id: projectId ?? null,
         created_by: caller.user.id
       }
     ])
@@ -194,6 +195,7 @@ export async function createTaskAction(
   if (!data) return {ok: false, error: 'generic'};
 
   revalidateTask(productId);
+  if (projectId) revalidatePath(`/[locale]/projects/${projectId}`, 'page');
   return {ok: true, taskId: data.id as string};
 }
 
@@ -206,7 +208,6 @@ export async function updateTaskAction(
     assigneeId: string | null;
     status: TaskStatus;
     completionNote?: string | null;
-    lifecyclePhase?: LifecyclePhase | null;
     productId?: string;
   }
 ): Promise<TaskActionResult> {
@@ -235,9 +236,6 @@ export async function updateTaskAction(
   // with the field the form never had.
   if (parsed.data.completionNote !== undefined) {
     patch.completion_note = parsed.data.completionNote || null;
-  }
-  if (parsed.data.lifecyclePhase !== undefined) {
-    patch.lifecycle_phase = parsed.data.lifecyclePhase;
   }
   // Only sent when adopting a general task. The database is what decides
   // whether that is allowed; sending it on an unchanged product is a no-op
@@ -276,7 +274,7 @@ export async function patchTaskAction(
   const columns = {
     title: 'title', notes: 'notes', dueDate: 'due_date', assigneeId: 'assignee_id',
     status: 'status', completionNote: 'completion_note',
-    lifecyclePhase: 'lifecycle_phase', productId: 'product_id'
+    productId: 'product_id'
   } as const;
   const patch: Record<string, unknown> = {};
   for (const key of Object.keys(parsed.data) as (keyof typeof columns)[]) {
@@ -337,5 +335,139 @@ export async function deleteTaskAction(
     ok: true,
     taskId,
     storageKeys: (attachments ?? []).map((item) => item.storage_key as string)
+  };
+}
+
+// ============================================================
+// Task detail — the side panel
+// ============================================================
+
+export type TaskSubtaskSummary = {
+  id: string;
+  title: string;
+  status: TaskStatus;
+  workflow_status: TaskWorkflowStatus;
+  due_date: string | null;
+  assignee_id: string | null;
+  assignee_name: string | null;
+  release_id: string | null;
+  completion_note: string | null;
+};
+
+export type TaskDetail = ProductTask & {
+  workflow_status: TaskWorkflowStatus;
+  product_name: string | null;
+  project_name: string | null;
+  release_name: string | null;
+  assignee_name: string | null;
+  created_by_name: string | null;
+  completed_by_name: string | null;
+  parent: {id: string; title: string} | null;
+  subtasks: TaskSubtaskSummary[];
+};
+
+export type TaskDetailResult =
+  | {
+      ok: true;
+      task: TaskDetail;
+      members: {userId: string; displayName: string}[];
+      products: {id: string; name: string}[];
+    }
+  | {ok: false; error: string};
+
+const TASK_COLUMNS =
+  'id, product_id, parent_task_id, title, notes, due_date, assignee_id, status, workflow_status, position, created_by, completed_at, created_at, updated_at, release_id, completion_note, completed_by, project_id';
+
+// Everything the panel shows in one call: the task, its parent and subtasks,
+// attachments, the names behind every id, and the option lists its editor
+// needs. Read-only.
+export async function getTaskDetailAction(taskId: string): Promise<TaskDetailResult> {
+  if (!z.string().uuid().safeParse(taskId).success) return {ok: false, error: 'invalid'};
+  const caller = await requireActiveCaller();
+  if (!caller) return {ok: false, error: 'forbidden'};
+
+  const insforge = await createInsForgeServerClient();
+  const [{data: row}, {data: subtasks}, {data: attachments}, {data: watched}, {data: members}, {data: products}] =
+    await Promise.all([
+      insforge.database.from('product_tasks').select(TASK_COLUMNS).eq('id', taskId).maybeSingle(),
+      insforge.database
+        .from('product_tasks')
+        .select('id, title, status, workflow_status, due_date, assignee_id, release_id, completion_note')
+        .eq('parent_task_id', taskId)
+        .order('position', {ascending: true})
+        .order('created_at', {ascending: true}),
+      insforge.database
+        .from('task_attachments')
+        .select('id, task_id, storage_url, storage_key, file_name, mime_type, size_bytes, created_at')
+        .eq('task_id', taskId)
+        .order('created_at', {ascending: true}),
+      insforge.database
+        .from('task_watchers')
+        .select('task_id')
+        .eq('task_id', taskId)
+        .eq('user_id', caller.user.id),
+      insforge.database
+        .from('team_members')
+        .select('user_id, display_name')
+        .eq('is_active', true)
+        .order('display_name'),
+      insforge.database
+        .from('products')
+        .select('id, name, archived_at')
+        .order('name')
+    ]);
+
+  if (!row) return {ok: false, error: 'notFound'};
+  const task = row as unknown as Omit<ProductTask, 'attachments' | 'is_watching'> & {
+    workflow_status: TaskWorkflowStatus;
+  };
+
+  const [parentResult, projectResult, releaseResult] = await Promise.all([
+    task.parent_task_id
+      ? insforge.database.from('product_tasks').select('id, title').eq('id', task.parent_task_id).maybeSingle()
+      : Promise.resolve({data: null}),
+    task.project_id
+      ? insforge.database.from('projects').select('name').eq('id', task.project_id).maybeSingle()
+      : Promise.resolve({data: null}),
+    task.release_id
+      ? insforge.database.from('product_releases').select('version, name').eq('id', task.release_id).maybeSingle()
+      : Promise.resolve({data: null})
+  ]);
+
+  const nameOf = new Map(
+    (members ?? []).map((member) => [member.user_id as string, member.display_name as string])
+  );
+  const productName = task.product_id
+    ? ((products ?? []).find((product) => product.id === task.product_id)?.name as string | undefined) ?? null
+    : null;
+  const release = releaseResult.data as Record<string, unknown> | null;
+
+  return {
+    ok: true,
+    task: {
+      ...task,
+      attachments: (attachments ?? []) as unknown as TaskAttachment[],
+      is_watching: (watched ?? []).length > 0,
+      product_name: productName,
+      project_name: ((projectResult.data as {name?: string} | null)?.name as string | undefined) ?? null,
+      release_name: release
+        ? [release.version, release.name].filter(Boolean).join(' · ') || null
+        : null,
+      assignee_name: task.assignee_id ? nameOf.get(task.assignee_id) ?? null : null,
+      created_by_name: nameOf.get(task.created_by) ?? null,
+      completed_by_name: task.completed_by ? nameOf.get(task.completed_by) ?? null : null,
+      parent: (parentResult.data as {id: string; title: string} | null) ?? null,
+      subtasks: ((subtasks ?? []) as unknown as Omit<TaskSubtaskSummary, 'assignee_name'>[]).map((subtask) => ({
+        ...subtask,
+        assignee_name: subtask.assignee_id ? nameOf.get(subtask.assignee_id) ?? null : null
+      }))
+    },
+    members: (members ?? []).map((member) => ({
+      userId: member.user_id as string,
+      displayName: member.display_name as string
+    })),
+    products: (products ?? [])
+      .filter((product) => !product.archived_at)
+      .map((product) => ({id: product.id as string, name: product.name as string}))
   };
 }

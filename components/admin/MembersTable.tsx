@@ -8,6 +8,7 @@ export type MemberRow = {
   display_name: string;
   role: 'admin' | 'member';
   is_active: boolean;
+  is_founder: boolean;
   created_at: string;
 };
 
@@ -100,6 +101,7 @@ export default function MembersTable({members, currentUserId}: Props) {
                       userId={member.user_id}
                       role={member.role}
                       isActive={member.is_active}
+                      isFounder={member.is_founder}
                     />
                   </td>
                 </tr>

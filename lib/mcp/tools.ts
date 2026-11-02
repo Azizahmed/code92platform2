@@ -11,15 +11,14 @@ import {
   createKnowledgeItemAction, createTagAction, deleteKnowledgeItemAction, setKnowledgeArchivedAction,
   signKnowledgeFileAction, updateKnowledgeItemAction
 } from '@/lib/actions/knowledge';
-import {
-  addPhaseArtifactAction, advanceLifecyclePhaseAction, deletePhaseArtifactAction,
-  setLifecyclePhaseDetailsAction, setProductRiskTierAction
-} from '@/lib/actions/lifecycle';
+import {addProjectNoteAction} from '@/lib/actions/projects';
 import {addStatusUpdateAttachmentsAction, addTaskAttachmentsAction, setProductLogoAction} from '@/lib/actions/media';
-import {createProductAction, setProductArchivedAction, updateProductAction} from '@/lib/actions/products';
 import {
-  advanceReleaseStatusAction, createReleaseAction, deleteReleaseAction, setReleaseCheckAction,
-  setTaskReleaseAction, updateReleaseAction
+  createProductAction, setProductArchivedAction, setProductRiskTierAction, updateProductAction
+} from '@/lib/actions/products';
+import {
+  addReleaseArtifactAction, createCycleReleaseAction, deleteReleaseAction, exitReleaseAction,
+  removeReleaseArtifactAction, setReleaseCheckAction, setTaskReleaseAction, updateReleaseAction
 } from '@/lib/actions/releases';
 import {deleteStatusUpdateAction, postStatusUpdateAction} from '@/lib/actions/status-updates';
 import {createTaskAction, deleteTaskAction, patchTaskAction} from '@/lib/actions/tasks';
@@ -27,8 +26,8 @@ import type {ToolResult} from '@/lib/assistant/protocol';
 import {toolDescriptions, toolSchemas} from '@/lib/assistant/schemas';
 import type {createInsForgeServerClient} from '@/lib/insforge/server';
 import {KNOWLEDGE_KINDS, KNOWLEDGE_STATUSES} from '@/lib/knowledge';
-import {ALL_ARTIFACT_TYPES, LIFECYCLE_PHASES, LIFECYCLE_STATES, RISK_TIERS} from '@/lib/lifecycle';
-import {RELEASE_CHECK_KEYS, RELEASE_STATUSES} from '@/lib/releases';
+import {ARTIFACT_KEYS, RELEASE_CHECK_KEYS, RELEASE_STATUSES} from '@/lib/releases';
+import {RISK_TIERS} from '@/lib/risk';
 import {
   createUploadTicket, FILE_PURPOSE_NAMES, FILE_PURPOSES, MAX_MCP_INLINE_UPLOAD_BYTES, MAX_MCP_UPLOAD_BYTES, McpFileError,
   openFile,
@@ -151,29 +150,24 @@ export const MCP_TOOLS: Record<string, Tool> = {
   }),
   get_product: tool({
     permission: 'read', readOnly: true, title: 'Get a product in detail',
-    description: 'Read one product: overview, lifecycle phases with their ids, states and artifacts, the 10 latest status updates and its releases.',
+    description: 'Read one product: its overview with business stage and checklist progress, its gate decisions, the 10 latest status updates and its releases with their stages.',
     schema: z.object({productId: uuid}).strict(),
     run: async ({productId}, context) => {
       const db = context.insforge.database;
-      const [overview, phases, updates, releases] = await Promise.all([
+      const [overview, updates, releases, decisions] = await Promise.all([
         db.from('product_overview').select('*').eq('id', productId).maybeSingle(),
-        db.from('product_lifecycle_phases').select('id, cycle, phase, state, owner_id, notes, entered_at, completed_at')
-          .eq('product_id', productId).order('cycle', {ascending: false}),
         db.from('status_updates').select('id, health, stage, summary, details, author_id, source_type, created_at')
           .eq('product_id', productId).order('created_at', {ascending: false}).limit(10),
-        db.from('release_overview').select('*').eq('product_id', productId).order('created_at', {ascending: false}).limit(20)
+        db.from('release_overview').select('*').eq('product_id', productId).order('release_number', {ascending: true}),
+        db.from('product_gate_decisions').select('id, gate, decision, decided_on, note, pmf_criteria, evidence, created_at')
+          .eq('product_id', productId).order('created_at', {ascending: false}).limit(10)
       ]);
-      if (overview.error || phases.error || updates.error || releases.error) return {ok: false, error: 'readFailed'};
+      if (overview.error || updates.error || releases.error || decisions.error) return {ok: false, error: 'readFailed'};
       if (!overview.data) return {ok: false, error: 'notFound'};
-      const phaseIds = (phases.data ?? []).map((phase) => phase.id as string);
-      const artifacts = phaseIds.length ? await db.from('phase_artifacts')
-        .select('id, phase_id, artifact_type, title, file_name, url, knowledge_item_id, notes, created_at')
-        .in('phase_id', phaseIds) : {data: [], error: null};
-      if (artifacts.error) return {ok: false, error: 'readFailed'};
       return {ok: true, href: `/products/${productId}`, data: {
         product: overview.data,
-        lifecyclePhases: (phases.data ?? []).map((phase) => ({...phase,
-          artifacts: (artifacts.data ?? []).filter((artifact) => artifact.phase_id === phase.id)})),
+        businessStage: overview.data.business_stage,
+        gateDecisions: decisions.data ?? [],
         recentStatusUpdates: updates.data ?? [],
         releases: releases.data ?? []
       }};
@@ -196,18 +190,52 @@ export const MCP_TOOLS: Record<string, Tool> = {
   }),
   get_release: tool({
     permission: 'read', readOnly: true, title: 'Get a release in detail',
-    description: 'Read one release with its checklist and scoped tasks.',
+    description: 'Read one release: its stage, status and goal; the evidence filed and what each stage requires; what is still missing before the current stage can close; its checklist and scoped tasks.',
     schema: z.object({releaseId: uuid}).strict(),
     run: async ({releaseId}, context) => {
       const db = context.insforge.database;
-      const [release, checks, tasks] = await Promise.all([
+      const [release, checks, tasks, artifacts, requirements, gaps] = await Promise.all([
         db.from('release_overview').select('*').eq('id', releaseId).maybeSingle(),
         db.from('release_checks').select('id, check_key, is_required, completed_at, completed_by, note').eq('release_id', releaseId),
-        db.from('product_tasks').select('id, title, status, assignee_id, due_date').eq('release_id', releaseId)
+        db.from('product_tasks').select('id, title, status, assignee_id, due_date').eq('release_id', releaseId),
+        db.from('release_artifacts').select('id, stage, artifact_key, title, url, knowledge_item_id, commit_ref, carry_to_next, created_at')
+          .eq('release_id', releaseId).order('created_at', {ascending: true}),
+        db.from('release_artifact_requirements').select('artifact_key, is_required').eq('release_id', releaseId),
+        db.rpc('release_stage_gaps', {p_release_id: releaseId})
       ]);
       if (release.error) return {ok: false, error: 'readFailed'};
       if (!release.data) return {ok: false, error: 'notFound'};
-      return {ok: true, href: `/releases/${releaseId}`, data: {release: release.data, checks: checks.data ?? [], tasks: tasks.data ?? []}};
+      return {ok: true, href: `/releases/${releaseId}`, data: {
+        release: release.data,
+        checks: checks.data ?? [],
+        tasks: tasks.data ?? [],
+        artifacts: artifacts.data ?? [],
+        requirements: requirements.data ?? [],
+        stageGaps: gaps.error ? [] : (gaps.data ?? [])
+      }};
+    }
+  }),
+  get_project: tool({
+    permission: 'read', readOnly: true, title: 'Get a project in detail',
+    description: 'Read one consultation project: its phase and dates, its outcome if closed, the 20 latest log entries, its tasks and the products captured from it.',
+    schema: z.object({projectId: uuid}).strict(),
+    run: async ({projectId}, context) => {
+      const db = context.insforge.database;
+      const [project, log, tasks, ideas] = await Promise.all([
+        db.from('project_overview').select('*').eq('id', projectId).maybeSingle(),
+        db.from('project_activities').select('id, kind, from_phase, to_phase, body, actor_id, created_at')
+          .eq('project_id', projectId).order('created_at', {ascending: false}).limit(20),
+        db.from('product_tasks').select('id, title, status, due_date, assignee_id').eq('project_id', projectId),
+        db.from('project_products').select('product_id, products(name, business_stage)').eq('project_id', projectId)
+      ]);
+      if (project.error || log.error || tasks.error || ideas.error) return {ok: false, error: 'readFailed'};
+      if (!project.data) return {ok: false, error: 'notFound'};
+      return {ok: true, href: `/projects/${projectId}`, data: {
+        project: project.data,
+        log: log.data ?? [],
+        tasks: tasks.data ?? [],
+        ideas: ideas.data ?? []
+      }};
     }
   }),
   list_channels: tool({
@@ -246,8 +274,8 @@ export const MCP_TOOLS: Record<string, Tool> = {
   // ---------------------------------------------------------------- tasks
   create_task: tool({
     permission: 'tasks', title: 'Create a task',
-    description: `${toolDescriptions.create_task} lifecyclePhase (product tasks only) files the work under a delivery phase.`,
-    schema: toolSchemas.create_task.extend({lifecyclePhase: z.enum(LIFECYCLE_PHASES).nullable().optional()}),
+    description: toolDescriptions.create_task,
+    schema: toolSchemas.create_task,
     run: async (args) => {
       const result = await createTaskAction(args);
       return done(result, result.ok ? {taskId: result.taskId} : null, '/tasks');
@@ -256,10 +284,7 @@ export const MCP_TOOLS: Record<string, Tool> = {
   update_task: tool({
     permission: 'tasks', title: 'Update a task',
     description: `${toolDescriptions.update_task} productId adopts a general task into a product.`,
-    schema: toolSchemas.update_task.extend({
-      lifecyclePhase: z.enum(LIFECYCLE_PHASES).nullable().optional(),
-      productId: uuid.optional()
-    }),
+    schema: toolSchemas.update_task.extend({productId: uuid.optional()}),
     run: async ({taskId, ...patch}) => done(await patchTaskAction(taskId, patch), {taskId}, '/tasks')
   }),
   set_task_watch: tool({
@@ -339,56 +364,41 @@ export const MCP_TOOLS: Record<string, Tool> = {
   }),
   set_product_risk_tier: tool({
     permission: 'products', title: 'Set a product\'s risk tier',
-    description: 'Set the risk tier (low, medium, high), which decides how strict the lifecycle gates are.',
+    description: 'Set the risk tier (low, medium, high), which decides which evidence releases require and whether shipping needs a waiver.',
     schema: z.object({productId: uuid, riskTier: z.enum(RISK_TIERS)}).strict(),
     run: async ({productId, riskTier}) =>
       done(await setProductRiskTierAction(productId, riskTier), {productId, riskTier}, `/products/${productId}`)
   }),
 
-  // ---------------------------------------------------------------- lifecycle
-  update_lifecycle_phase: tool({
-    permission: 'lifecycle', title: 'Update a lifecycle phase',
-    description: 'Change the owner and/or notes of a lifecycle phase (ids from get_product). Omitted fields are kept.',
-    schema: z.object({phaseId: uuid, ownerId: uuid.nullable().optional(),
-      notes: z.string().trim().max(5000).nullable().optional()}).strict(),
-    run: async ({phaseId, ownerId, notes}, context) => {
-      const current = await readRow<{owner_id: string | null; notes: string | null}>(context,
-        'product_lifecycle_phases', 'owner_id, notes', phaseId);
-      if (!current) return {ok: false, error: 'notFound'};
-      return done(await setLifecyclePhaseDetailsAction(phaseId,
-        ownerId === undefined ? current.owner_id : ownerId, notes === undefined ? current.notes : notes), {phaseId});
-    }
-  }),
-  advance_lifecycle_phase: tool({
-    permission: 'lifecycle', title: 'Move a lifecycle phase to a new state',
-    description: 'Set a phase to not_started, in_progress, blocked or complete. Completing without the required evidence needs a waiverReason, and the gate rules for the product\'s risk tier still apply.',
-    schema: z.object({phaseId: uuid, state: z.enum(LIFECYCLE_STATES),
-      waiverReason: z.string().trim().max(2000).nullable().optional()}).strict(),
-    run: async ({phaseId, state, waiverReason}) =>
-      done(await advanceLifecyclePhaseAction(phaseId, state, waiverReason ?? null), {phaseId, state})
-  }),
-  add_lifecycle_artifact: tool({
-    permission: 'lifecycle', title: 'Add evidence to a lifecycle phase',
-    description: 'File evidence on a phase: a link (url), an existing knowledge item, or an uploaded file (fileId from upload_file/create_upload_link with purpose "lifecycle"; needs the attachments permission). At least one is required.',
+  // ---------------------------------------------------------------- delivery
+  // The 'lifecycle' grant predates 0.3. It now covers the evidence a release
+  // stage needs and the notes a project log takes; the name stays so existing
+  // tokens keep working.
+  add_release_artifact: tool({
+    permission: 'lifecycle', title: 'File release evidence',
+    description: 'File one artifact link against a release: artifactKey is one of intent, spec, plan, threat_model, pull_request, test_results, review_findings, security_review, release_tag, deploy_checklist, security_scan, incident, metric, runbook. Its stage must be one the release has reached. commitRef records a commit or tag.',
     schema: z.object({
-      phaseId: uuid,
-      artifactType: z.enum(ALL_ARTIFACT_TYPES as [string, ...string[]]),
+      releaseId: uuid,
+      artifactKey: z.enum(ARTIFACT_KEYS as [string, ...string[]]),
       title: z.string().trim().min(1).max(240),
-      notes: z.string().trim().max(5000).nullable().default(null),
-      url: z.string().trim().url().max(2000).regex(/^https?:\/\//).nullable().default(null),
-      knowledgeItemId: uuid.nullable().default(null),
-      fileId: fileId.nullable().default(null)
+      url: z.string().trim().url().max(2000).regex(/^https?:\/\//),
+      commitRef: z.string().trim().max(100).nullable().default(null),
+      carryToNext: z.boolean().default(false)
     }).strict(),
-    run: async ({fileId: id, ...args}, context) => {
-      if (id) {
-        const denied = needsAttachments(context);
-        if (denied) return denied;
-      }
-      const result = await addPhaseArtifactAction({...args,
-        artifactType: args.artifactType as Parameters<typeof addPhaseArtifactAction>[0]['artifactType'],
-        file: id ? openFile(id, context.caller.userId, 'lifecycle') : null});
-      return done(result, result.ok ? result : null);
+    run: async (args) => {
+      const result = await addReleaseArtifactAction({
+        releaseId: args.releaseId, key: args.artifactKey, title: args.title, url: args.url,
+        commitRef: args.commitRef, carryToNext: args.carryToNext
+      });
+      return done(result, result.ok ? {releaseId: args.releaseId, artifactId: result.artifactId} : null,
+        `/releases/${args.releaseId}`);
     }
+  }),
+  add_project_note: tool({
+    permission: 'lifecycle', title: 'Add a note to a project log',
+    description: 'Add a note to a consultation project\'s log. Phase moves, including closing with an outcome, are made in the app.',
+    schema: z.object({projectId: uuid, body: z.string().trim().min(1).max(5000)}).strict(),
+    run: async ({projectId, body}) => done(await addProjectNoteAction(projectId, body), {projectId}, `/projects/${projectId}`)
   }),
 
   // ---------------------------------------------------------------- knowledge
@@ -468,40 +478,42 @@ export const MCP_TOOLS: Record<string, Tool> = {
 
   // ---------------------------------------------------------------- releases
   create_release: tool({
-    permission: 'releases', title: 'Create a release',
-    description: 'Plan a release for a product. version must be unique within the product.',
-    schema: z.object({productId: uuid, version: z.string().trim().min(1).max(60),
-      name: z.string().trim().max(240).nullable().default(null), notes: z.string().trim().max(5000).nullable().default(null),
-      targetDate: date.nullable().default(null), ownerId: uuid.nullable().default(null)}).strict(),
+    permission: 'releases', title: 'Create a cycle release',
+    description: 'Create a cycle (every release after the MVP) for a product that has passed Gate 1: a version, a one-line goal, and an optional target date and success criteria. Its stages and required evidence follow from the product\'s risk tier.',
+    schema: z.object({productId: uuid, version: z.string().trim().min(1).max(60), goal: z.string().trim().min(1).max(240),
+      targetDate: date.nullable().default(null), successCriteria: z.string().trim().max(5000).nullable().default(null)}).strict(),
     run: async (args) => {
-      const result = await createReleaseAction(args);
+      const result = await createCycleReleaseAction(args);
       return done(result, result.ok ? {releaseId: result.releaseId} : null,
         result.ok ? `/releases/${result.releaseId}` : undefined);
     }
   }),
   update_release: tool({
     permission: 'releases', title: 'Update a release',
-    description: 'Change only the given fields of a release. Status moves through advance_release_status.',
+    description: 'Change only the given fields of a release. Stage and status move through the app: forward through the stages, and cancel or roll back with advance_release_status.',
     schema: z.object({releaseId: uuid, version: z.string().trim().min(1).max(60).optional(),
-      name: z.string().trim().max(240).nullable().optional(), notes: z.string().trim().max(5000).nullable().optional(),
+      name: z.string().trim().max(240).nullable().optional(), goal: z.string().trim().max(240).nullable().optional(),
+      successCriteria: z.string().trim().max(5000).nullable().optional(),
+      notes: z.string().trim().max(5000).nullable().optional(),
       targetDate: date.nullable().optional(), ownerId: uuid.nullable().optional()}).strict(),
     run: async ({releaseId, ...patch}, context) => {
-      const current = await readRow<{version: string; name: string | null; notes: string | null;
-        target_date: string | null; owner_id: string | null}>(context, 'product_releases',
-        'version, name, notes, target_date, owner_id', releaseId);
+      const current = await readRow<{version: string; name: string | null; goal: string | null; success_criteria: string | null;
+        notes: string | null; target_date: string | null; owner_id: string | null}>(context, 'product_releases',
+        'version, name, goal, success_criteria, notes, target_date, owner_id', releaseId);
       if (!current) return {ok: false, error: 'notFound'};
       return done(await updateReleaseAction(releaseId, {version: current.version, name: current.name,
-        notes: current.notes, targetDate: current.target_date, ownerId: current.owner_id, ...patch}),
+        goal: current.goal, successCriteria: current.success_criteria, notes: current.notes,
+        targetDate: current.target_date, ownerId: current.owner_id, ...patch}),
       {releaseId}, `/releases/${releaseId}`);
     }
   }),
   advance_release_status: tool({
-    permission: 'releases', title: 'Move a release to a new status',
-    description: `Move a release through ${RELEASE_STATUSES.join(' → ')}. Shipping with open required checks needs a waiverReason; some transitions require an admin.`,
+    permission: 'releases', title: 'Cancel, roll back or reopen a release',
+    description: 'Cancel a release (cancelled), roll a shipped release back (rolled_back), or reopen a cancelled release (planned) or a rolled-back one (in_progress). Cancelling and rolling back need a waiverReason, which is the written reason. Forward movement through the stages is done in the app.',
     schema: z.object({releaseId: uuid, status: z.enum(RELEASE_STATUSES),
       waiverReason: z.string().trim().max(2000).nullable().optional()}).strict(),
     run: async ({releaseId, status, waiverReason}) =>
-      done(await advanceReleaseStatusAction(releaseId, status, waiverReason ?? null), {releaseId, status}, `/releases/${releaseId}`)
+      done(await exitReleaseAction({releaseId, status, reason: waiverReason ?? null}), {releaseId, status}, `/releases/${releaseId}`)
   }),
   set_release_check: tool({
     permission: 'releases', title: 'Tick or untick a release check',
@@ -658,11 +670,11 @@ export const MCP_TOOLS: Record<string, Tool> = {
     schema: z.object({messageId: uuid}).strict(),
     run: async ({messageId}) => done(await deleteMessageAction({messageId}), {messageId})
   }),
-  delete_lifecycle_artifact: tool({
-    permission: 'delete', destructive: true, title: 'Delete lifecycle evidence',
-    description: 'Remove an artifact from a lifecycle phase.',
+  delete_release_artifact: tool({
+    permission: 'delete', destructive: true, title: 'Remove release evidence',
+    description: 'Remove an artifact from a release. Only the release\'s current stage can be changed.',
     schema: z.object({artifactId: uuid}).strict(),
-    run: async ({artifactId}) => done(await deletePhaseArtifactAction(artifactId), {artifactId})
+    run: async ({artifactId}) => done(await removeReleaseArtifactAction(artifactId), {artifactId})
   }),
   set_product_archived: tool({
     permission: 'delete', destructive: true, title: 'Archive or restore a product',

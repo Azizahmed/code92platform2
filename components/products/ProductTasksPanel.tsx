@@ -1,314 +1,48 @@
 'use client';
 
 import {
-  CalendarDays,
+  Bell,
+  BellOff,
   Check,
   CheckCircle2,
-  ChevronDown,
   Circle,
+  ExternalLink,
   ListTodo,
+  ListTree,
   Paperclip,
   Pencil,
   Plus,
-  Trash2,
-  UserRound,
-  X
+  Trash2
 } from 'lucide-react';
 import {useTranslations} from 'next-intl';
-import {useMemo, useOptimistic, useRef, useState, useTransition} from 'react';
+import {useMemo, useRef, useState} from 'react';
 
+import DueLabel from '@/components/tasks/DueLabel';
+import StatusMenu from '@/components/tasks/StatusMenu';
 import TaskAttachments from '@/components/tasks/TaskAttachments';
-import TaskCompletionDialog from '@/components/tasks/TaskCompletionDialog';
 import TaskCompletionNote from '@/components/tasks/TaskCompletionNote';
-import TaskWatchToggle from '@/components/tasks/TaskWatchToggle';
-import {
-  addTaskAttachmentsAction,
-  type StoredImage
-} from '@/lib/actions/media';
-import {
-  createTaskAction,
-  deleteTaskAction,
-  type ProductTask,
-  type TaskStatus,
-  updateTaskAction
-} from '@/lib/actions/tasks';
-import {drainNotificationEmailsAction} from '@/lib/actions/notifications';
+import TaskEditorModal from '@/components/tasks/TaskEditorModal';
+import type {TaskEditorDefaults} from '@/components/tasks/TaskEditorDialog';
+import TaskQuickAdd from '@/components/tasks/TaskQuickAdd';
+import {useTaskActions, useTaskOverrides} from '@/components/tasks/useTaskActions';
+import Avatar from '@/components/ui/Avatar';
+import Menu from '@/components/ui/Menu';
+import {useToast} from '@/components/ui/ToastProvider';
+import {useRouter} from '@/i18n/navigation';
+import {addTaskAttachmentsAction, type StoredImage} from '@/lib/actions/media';
+import {setTaskWatchAction} from '@/lib/actions/notifications';
+import type {ProductTask} from '@/lib/actions/tasks';
 import {DOCUMENT_ACCEPT} from '@/lib/attachments';
-import {
-  removeStoredImages,
-  uploadAttachments,
-  validateAttachmentFiles
-} from '@/lib/media-upload';
+import {businessDate} from '@/lib/dates';
+import {removeStoredImages, uploadAttachments, validateAttachmentFiles} from '@/lib/media-upload';
+import {workflowOf} from '@/lib/task-ui';
 
 export type TaskMemberOption = {
   userId: string;
   displayName: string;
 };
 
-const INPUT_CLASS =
-  'w-full rounded-md border border-hairline bg-bg px-3 py-2 text-sm outline-none transition-colors placeholder:text-faint focus:border-accent/50';
-
-// Applied to the server-rendered task list the instant a mutation starts, so
-// the row reacts on click instead of after the round trip. React drops these
-// once the transition settles and the action's fresh payload arrives.
-type OptimisticAction =
-  | {type: 'toggle'; taskId: string}
-  | {type: 'delete'; taskId: string};
-
-function applyOptimisticAction(
-  current: ProductTask[],
-  action: OptimisticAction
-): ProductTask[] {
-  switch (action.type) {
-    case 'toggle':
-      return current.map((task) =>
-        task.id === action.taskId
-          ? {
-              ...task,
-              status: task.status === 'completed' ? 'pending' : 'completed'
-            }
-          : task
-      );
-    case 'delete': {
-      // deleteTaskAction cascades to subtasks; mirror that here so a parent
-      // and its children disappear together rather than in two steps.
-      const removed = new Set([action.taskId]);
-      for (const task of current) {
-        if (task.parent_task_id === action.taskId) removed.add(task.id);
-      }
-      return current.filter((task) => !removed.has(task.id));
-    }
-  }
-}
-
-function errorKey(error: unknown): string {
-  if (!(error instanceof Error)) return 'generic';
-  return [
-    'imageType',
-    'imageSize',
-    'tooManyImages',
-    'fileType',
-    'fileSize',
-    'tooManyFiles',
-    'uploadFailed'
-  ].includes(error.message)
-    ? error.message
-    : 'generic';
-}
-
-function TaskEditor({
-  productId,
-  parentTaskId,
-  task,
-  members,
-  onDone,
-  onError
-}: {
-  productId: string;
-  parentTaskId: string | null;
-  task?: ProductTask;
-  members: TaskMemberOption[];
-  onDone: () => void;
-  onError: (key: string) => void;
-}) {
-  const t = useTranslations('tasks');
-  const fileInput = useRef<HTMLInputElement>(null);
-  const [title, setTitle] = useState(task?.title ?? '');
-  const [notes, setNotes] = useState(task?.notes ?? '');
-  const [dueDate, setDueDate] = useState(task?.due_date ?? '');
-  const [assigneeId, setAssigneeId] = useState(task?.assignee_id ?? '');
-  const [files, setFiles] = useState<File[]>([]);
-  const [pending, startTransition] = useTransition();
-
-  function handleFiles(nextFiles: File[]) {
-    const invalid = validateAttachmentFiles(nextFiles);
-    if (invalid) {
-      onError(invalid);
-      if (fileInput.current) fileInput.current.value = '';
-      return;
-    }
-    setFiles(nextFiles);
-  }
-
-  function submit(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    onError('');
-    startTransition(async () => {
-      const result = task
-        ? await updateTaskAction(task.id, {
-            title,
-            notes: notes.trim() || null,
-            dueDate: dueDate || null,
-            assigneeId: assigneeId || null,
-            status: task.status
-          })
-        : await createTaskAction({
-            productId,
-            parentTaskId,
-            title,
-            notes: notes.trim() || null,
-            dueDate: dueDate || null,
-            assigneeId: assigneeId || null
-          });
-
-      if (!result.ok) {
-        onError(result.error);
-        return;
-      }
-
-      // The database trigger has already written the notification rows; this
-      // only pushes the ones that asked to be emailed. Deliberately not
-      // awaited into the error path: a mail problem is not a task problem, and
-      // anything left pending is picked up by the next drain.
-      void drainNotificationEmailsAction();
-
-      if (!task && files.length > 0) {
-        let uploaded: StoredImage[] = [];
-        try {
-          uploaded = await uploadAttachments(
-            files,
-            `products/${productId}/tasks/${result.taskId}`
-          );
-          const attachmentResult = await addTaskAttachmentsAction(
-            result.taskId,
-            uploaded
-          );
-          if (!attachmentResult.ok) {
-            await removeStoredImages(uploaded.map((image) => image.key));
-            onError(attachmentResult.error);
-          }
-        } catch (error) {
-          onError(errorKey(error));
-        }
-      }
-
-      // No router.refresh(): the action called revalidatePath, so its own
-      // response already carries the re-rendered page.
-      onDone();
-    });
-  }
-
-  const heading = task
-    ? t('form.editTitle')
-    : parentTaskId
-      ? t('form.subtaskTitle')
-      : t('form.newTitle');
-
-  return (
-    <form
-      onSubmit={submit}
-      className="space-y-4 rounded-lg border border-accent/20 bg-accent/[0.035] p-4"
-    >
-      <div className="flex items-center justify-between gap-3">
-        <h3 className="text-sm font-medium">{heading}</h3>
-        <button
-          type="button"
-          onClick={onDone}
-          className="rounded p-1 text-faint transition-colors hover:bg-raised hover:text-ink"
-          aria-label={t('form.cancel')}
-        >
-          <X className="h-4 w-4" />
-        </button>
-      </div>
-
-      <label className="block space-y-1.5">
-        <span className="text-xs text-muted">{t('form.title')}</span>
-        <input
-          autoFocus
-          required
-          maxLength={240}
-          value={title}
-          onChange={(event) => setTitle(event.target.value)}
-          placeholder={t('form.titlePlaceholder')}
-          className={INPUT_CLASS}
-        />
-      </label>
-
-      <label className="block space-y-1.5">
-        <span className="text-xs text-muted">{t('form.notes')}</span>
-        <textarea
-          rows={3}
-          maxLength={5000}
-          value={notes}
-          onChange={(event) => setNotes(event.target.value)}
-          placeholder={t('form.notesPlaceholder')}
-          className={`${INPUT_CLASS} resize-y`}
-        />
-      </label>
-
-      <div className="grid gap-3 sm:grid-cols-2">
-        <label className="block space-y-1.5">
-          <span className="text-xs text-muted">{t('form.dueDate')}</span>
-          <input
-            type="date"
-            value={dueDate}
-            onChange={(event) => setDueDate(event.target.value)}
-            className={`${INPUT_CLASS} font-mono`}
-          />
-        </label>
-        <label className="block space-y-1.5">
-          <span className="text-xs text-muted">{t('form.assignee')}</span>
-          <select
-            value={assigneeId}
-            onChange={(event) => setAssigneeId(event.target.value)}
-            className={INPUT_CLASS}
-          >
-            <option value="">{t('form.unassigned')}</option>
-            {members.map((member) => (
-              <option key={member.userId} value={member.userId}>
-                {member.displayName}
-              </option>
-            ))}
-          </select>
-        </label>
-      </div>
-
-      {!task ? (
-        <label className="block space-y-1.5">
-          <span className="text-xs text-muted">{t('form.attachments')}</span>
-          <input
-            ref={fileInput}
-            type="file"
-            accept={DOCUMENT_ACCEPT}
-            multiple
-            onChange={(event) =>
-              handleFiles(Array.from(event.target.files ?? []))
-            }
-            className="block w-full text-xs text-muted file:me-3 file:rounded-md file:border-0 file:bg-raised file:px-3 file:py-2 file:text-xs file:font-medium file:text-ink hover:file:bg-hairline"
-          />
-          <span className="text-[11px] text-faint">
-            {files.length > 0
-              ? t('media.selectedFiles', {count: files.length})
-              : t('form.attachmentsHint')}
-          </span>
-        </label>
-      ) : null}
-
-      <div className="flex items-center gap-2">
-        <button
-          type="submit"
-          disabled={pending}
-          className="rounded-md bg-accent px-3.5 py-2 text-sm font-semibold text-bg transition-opacity hover:opacity-90 disabled:opacity-50"
-        >
-          {task
-            ? pending
-              ? t('form.saving')
-              : t('form.save')
-            : pending
-              ? t('form.creating')
-              : t('form.create')}
-        </button>
-        <button
-          type="button"
-          onClick={onDone}
-          className="rounded-md border border-hairline px-3.5 py-2 text-sm text-muted transition-colors hover:bg-raised hover:text-ink"
-        >
-          {t('form.cancel')}
-        </button>
-      </div>
-    </form>
-  );
-}
+type Actions = ReturnType<typeof useTaskActions>;
 
 function TaskCard({
   task,
@@ -316,207 +50,194 @@ function TaskCard({
   productId,
   members,
   locale,
-  editingTaskId,
-  addingUnderId,
-  uploadingTaskId,
+  today,
+  disabled,
+  addingUnder,
+  actions,
   onEdit,
   onAddSubtask,
-  onCloseEditor,
-  onError,
-  onToggle,
-  onDelete,
-  onAddFiles
+  onCloseSubtask
 }: {
   task: ProductTask;
   subtasks: ProductTask[];
   productId: string;
   members: TaskMemberOption[];
   locale: string;
-  editingTaskId: string | null;
-  addingUnderId: string | null;
-  uploadingTaskId: string | null;
-  onEdit: (taskId: string) => void;
+  today: string;
+  disabled: boolean;
+  addingUnder: string | null;
+  actions: Actions;
+  onEdit: (task: ProductTask) => void;
   onAddSubtask: (taskId: string) => void;
-  onCloseEditor: () => void;
-  onError: (key: string) => void;
-  onToggle: (task: ProductTask) => void;
-  onDelete: (task: ProductTask) => void;
-  onAddFiles: (task: ProductTask, files: File[]) => void;
+  onCloseSubtask: () => void;
 }) {
   const t = useTranslations('tasks');
-  const memberName = members.find(
-    (member) => member.userId === task.assignee_id
-  )?.displayName;
-  const isCompleted = task.status === 'completed';
-  const isOverdue =
-    !isCompleted &&
-    task.due_date !== null &&
-    new Date(`${task.due_date}T23:59:59`).getTime() < Date.now();
-  const date = task.due_date
-    ? new Intl.DateTimeFormat(locale, {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric'
-      }).format(new Date(`${task.due_date}T00:00:00`))
-    : null;
+  const toast = useToast();
+  const router = useRouter();
+  const fileInput = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
+  const memberName = (id: string | null) =>
+    id ? members.find((member) => member.userId === id)?.displayName ?? null : null;
+  const completed = task.status === 'completed';
+  const status = workflowOf(task);
+  const overdue = !completed && Boolean(task.due_date && task.due_date < today);
+  const isSubtask = Boolean(task.parent_task_id);
+  const doneSubtasks = subtasks.filter((subtask) => subtask.status === 'completed').length;
 
-  if (editingTaskId === task.id) {
-    return (
-      <TaskEditor
-        productId={productId}
-        parentTaskId={task.parent_task_id}
-        task={task}
-        members={members}
-        onDone={onCloseEditor}
-        onError={onError}
-      />
-    );
+  async function addFiles(files: File[]) {
+    const invalid = validateAttachmentFiles(files);
+    if (invalid) {
+      toast({message: t(`errors.${invalid}`), tone: 'error'});
+      return;
+    }
+    setUploading(true);
+    let uploaded: StoredImage[] = [];
+    try {
+      uploaded = await uploadAttachments(files, `products/${productId}/tasks/${task.id}`);
+      const result = await addTaskAttachmentsAction(task.id, uploaded);
+      if (!result.ok) {
+        await removeStoredImages(uploaded.map((image) => image.key));
+        toast({message: t(`errors.${result.error}`), tone: 'error'});
+        return;
+      }
+      toast({message: t('feedback.filesAdded', {count: uploaded.length})});
+      setTimeout(() => router.refresh(), 0);
+    } catch {
+      toast({message: t('errors.uploadFailed'), tone: 'error'});
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  async function toggleWatch() {
+    const result = await setTaskWatchAction(task.id, !task.is_watching);
+    if (!result.ok) {
+      toast({message: t('errors.generic'), tone: 'error'});
+      return;
+    }
+    toast({message: task.is_watching ? t('feedback.unwatched') : t('feedback.watching'), tone: 'info'});
+    setTimeout(() => router.refresh(), 0);
   }
 
   return (
     <article
       id={`task-${task.id}`}
-      className={`group rounded-lg border bg-panel transition-colors ${
-        isCompleted
-          ? 'border-hairline opacity-65'
-          : isOverdue
-            ? 'border-amber/25'
-            : 'border-hairline hover:border-accent/20'
-      }`}
+      className={`rounded-lg border bg-panel transition-colors ${
+        completed ? 'border-hairline opacity-70' : overdue ? 'border-amber/25' : 'border-hairline hover:border-accent/20'
+      } ${isSubtask ? 'bg-bg/40' : ''}`}
     >
-      <div className="p-4">
+      <div className={isSubtask ? 'p-3' : 'p-4'}>
         <div className="flex items-start gap-3">
           <button
             type="button"
-            onClick={() => onToggle(task)}
-            className={`mt-0.5 shrink-0 rounded-full transition-colors ${
-              isCompleted
-                ? 'text-accent'
-                : 'text-faint hover:text-accent'
+            onClick={() => actions.toggle(task)}
+            disabled={disabled}
+            className={`mt-0.5 shrink-0 rounded-full transition-colors disabled:opacity-40 ${
+              completed ? 'text-accent' : 'text-faint hover:text-accent'
             }`}
-            aria-label={
-              isCompleted ? t('task.reopen') : t('task.complete')
-            }
+            aria-label={completed ? t('task.reopen') : t('task.complete')}
           >
-            {isCompleted ? (
-              <CheckCircle2 className="h-5 w-5" strokeWidth={1.75} />
+            {completed ? (
+              <CheckCircle2 className={isSubtask ? 'h-4 w-4' : 'h-5 w-5'} strokeWidth={1.75} />
             ) : (
-              <Circle className="h-5 w-5" strokeWidth={1.75} />
+              <Circle className={isSubtask ? 'h-4 w-4' : 'h-5 w-5'} strokeWidth={1.75} />
             )}
           </button>
 
           <div className="min-w-0 flex-1">
             <div className="flex items-start justify-between gap-3">
-              <h3
-                className={`text-sm font-medium leading-5 ${
-                  isCompleted ? 'line-through text-muted' : 'text-ink'
+              <button
+                type="button"
+                onClick={() => actions.open(task.id)}
+                className={`text-start text-sm font-medium leading-5 transition-colors hover:text-accent ${
+                  completed ? 'text-muted line-through' : 'text-ink'
                 }`}
               >
                 {task.title}
-              </h3>
-              <div className="flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity focus-within:opacity-100 group-hover:opacity-100">
-                {!task.parent_task_id ? (
-                  <button
-                    type="button"
-                    onClick={() => onAddSubtask(task.id)}
-                    className="rounded p-1.5 text-faint transition-colors hover:bg-raised hover:text-ink"
-                    aria-label={t('task.addSubtask')}
-                  >
-                    <Plus className="h-3.5 w-3.5" />
-                  </button>
-                ) : null}
-                <TaskWatchToggle
-                  taskId={task.id}
-                  watching={task.is_watching}
-                  compact
+              </button>
+              <div className="flex shrink-0 items-center gap-1">
+                <StatusMenu
+                  status={status}
+                  overdue={overdue}
+                  onChange={
+                    disabled
+                      ? undefined
+                      : (next) => {
+                          if (next === 'done') actions.complete(task);
+                          else void actions.setStatus(task, next);
+                        }
+                  }
                 />
-                <label
-                  className="cursor-pointer rounded p-1.5 text-faint transition-colors hover:bg-raised hover:text-ink"
-                  aria-label={t('task.addFiles')}
-                  title={t('task.addFiles')}
-                >
-                  <Paperclip className="h-3.5 w-3.5" />
-                  <input
-                    type="file"
-                    accept={DOCUMENT_ACCEPT}
-                    multiple
-                    className="sr-only"
-                    disabled={uploadingTaskId === task.id}
-                    onChange={(event) => {
-                      const files = Array.from(event.target.files ?? []);
-                      event.target.value = '';
-                      if (files.length) onAddFiles(task, files);
-                    }}
+                {!disabled ? (
+                  <Menu
+                    label={t('task.actions')}
+                    items={[
+                      {key: 'open', label: t('task.open'), icon: ExternalLink, onSelect: () => actions.open(task.id)},
+                      {key: 'edit', label: t('task.edit'), icon: Pencil, onSelect: () => onEdit(task)},
+                      ...(!isSubtask
+                        ? [{key: 'sub', label: t('task.addSubtask'), icon: Plus, onSelect: () => onAddSubtask(task.id)}]
+                        : []),
+                      {
+                        key: 'files',
+                        label: uploading ? t('task.uploading') : t('task.addFiles'),
+                        icon: Paperclip,
+                        disabled: uploading,
+                        onSelect: () => fileInput.current?.click()
+                      },
+                      {
+                        key: 'watch',
+                        label: task.is_watching ? t('task.unwatch') : t('task.watch'),
+                        icon: task.is_watching ? BellOff : Bell,
+                        onSelect: () => void toggleWatch()
+                      },
+                      {key: 'delete', label: t('task.delete'), icon: Trash2, tone: 'danger', onSelect: () => void actions.remove(task)}
+                    ]}
                   />
-                </label>
-                <button
-                  type="button"
-                  onClick={() => onEdit(task.id)}
-                  className="rounded p-1.5 text-faint transition-colors hover:bg-raised hover:text-ink"
-                  aria-label={t('task.edit')}
-                >
-                  <Pencil className="h-3.5 w-3.5" />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => onDelete(task)}
-                  className="rounded p-1.5 text-faint transition-colors hover:bg-danger/10 hover:text-danger"
-                  aria-label={t('task.delete')}
-                >
-                  <Trash2 className="h-3.5 w-3.5" />
-                </button>
+                ) : null}
+                <input
+                  ref={fileInput}
+                  type="file"
+                  accept={DOCUMENT_ACCEPT}
+                  multiple
+                  className="sr-only"
+                  tabIndex={-1}
+                  aria-hidden="true"
+                  onChange={(event) => {
+                    const files = Array.from(event.target.files ?? []);
+                    event.target.value = '';
+                    if (files.length) void addFiles(files);
+                  }}
+                />
               </div>
             </div>
 
             {task.notes ? (
-              <p className="mt-1 whitespace-pre-wrap text-sm leading-relaxed text-muted">
-                {task.notes}
-              </p>
+              <p className="mt-1 line-clamp-3 whitespace-pre-wrap text-sm leading-relaxed text-muted">{task.notes}</p>
             ) : null}
 
             <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-[11px] text-faint">
-              {date ? (
-                <span
-                  className={`inline-flex items-center gap-1 ${
-                    isOverdue ? 'text-amber' : ''
-                  }`}
-                >
-                  <CalendarDays className="h-3 w-3" />
-                  {t('task.due', {date})}
-                  {isOverdue ? (
-                    <span className="rounded border border-amber/30 bg-amber/10 px-1 py-0.5 text-[9px] uppercase tracking-wider">
-                      {t('task.overdue')}
-                    </span>
-                  ) : null}
-                </span>
-              ) : null}
-              <span className="inline-flex items-center gap-1">
-                <UserRound className="h-3 w-3" />
-                {memberName
-                  ? t('task.assignedTo', {name: memberName})
-                  : t('task.unassigned')}
+              <DueLabel dueDate={task.due_date} today={today} locale={locale} completed={completed} />
+              <span className="inline-flex items-center gap-1.5">
+                <Avatar name={memberName(task.assignee_id)} size="xs" />
+                {memberName(task.assignee_id) ?? t('task.unassigned')}
               </span>
               {subtasks.length > 0 ? (
-                <span className="inline-flex items-center gap-1">
-                  <ChevronDown className="h-3 w-3" />
-                  {t('task.subtasks', {count: subtasks.length})}
+                <span
+                  className={`inline-flex items-center gap-1 ${doneSubtasks === subtasks.length ? 'text-accent' : ''}`}
+                >
+                  <ListTree className="h-3 w-3" strokeWidth={1.75} />
+                  <span className="font-mono">
+                    {doneSubtasks}/{subtasks.length}
+                  </span>
                 </span>
               ) : null}
-              {uploadingTaskId === task.id ? (
-                <span className="text-accent">{t('task.uploading')}</span>
-              ) : null}
+              {uploading ? <span className="text-accent">{t('task.uploading')}</span> : null}
             </div>
 
-            {isCompleted ? (
+            {completed ? (
               <TaskCompletionNote
                 note={task.completion_note}
-                completedBy={
-                  task.completed_by
-                    ? members.find(
-                        (option) => option.userId === task.completed_by
-                      )?.displayName ?? null
-                    : null
-                }
+                completedBy={memberName(task.completed_by)}
                 completedAt={task.completed_at}
               />
             ) : null}
@@ -530,7 +251,7 @@ function TaskCard({
         </div>
       </div>
 
-      {subtasks.length > 0 || addingUnderId === task.id ? (
+      {subtasks.length > 0 || addingUnder === task.id ? (
         <div className="space-y-2 border-t border-hairline bg-bg/25 p-3 ps-11">
           {subtasks.map((subtask) => (
             <TaskCard
@@ -540,26 +261,29 @@ function TaskCard({
               productId={productId}
               members={members}
               locale={locale}
-              editingTaskId={editingTaskId}
-              addingUnderId={addingUnderId}
-              uploadingTaskId={uploadingTaskId}
+              today={today}
+              disabled={disabled}
+              addingUnder={addingUnder}
+              actions={actions}
               onEdit={onEdit}
               onAddSubtask={onAddSubtask}
-              onCloseEditor={onCloseEditor}
-              onError={onError}
-              onToggle={onToggle}
-              onDelete={onDelete}
-              onAddFiles={onAddFiles}
+              onCloseSubtask={onCloseSubtask}
             />
           ))}
-          {addingUnderId === task.id ? (
-            <TaskEditor
-              productId={productId}
-              parentTaskId={task.id}
-              members={members}
-              onDone={onCloseEditor}
-              onError={onError}
-            />
+          {addingUnder === task.id ? (
+            <div className="space-y-1">
+              <TaskQuickAdd
+                compact
+                autoFocus
+                members={members}
+                productId={productId}
+                parentTaskId={task.id}
+                placeholder={t('drawer.addSubtask')}
+              />
+              <button type="button" onClick={onCloseSubtask} className="text-xs text-faint hover:text-ink">
+                {t('form.cancel')}
+              </button>
+            </div>
           ) : null}
         </div>
       ) : null}
@@ -569,140 +293,66 @@ function TaskCard({
 
 export default function ProductTasksPanel({
   productId,
+  productName,
   tasks,
   members,
   locale,
   disabled = false
 }: {
   productId: string;
+  productName: string;
   tasks: ProductTask[];
   members: TaskMemberOption[];
   locale: string;
   disabled?: boolean;
 }) {
   const t = useTranslations('tasks');
-  const [creatingRoot, setCreatingRoot] = useState(false);
-  const [addingUnderId, setAddingUnderId] = useState<string | null>(null);
-  const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
-  const [uploadingTaskId, setUploadingTaskId] = useState<string | null>(null);
-  const [completingTask, setCompletingTask] = useState<ProductTask | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [savingCompletion, startCompletionTransition] = useTransition();
-  const [, startTransition] = useTransition();
-  const [optimisticTasks, applyOptimistic] = useOptimistic(
-    tasks,
-    applyOptimisticAction
-  );
+  const today = businessDate();
+  const [addingUnder, setAddingUnder] = useState<string | null>(null);
+  const [editor, setEditor] = useState<
+    {kind: 'new'; defaults: TaskEditorDefaults} | {kind: 'edit'; task: ProductTask} | null
+  >(null);
+  const [items, override] = useTaskOverrides(tasks);
+  const actions = useTaskActions({onOverride: override});
+  const productOptions = useMemo(() => [{id: productId, name: productName}], [productId, productName]);
 
-  const roots = useMemo(
-    () => optimisticTasks.filter((task) => task.parent_task_id === null),
-    [optimisticTasks]
-  );
+  const roots = useMemo(() => items.filter((task) => task.parent_task_id === null), [items]);
   const children = useMemo(() => {
     const map = new Map<string, ProductTask[]>();
-    for (const task of optimisticTasks) {
+    for (const task of items) {
       if (!task.parent_task_id) continue;
       const list = map.get(task.parent_task_id) ?? [];
       list.push(task);
       map.set(task.parent_task_id, list);
     }
     return map;
-  }, [optimisticTasks]);
-  const openCount = optimisticTasks.filter(
-    (task) => task.status === 'pending'
-  ).length;
-  const completedCount = optimisticTasks.length - openCount;
-
-  function closeEditors() {
-    setCreatingRoot(false);
-    setAddingUnderId(null);
-    setEditingTaskId(null);
-  }
-
-  // Completing asks what was done; reopening does not ask anything.
-  function toggle(task: ProductTask) {
-    setError(null);
-    if (task.status !== 'completed') {
-      setCompletingTask(task);
-      return;
-    }
-    setStatus(task, 'pending');
-  }
-
-  function setStatus(
-    task: ProductTask,
-    status: TaskStatus,
-    completionNote?: string | null
-  ) {
-    // Its own transition, so the dialog's saving state is not shared with the
-    // delete and upload flows.
-    startCompletionTransition(async () => {
-      // Flip the row first — the await below costs a full round trip.
-      applyOptimistic({type: 'toggle', taskId: task.id});
-      const result = await updateTaskAction(task.id, {
-        title: task.title,
-        notes: task.notes,
-        dueDate: task.due_date,
-        assigneeId: task.assignee_id,
-        status,
-        ...(completionNote !== undefined ? {completionNote} : {})
-      });
-      setCompletingTask(null);
-      // On failure React rolls the optimistic flip back for us.
-      if (!result.ok) {
-        setError(result.error);
-        return;
-      }
-      void drainNotificationEmailsAction();
-    });
-  }
-
-  function removeTask(task: ProductTask) {
-    if (!window.confirm(t('task.deleteConfirm'))) return;
-    setError(null);
-    startTransition(async () => {
-      applyOptimistic({type: 'delete', taskId: task.id});
-      const result = await deleteTaskAction(task.id);
-      if (!result.ok) {
-        setError(result.error);
-        return;
-      }
-      if (result.storageKeys?.length) {
-        await removeStoredImages(result.storageKeys);
-      }
-    });
-  }
-
-  async function addFiles(task: ProductTask, files: File[]) {
-    const invalid = validateAttachmentFiles(files);
-    if (invalid) {
-      setError(invalid);
-      return;
-    }
-
-    setError(null);
-    setUploadingTaskId(task.id);
-    let uploaded: StoredImage[] = [];
-    try {
-      uploaded = await uploadAttachments(
-        files,
-        `products/${productId}/tasks/${task.id}`
-      );
-      const result = await addTaskAttachmentsAction(task.id, uploaded);
-      if (!result.ok) {
-        await removeStoredImages(uploaded.map((image) => image.key));
-        setError(result.error);
-        return;
-      }
-    } catch (uploadError) {
-      setError(errorKey(uploadError));
-    } finally {
-      setUploadingTaskId(null);
-    }
-  }
+  }, [items]);
+  // Open work first; finished work stays below, out of the way.
+  const ordered = useMemo(
+    () => [...roots.filter((task) => task.status === 'pending'), ...roots.filter((task) => task.status === 'completed')],
+    [roots]
+  );
+  const openCount = items.filter((task) => task.status === 'pending').length;
+  const completedCount = items.length - openCount;
 
   return (
     <section id="tasks" className="scroll-mt-8 space-y-4">
+      {actions.dialog}
+      {editor ? (
+        <TaskEditorModal
+          task={editor.kind === 'edit' ? editor.task : undefined}
+          defaults={editor.kind === 'new' ? editor.defaults : undefined}
+          lockProduct
+          products={productOptions}
+          members={members}
+          onClose={(createdId) => {
+            setEditor(null);
+            if (createdId) actions.open(createdId);
+          }}
+          onError={() => {}}
+        />
+      ) : null}
+
       <header className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
@@ -716,61 +366,27 @@ export default function ProductTasksPanel({
             <span>{t('section.completed', {count: completedCount})}</span>
           </div>
         </div>
-        {!disabled ? (
-          <button
-            type="button"
-            onClick={() => {
-              closeEditors();
-              setCreatingRoot(true);
-              setError(null);
-            }}
-            className="inline-flex items-center gap-2 rounded-md bg-accent px-3.5 py-2 text-sm font-semibold text-bg transition-opacity hover:opacity-90"
-          >
-            <Plus className="h-4 w-4" strokeWidth={2} />
-            {t('section.newTask')}
-          </button>
-        ) : null}
       </header>
 
-      {error ? (
-        <p className="rounded-md border border-danger/30 bg-danger/10 px-3 py-2 text-xs text-danger">
-          {t(`errors.${error}`)}
-        </p>
-      ) : null}
-
-      {completingTask ? (
-        <TaskCompletionDialog
-          taskTitle={completingTask.title}
-          initialNote={completingTask.completion_note}
-          pending={savingCompletion}
-          onCancel={() => setCompletingTask(null)}
-          onConfirm={(note) => setStatus(completingTask, 'completed', note)}
-        />
-      ) : null}
-
-      {creatingRoot ? (
-        <TaskEditor
-          productId={productId}
-          parentTaskId={null}
+      {!disabled ? (
+        <TaskQuickAdd
           members={members}
-          onDone={closeEditors}
-          onError={(key) => setError(key || null)}
+          productId={productId}
+          onMoreOptions={(draft) => setEditor({kind: 'new', defaults: {...draft, productId}})}
         />
       ) : null}
 
-      {roots.length === 0 && !creatingRoot ? (
+      {roots.length === 0 ? (
         <div className="rounded-lg border border-dashed border-hairline bg-panel/50 px-6 py-12 text-center">
           <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-full border border-accent/20 bg-accent/10 text-accent">
             <Check className="h-5 w-5" strokeWidth={1.75} />
           </div>
           <h3 className="mt-3 text-sm font-medium">{t('section.emptyTitle')}</h3>
-          <p className="mx-auto mt-1 max-w-md text-sm leading-relaxed text-muted">
-            {t('section.emptyBody')}
-          </p>
+          <p className="mx-auto mt-1 max-w-md text-sm leading-relaxed text-muted">{t('section.emptyBody')}</p>
         </div>
       ) : (
         <div className="space-y-3">
-          {roots.map((task) => (
+          {ordered.map((task) => (
             <TaskCard
               key={task.id}
               task={task}
@@ -778,24 +394,13 @@ export default function ProductTasksPanel({
               productId={productId}
               members={members}
               locale={locale}
-              editingTaskId={editingTaskId}
-              addingUnderId={addingUnderId}
-              uploadingTaskId={uploadingTaskId}
-              onEdit={(taskId) => {
-                closeEditors();
-                setEditingTaskId(taskId);
-                setError(null);
-              }}
-              onAddSubtask={(taskId) => {
-                closeEditors();
-                setAddingUnderId(taskId);
-                setError(null);
-              }}
-              onCloseEditor={closeEditors}
-              onError={(key) => setError(key || null)}
-              onToggle={toggle}
-              onDelete={removeTask}
-              onAddFiles={addFiles}
+              today={today}
+              disabled={disabled}
+              addingUnder={addingUnder}
+              actions={actions}
+              onEdit={(target) => setEditor({kind: 'edit', task: target})}
+              onAddSubtask={(taskId) => setAddingUnder(taskId)}
+              onCloseSubtask={() => setAddingUnder(null)}
             />
           ))}
         </div>

@@ -1,18 +1,23 @@
 {
   "title": "Releases",
-  "subtitle": "Every cycle in flight, what it still needs, and what it took to ship the last one.",
+  "subtitle": "Every release by stage: what it is waiting on, and what it took to ship.",
   "newRelease": "New release",
   "searchPlaceholder": "Search versions, products, or owners…",
   "allProducts": "All products",
-  "noTargetDate": "No date",
-  "overdue": "Overdue",
-  "releasedAt": "Released",
+  "noTargetDate": "No target date",
+  "overdue": "Past target",
+  "releasedAt": "Shipped",
   "backToReleases": "All releases",
-  "edit": "Edit release",
+  "edit": {
+    "action": "Edit",
+    "title": "Edit release",
+    "save": "Save",
+    "saving": "Saving…"
+  },
   "delete": "Delete release",
   "deleteConfirm": "Delete release {version}? Its checklist and history go with it. Tasks scoped into it are kept and unscoped.",
   "emptyTitle": "No releases match this view",
-  "emptyBody": "Adjust the filters, or plan the next cycle from a product page.",
+  "emptyBody": "Nothing in this view. A cycle opens once a product has passed Gate 1.",
   "openOfTotal": "{open} open of {total}",
   "scope": {
     "active": "In flight",
@@ -25,11 +30,12 @@
     "addTitle": "Add unscoped tasks",
     "remove": "Remove from release",
     "noneAvailable": "Every open task on this product is already in a release.",
-    "unassigned": "Unassigned"
+    "unassigned": "Unassigned",
+    "shipped": "Shipped"
   },
   "stats": {
     "active": "In flight",
-    "overdue": "Past target",
+    "overdue": "{count} past target",
     "openWork": "Open work",
     "released": "Shipped"
   },
@@ -44,7 +50,13 @@
   "panel": {
     "title": "Releases",
     "subtitle": "The cycles this product ships in.",
-    "empty": "No releases yet. Plan one to give the next batch of work a date and a checklist."
+    "empty": "No releases yet. Plan one to give the next batch of work a date and a checklist.",
+    "mvp": "MVP",
+    "filed": "{filed}/{required} filed",
+    "noGoal": "No goal set yet",
+    "emptyTitle": "No releases yet",
+    "emptyBody": "The MVP appears when the product passes Gate 1. Cycles are planned here after that.",
+    "needsGate": "Cycles open once the product has passed Gate 1."
   },
   "form": {
     "newTitle": "New release",
@@ -54,16 +66,19 @@
     "versionPlaceholder": "1.4.0",
     "name": "Name",
     "namePlaceholder": "What this release is about…",
-    "notes": "Release notes",
+    "notes": "Notes",
     "notesPlaceholder": "What changed, what to watch, what to tell users…",
     "targetDate": "Target date",
-    "owner": "Release owner",
+    "owner": "Owner",
     "noOwner": "No owner",
     "create": "Create release",
     "creating": "Creating…",
     "save": "Save changes",
     "saving": "Saving…",
-    "cancel": "Cancel"
+    "cancel": "Cancel",
+    "goal": "Goal",
+    "successCriteria": "Success criteria",
+    "riskTier": "Risk tier"
   },
   "checklist": {
     "title": "Checklist",
@@ -126,21 +141,188 @@
     "moved": "{from} → {to}",
     "someone": "Someone",
     "selfApproved": "Self-approved",
-    "waiver": "Waiver:",
+    "waiver": "Waiver: {reason}",
     "gaps": "Shipped with: {gaps}",
-    "openTasksGap": "open tasks"
+    "openTasksGap": "open tasks",
+    "approval": "Spec approved",
+    "stage": "{from} → {to}",
+    "status": "Status: {from} → {to}",
+    "missing": "Open at the time: {items}"
   },
   "errors": {
     "generic": "Something went wrong. Please try again.",
-    "invalid": "Check the release details and try again.",
+    "invalid": "Check the details and try again.",
     "forbidden": "Only the product owner or an admin can do that.",
-    "adminRequired": "High-risk products need an admin for this.",
+    "adminRequired": "Only an admin can do this for a high-risk release.",
     "archived": "This product is archived.",
-    "notFound": "The release could not be found.",
+    "notFound": "That release could not be found.",
     "duplicateVersion": "That version already exists for this product.",
-    "invalidTransition": "A release cannot move straight to that status.",
+    "invalidTransition": "That change is not allowed from here.",
     "checklistClosed": "This release has shipped or been cancelled; its checklist is closed.",
-    "releasedImmutable": "A released version cannot be deleted.",
-    "waiverRequired": "Write down why this ships with gaps."
-  }
+    "releasedImmutable": "A shipped release cannot be deleted.",
+    "waiverRequired": "Write down why this ships with gaps.",
+    "stageIncomplete": "This stage cannot close yet. See what is still needed.",
+    "noteRequired": "Add a note for this move.",
+    "reasonRequired": "Say why.",
+    "cannotMoveBack": "A shipped release does not move back by stage. Roll it back instead.",
+    "notReachedYet": "That evidence belongs to a stage the release has not reached.",
+    "onlyCurrentStage": "Only evidence from the current stage can be removed.",
+    "linkRequired": "Add a link.",
+    "invalidLink": "The link must start with https:// or http://.",
+    "alreadyApproved": "The spec is already approved.",
+    "goalRequired": "Give the cycle a one-line goal.",
+    "gateOneRequired": "Cycles open once the product has passed Gate 1.",
+    "versionRequired": "Give the cycle a version.",
+    "cancelled": "This release is cancelled. Reopen it first.",
+    "rolledBack": "This release was rolled back. Reopen it first.",
+    "alreadyInStage": "The release is already in that stage.",
+    "oneStepAtATime": "Move one stage at a time.",
+    "wrongStage": "That happens at a different stage.",
+    "mvpImmutable": "The MVP cannot be deleted."
+  },
+  "board": {
+    "none": "Nothing here"
+  },
+  "kind": {
+    "mvp": "MVP",
+    "cycle": "Cycle"
+  },
+  "stage": {
+    "plan": "Plan",
+    "design": "Design",
+    "build": "Build",
+    "test": "Test",
+    "deploy": "Deploy",
+    "maintain": "Maintain",
+    "filed": "{filed}/{required} filed",
+    "current": "Current stage",
+    "done": "Done",
+    "ahead": "Ahead",
+    "advance": "Move to {stage}",
+    "back": "Back to {stage}",
+    "closeTitle": "Close {stage}",
+    "backTitle": "Move back a stage",
+    "missingTitle": "Cannot close yet. Still needed:",
+    "gapsTitle": "Open, recorded against the release:",
+    "waivable": "(waivable for high risk)",
+    "waiverHint": "High risk ships only with a written reason for what is still open.",
+    "adminOnly": "Only an admin can move a high-risk release.",
+    "ready": "Everything this stage needs is in place.",
+    "reason": "Why is the release going back?",
+    "note": "Note (optional)",
+    "waiver": "Waiver: why this ships with the gaps above",
+    "moving": "Moving…",
+    "confirm": "Move",
+    "confirmBack": "Move back"
+  },
+  "cycle": {
+    "title": "New cycle",
+    "subtitle": "A version, a one-line goal and a target date. Its stages and evidence follow from the risk tier.",
+    "newAction": "New cycle",
+    "product": "Product",
+    "pickProduct": "Choose a product",
+    "version": "Version",
+    "goal": "Goal",
+    "goalPlaceholder": "What this cycle delivers, in one line",
+    "criteria": "Success criteria",
+    "targetDate": "Target date",
+    "create": "Create cycle",
+    "creating": "Creating…"
+  },
+  "risk": {
+    "low": "Low risk",
+    "medium": "Medium risk",
+    "high": "High risk",
+    "hint": "The risk tier decides which evidence a release requires and whether shipping needs a waiver.",
+    "short": {
+      "low": "Low",
+      "medium": "Medium",
+      "high": "High"
+    }
+  },
+  "approval": {
+    "title": "Spec approval",
+    "hint": "The release owner approves the spec before it moves to Build.",
+    "approve": "Approve spec",
+    "approved": "Approved on {date}",
+    "selfApproved": "approved by the release owner"
+  },
+  "test": {
+    "title": "Test result",
+    "hint": "Record the outcome. Open findings must be closed before the release can deploy.",
+    "result": "Result",
+    "pass": "Passed",
+    "fail": "Failed",
+    "open": "Open findings",
+    "closed": "Closed findings",
+    "save": "Save result"
+  },
+  "artifacts": {
+    "intent": "Intent",
+    "spec": "Spec",
+    "plan": "Plan document",
+    "threat_model": "Threat model",
+    "pull_request": "Pull request",
+    "test_results": "Test results",
+    "review_findings": "Review findings",
+    "security_review": "Security review",
+    "release_tag": "Release tag",
+    "deploy_checklist": "Deploy checklist",
+    "security_scan": "Security scan",
+    "incident": "Incident",
+    "metric": "Metric",
+    "runbook": "Runbook",
+    "none": "Nothing filed at this stage yet.",
+    "kind": "Kind",
+    "title": "Title",
+    "url": "Link",
+    "commit": "Commit or tag (optional)",
+    "file": "File evidence",
+    "remove": "Remove",
+    "removeConfirm": "Remove this evidence from the release?",
+    "carried": "carried to next",
+    "carryHint": "Carry this into the next release’s intent",
+    "requiredTag": "required"
+  },
+  "evidence": {
+    "title": "{stage}: evidence",
+    "required": "Required here: {keys}",
+    "none": "nothing",
+    "earlier": "Earlier stages",
+    "count": "{count} filed"
+  },
+  "exit": {
+    "title": "Cancel, roll back or reopen",
+    "to": {
+      "cancelled": "Cancel release",
+      "rolled_back": "Roll back",
+      "in_progress": "Reopen to in progress",
+      "planned": "Reopen to planned"
+    },
+    "confirm": {
+      "cancelled": "The release will not go out. Say why; the reason stays in the log.",
+      "rolled_back": "A shipped release is pulled back. Say why; the shipping date is kept.",
+      "in_progress": "Fix and ship again from Build.",
+      "planned": "Start the loop again from Plan."
+    },
+    "apply": {
+      "cancelled": "Cancel release",
+      "rolled_back": "Roll back",
+      "in_progress": "Reopen",
+      "planned": "Reopen"
+    }
+  },
+  "gap": {
+    "waivableNote": "Unmet checks and open tasks can be waived for a high-risk release, with a written reason.",
+    "link": "Nothing filed at this stage yet",
+    "specApproval": "Spec not yet approved",
+    "testPass": "Tests not passed",
+    "findingsClosed": "Open review findings",
+    "openTasks": "Open tasks in the release",
+    "unknown": "Something else"
+  },
+  "actions": {
+    "cancel": "Cancel"
+  },
+  "stageLabel": "Stage"
 }

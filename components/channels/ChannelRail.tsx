@@ -1,9 +1,10 @@
 'use client';
 
 import {useMemo, useState, useTransition} from 'react';
-import {Hash, MessageSquare, Package, Plus, X} from 'lucide-react';
+import {Briefcase, Hash, MessageSquare, Package, Plus, X} from 'lucide-react';
 import {useTranslations} from 'next-intl';
 
+import {useConfirm} from '@/components/ui/ConfirmProvider';
 import {Link, usePathname, useRouter} from '@/i18n/navigation';
 import {pushAfterAction} from '@/lib/navigation-guard';
 import {
@@ -46,6 +47,7 @@ export default function ChannelRail({
   defaultChannelId: string | null;
 }) {
   const t = useTranslations('channels');
+  const confirm = useConfirm();
   const router = useRouter();
   const pathname = usePathname();
 
@@ -95,6 +97,7 @@ export default function ChannelRail({
   const roots = (byParent.get('') ?? []).slice().sort(order);
   const standingRoots = roots.filter((c) => c.kind === 'standing');
   const productRoots = roots.filter((c) => c.kind === 'product');
+  const projectRoots = roots.filter((c) => c.kind === 'project');
   // Sorted by the name actually on screen — the other person's — rather than by
   // the slug, which is a pair of ids and sorts meaninglessly.
   const dmRoots = roots
@@ -151,11 +154,11 @@ export default function ChannelRail({
     });
   }
 
-  function remove(channel: Channel) {
+  async function remove(channel: Channel) {
     // The confirm cannot promise which of the two will happen — only the server
     // knows whether the channel is empty — so it states the rule instead of
     // guessing, and the outcome is reported afterwards.
-    if (!window.confirm(t('remove.confirm', {name: channelLabel(channel, locale)}))) {
+    if (!await confirm(t('remove.confirm', {name: channelLabel(channel, locale)}))) {
       return;
     }
     setError(null);
@@ -255,6 +258,8 @@ export default function ChannelRail({
           >
             {channel.kind === 'product' && channel.is_primary ? (
               <Package className="h-3.5 w-3.5 shrink-0" strokeWidth={1.75} />
+            ) : channel.kind === 'project' && channel.is_primary ? (
+              <Briefcase className="h-3.5 w-3.5 shrink-0" strokeWidth={1.75} />
             ) : (
               <Hash className="h-3.5 w-3.5 shrink-0" strokeWidth={1.75} />
             )}
@@ -366,6 +371,19 @@ export default function ChannelRail({
           </p>
           <ul className="flex flex-col gap-0.5">
             {productRoots.map((channel) => (
+              <Row key={channel.id} channel={channel} depth={0} />
+            ))}
+          </ul>
+        </>
+      ) : null}
+
+      {projectRoots.length > 0 ? (
+        <>
+          <p className="px-2 pb-2 pt-4 font-mono text-[10px] uppercase tracking-widest text-faint">
+            {t('sections.projects')}
+          </p>
+          <ul className="flex flex-col gap-0.5">
+            {projectRoots.map((channel) => (
               <Row key={channel.id} channel={channel} depth={0} />
             ))}
           </ul>

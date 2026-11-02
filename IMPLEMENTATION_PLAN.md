@@ -343,6 +343,72 @@ client, a hydration mismatch (#418) that made React regenerate the tree and
 drop revalidated updates — the main cause of "saved but the screen didn't
 change" on existing screens too.
 
+### M15 — Release 0.3: projects, business track, release loop · `20261027100000_…` → `20261027104000_…`
+
+*One product, two tracks; consultation is a project.* The plan and the decisions
+taken are in [docs/release-0.3-plan.md](docs/release-0.3-plan.md).
+
+- **Business track** — `products.business_stage` (Idea → Board), moved only by
+  `move_business_stage()`. Gate 1 needs an operator and a founder's go, and
+  passing it calls `start_development()`. Gate 2 needs a founder's PMF go with
+  criteria and evidence. `product_gate_decisions` and
+  `business_stage_transitions` are append-only. Checklists are seeded per stage
+  and guide without blocking.
+- **Release loop** — `product_releases` gains a stage, a goal and the snapshotted
+  artifact requirements. `move_release_stage()` closes a stage only with its
+  artifacts filed, and status is derived from stage. Spec approval, the test
+  result, release checks and open tasks are the other gaps. High-risk releases
+  need an admin and a waiver reason for anything still open.
+- **Projects** — `engagements` is renamed to `projects`. A consultation win opens
+  one in Kickoff. `move_project_phase()` logs every move and asks for an outcome
+  on close. Each project has a channel that archives with it.
+  `capture_project_idea()` links a product at Idea to its project.
+- **Retirement** — the lifecycle tables are read-only. `lifecycle_backfill_0_3()`
+  moves existing products onto the new tracks.
+- **Projections** — `product_overview` (rebuilt), `governance_gate_log`,
+  `dashboard_strips()`, `dashboard_attention()`, and `my_waiting_on()` with the
+  three new kinds.
+
+*Verified:* 48 migrations replay clean on Postgres 16 (`scripts/test-sql.sh`,
+run in a container). The SQL suites `tests/sql/*` pass, including the business
+track, the release loop, projects, the dashboard, and the lifecycle backfill
+(run twice on fixture data). `tsc`, `eslint`, `vitest` (85 unit tests for the
+TypeScript mirrors), `node --test` (81), and `next build` all pass.
+
+### M16 — Release 0.3: screens and removal of the lifecycle
+
+- **Projects** — `/projects` (filters by owner, account, phase, stale), `/projects/new`,
+  and `/projects/[id]` with a phase stepper, deliverables, tasks, ideas, team
+  and a log. The account and deal pages show their projects.
+- **Product page** — a header with both tracks, then tabs: Business (stage
+  stepper, gate decisions, checklists, business details, documents, customers),
+  Development (releases, repository, status updates), Sales, Tasks, Knowledge
+  (track and release filters and an editor), Channel.
+- **Releases** — the board is grouped by stage. The release page shows the six
+  stages, the evidence for the current stage, approval and test result,
+  checks, scoped tasks, exits, and the log. Cycles are created with a goal.
+- **Governance** — one gate log, release evidence coverage, and an admin matrix
+  for the artifact policy.
+- **Dashboard** — four strips of linked counts and an attention list.
+- **Removal** — `lib/lifecycle*`, `components/lifecycle/*`, and the lifecycle
+  actions are gone. The agent functions, the MCP tools and the assistant use the
+  business stage and the releases. The MCP `lifecycle` grant keeps its name so
+  existing tokens still work; it now covers release evidence and project notes.
+- **Admins** — Settings → Members can mark founders.
+
+### M17 — Release 0.3: verification and release log
+
+- The 0.3 entry is the top of `lib/platform-releases.ts` (EN and AR), and
+  `package.json` is `0.3.0`.
+
+*Not verified here:* the signed-in screens. The build environment cannot sign in
+as a team member, so the flows were checked by the SQL suites, the unit tests,
+and the build, not by clicking through the app. The first click-through is the
+team's.
+
+*Team data, not seeded by the build:* founders, operators, origination and
+ownership, business owners, and the cycles and release history after 0.1.
+
 ## 4. Outstanding work
 
 ### Blocked on a credential

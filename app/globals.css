@@ -168,3 +168,23 @@ html[dir='rtl'] .assistant-launcher { inset-inline-start: 1.5rem; inset-inline-e
 @media (prefers-reduced-motion: reduce) {
   .dashboard-reveal { animation: none; }
 }
+
+/* Task panel slides in from the inline end; toasts rise. Both respect
+   reduced-motion. */
+@keyframes drawer-enter {
+  from { transform: translateX(var(--drawer-from, 24px)); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+[dir='rtl'] .drawer-enter { --drawer-from: -24px; }
+.drawer-enter { animation: drawer-enter 180ms ease-out both; }
+
+@keyframes toast-enter {
+  from { transform: translateY(8px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+.toast-enter { animation: toast-enter 160ms ease-out both; }
+
+@media (prefers-reduced-motion: reduce) {
+  .drawer-enter,
+  .toast-enter { animation: none; }
+}

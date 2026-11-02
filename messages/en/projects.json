@@ -1,0 +1,149 @@
+{
+  "list": {
+    "title": "Projects",
+    "subtitle": "Consultation engagements, from kickoff to close.",
+    "new": "New project",
+    "allPhases": "All phases",
+    "staleOnly": "Stale only",
+    "filterOwner": "Filter by owner",
+    "filterAccount": "Filter by account",
+    "anyOwner": "Any owner",
+    "anyAccount": "Any account",
+    "apply": "Apply",
+    "empty": "No projects match this view. A project opens when a consultation deal is won, or from an account.",
+    "columns": {
+      "name": "Project",
+      "account": "Account",
+      "owner": "Owner",
+      "phase": "Phase",
+      "dates": "Dates",
+      "activity": "Last activity",
+      "work": "Work"
+    },
+    "work": "Open tasks: {open} · Ideas: {ideas}",
+    "stale": "Stale"
+  },
+  "phases": {
+    "kickoff": "Kickoff",
+    "discovery": "Discovery",
+    "delivery": "Delivery",
+    "handover": "Handover",
+    "closed": "Closed"
+  },
+  "ownership": {
+    "client": "Client-owned code",
+    "code92_full": "Code92 owns the code",
+    "code92_partial": "Code92 owns part of the code"
+  },
+  "new": {
+    "title": "New project",
+    "subtitle": "An engagement the team is delivering for an account."
+  },
+  "form": {
+    "account": "Account",
+    "pickAccount": "Choose an account",
+    "name": "Name",
+    "owner": "Owner",
+    "pickOwner": "Choose an owner",
+    "ownership": "Code ownership",
+    "notSet": "Not set",
+    "startDate": "Start date",
+    "targetEnd": "Target end date",
+    "notes": "Notes",
+    "create": "Create project",
+    "save": "Save changes",
+    "saving": "Saving…"
+  },
+  "detail": {
+    "back": "All projects",
+    "owner": "Owner",
+    "start": "Start",
+    "target": "Target end",
+    "activity": "Last activity",
+    "staleAfter": "Stale after {days} days without activity",
+    "outcome": "Outcome",
+    "fromDeal": "From the deal",
+    "room": "Project room",
+    "edit": "Edit details"
+  },
+  "watch": {
+    "watch": "Watch",
+    "watching": "Watching"
+  },
+  "phase": {
+    "closeTitle": "Close the project",
+    "closeHint": "Say what was delivered. This is the outcome the record keeps.",
+    "outcome": "Outcome",
+    "close": "Close project",
+    "closing": "Closing…"
+  },
+  "deliverables": {
+    "title": "Deliverables",
+    "empty": "No deliverables linked yet. Link the reports and documents the project produces.",
+    "unlink": "Unlink",
+    "pick": "Choose a knowledge item",
+    "link": "Link"
+  },
+  "tasks": {
+    "title": "Tasks",
+    "empty": "No tasks yet.",
+    "placeholder": "Add a task…",
+    "add": "Add"
+  },
+  "team": {
+    "title": "Team",
+    "empty": "No one else is on this project yet.",
+    "pick": "Add someone",
+    "add": "Add",
+    "remove": "Remove from the project"
+  },
+  "ideas": {
+    "title": "Ideas from this project",
+    "empty": "No ideas captured yet.",
+    "action": "Capture an idea",
+    "stage": {
+      "idea": "Idea",
+      "concept": "Concept",
+      "build": "Build",
+      "venture": "Venture",
+      "company": "Company",
+      "board": "Board"
+    }
+  },
+  "idea": {
+    "title": "Capture an idea",
+    "hint": "Creates a product at Idea, linked to this project. Nothing else changes.",
+    "name": "Name",
+    "problem": "Problem statement",
+    "capture": "Capture",
+    "capturing": "Capturing…",
+    "action": "Capture an idea"
+  },
+  "log": {
+    "title": "Log",
+    "placeholder": "Add a note for the record…",
+    "add": "Add note",
+    "empty": "Nothing logged yet.",
+    "someone": "Someone",
+    "created": "opened the project.",
+    "phaseChange": "moved the project from {from} to {to}.",
+    "fieldChange": "changed {field}.",
+    "ideaCaptured": "captured an idea.",
+    "noted": "added a note."
+  },
+  "actions": {
+    "cancel": "Cancel"
+  },
+  "errors": {
+    "outcomeRequired": "Say what was delivered before closing.",
+    "alreadyInPhase": "The project is already in that phase.",
+    "notFound": "That project could not be found.",
+    "forbidden": "You cannot change this project.",
+    "datesOrder": "The end date must be after the start date.",
+    "nameRequired": "Give the idea a name of up to 200 characters.",
+    "problemRequired": "Describe the problem the idea solves.",
+    "duplicate": "That already exists.",
+    "generic": "Something went wrong. Please try again.",
+    "invalid": "Check the details and try again."
+  }
+}

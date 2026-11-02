@@ -5,7 +5,7 @@ import {z} from 'zod';
 
 import {getOwnMembership, getSessionUser} from '@/lib/auth';
 import {createInsForgeServerClient} from '@/lib/insforge/server';
-import type {RiskTier} from '@/lib/lifecycle';
+import {RISK_TIERS, type RiskTier} from '@/lib/risk';
 
 // Shared product types used by the registry pages and components.
 
@@ -39,7 +39,7 @@ export type Product = {
   archived_at: string | null;
   logo_url: string | null;
   logo_key: string | null;
-  // Set by admins only (products_guard_risk_tier); drives the lifecycle gates.
+  // Set by admins only (products_guard_risk_tier); the default for releases.
   risk_tier: RiskTier;
   // Written exclusively by the github-sync edge function after it confirms the
   // repository is private and owned by the org — no client holds an INSERT or
@@ -69,7 +69,9 @@ const productInputSchema = z.object({
   description: z.string().trim().max(2000).nullable(),
   descriptionAr: z.string().trim().max(2000).nullable(),
   category: z.string().trim().max(80).nullable(),
-  stage: z.enum(['idea', 'development', 'beta', 'live', 'paused', 'sunset']),
+  // Optional since 0.3: the market stage is no longer chosen in the product
+  // form. The database default (idea) applies when it is not sent.
+  stage: z.enum(['idea', 'development', 'beta', 'live', 'paused', 'sunset']).optional(),
   keywords: z.array(z.string().trim().min(1).max(60)).max(20),
   links: z.record(z.string().trim().min(1).max(60), z.string().url().max(500)),
   reviewIntervalDays: z.number().int().min(1).max(365),
@@ -234,4 +236,33 @@ export async function setProductArchivedAction(
 
   revalidateProductPaths(productId);
   return {ok: true, productId};
+}
+
+// Admin only: the tier decides which evidence a product's releases require, and
+// whether shipping needs a written waiver. The database enforces the same rule.
+export async function setProductRiskTierAction(
+  productId: string,
+  riskTier: RiskTier
+): Promise<ProductActionResult> {
+  const parsed = z
+    .object({productId: z.string().uuid(), riskTier: z.enum(RISK_TIERS)})
+    .safeParse({productId, riskTier});
+  if (!parsed.success) return {ok: false, error: 'invalid'};
+
+  const caller = await requireActiveCaller();
+  if (!caller) return {ok: false, error: 'forbidden'};
+  if (caller.member.role !== 'admin') return {ok: false, error: 'adminRequired'};
+
+  const insforge = await createInsForgeServerClient();
+  const {data, error} = await insforge.database
+    .from('products')
+    .update({risk_tier: parsed.data.riskTier})
+    .eq('id', parsed.data.productId)
+    .select('id');
+
+  if (error) return {ok: false, error: 'generic'};
+  if (!data?.length) return {ok: false, error: 'forbidden'};
+
+  revalidateProductPaths(parsed.data.productId);
+  return {ok: true, productId: parsed.data.productId};
 }

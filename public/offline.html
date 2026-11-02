@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#11151C">
+  <title>Offline · Code 92</title>
+  <style>
+    :root {
+      --bg: #0B0E13; --panel: #11151C; --hairline: rgba(255,255,255,0.07);
+      --accent: 52, 211, 153; --ink: #E6EAF2; --muted: #8B95A7; --faint: #5B6577;
+      color-scheme: dark;
+    }
+    @media (prefers-color-scheme: light) {
+      :root {
+        --bg: #F4F7F6; --panel: #FFFFFF; --hairline: #D3DCD9;
+        --accent: 5, 150, 105; --ink: #111827; --muted: #4B5563; --faint: #6B7280;
+        color-scheme: light;
+      }
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; height: 100%; }
+    body {
+      display: flex; align-items: center; justify-content: center;
+      padding: max(16px, env(safe-area-inset-top)) 16px max(16px, env(safe-area-inset-bottom));
+      background: var(--bg); color: var(--ink);
+      font: 14px/1.5 system-ui, -apple-system, "Segoe UI", "Noto Sans Arabic", sans-serif;
+    }
+    main {
+      width: 100%; max-width: 360px; padding: 24px;
+      background: var(--panel); border: 1px solid var(--hairline); border-radius: 10px;
+    }
+    .mark {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 32px; height: 32px; border-radius: 8px;
+      border: 1px solid rgba(var(--accent), 0.3); background: rgba(var(--accent), 0.1);
+      color: rgb(var(--accent)); font: 600 12px ui-monospace, "SF Mono", monospace;
+    }
+    h1 { margin: 16px 0 4px; font-size: 16px; font-weight: 600; }
+    p { margin: 0; color: var(--muted); }
+    hr { margin: 16px 0; border: 0; border-top: 1px solid var(--hairline); }
+    button {
+      margin-top: 20px; width: 100%; padding: 10px 12px; border: 0; border-radius: 6px;
+      background: rgb(var(--accent)); color: var(--bg); font: inherit; font-weight: 600; cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <span class="mark">92</span>
+    <h1>You're offline</h1>
+    <p>Code 92 Command Center needs a connection to load. Check your network and try again.</p>
+    <hr>
+    <div dir="rtl" lang="ar">
+      <h1>لا يوجد اتصال</h1>
+      <p>يحتاج مركز قيادة Code 92 إلى اتصال بالإنترنت. تحقق من الشبكة ثم أعد المحاولة.</p>
+    </div>
+    <button type="button" onclick="location.reload()">Try again · أعد المحاولة</button>
+  </main>
+  <script>
+    // Reload on its own as soon as the connection comes back.
+    window.addEventListener('online', function () { location.reload(); });
+  </script>
+</body>
+</html>

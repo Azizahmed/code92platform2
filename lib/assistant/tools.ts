@@ -21,10 +21,10 @@ export function createToolExecutor(insforge: ServerClient) {
           return {ok: false, error: 'invalid'};
         }
         const sources = {
-          products: {table: 'product_overview', columns: 'id, name, description, stage, health, owner_id, owner_name, next_review_at, is_overdue, last_update_summary, risk_tier, lifecycle_phase, lifecycle_state', label: 'name', order: 'name', route: 'products'},
+          products: {table: 'product_overview', columns: 'id, name, description, business_stage, health, owner_id, owner_name, next_review_at, is_overdue, last_update_summary, risk_tier, current_release_version, current_release_stage', label: 'name', order: 'name', route: 'products'},
           tasks: {table: 'product_tasks', columns: 'id, product_id, parent_task_id, title, notes, status, due_date, assignee_id, completion_note', label: 'title', order: 'created_at', route: 'tasks'},
           members: {table: 'team_members', columns: 'user_id, display_name, role', label: 'display_name', order: 'display_name', route: 'settings'},
-          releases: {table: 'release_overview', columns: 'id, product_id, name, status, target_date', label: 'name', order: 'created_at', route: 'releases'}
+          releases: {table: 'release_overview', columns: 'id, product_id, version, name, status, stage, target_date', label: 'version', order: 'created_at', route: 'releases'}
         } as const;
         const source = sources[args.entity];
         let query = insforge.database.from(source.table).select(source.columns)

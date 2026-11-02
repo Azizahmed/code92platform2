@@ -57,7 +57,10 @@
       "deal_closing": "صفقة متوقع إغلاقها هذا الأسبوع",
       "gate_ready": "بوابة جاهزة لقرارك",
       "proposal_pending": "مقترح وكيل بانتظارك",
-      "mention_unreplied": "أشار إليك — دون رد بعد"
+      "mention_unreplied": "أشار إليك — دون رد بعد",
+      "business_gate_pending": "قرار بوابة",
+      "release_spec_approval": "اعتماد المواصفات",
+      "release_stage_ready": "مرحلة جاهزة للإغلاق"
     },
     "when": {
       "review_overdue": "مستحقة {date}",
@@ -65,7 +68,10 @@
       "deal_closing": "تُغلق {date}",
       "gate_ready": "منذ {date}",
       "proposal_pending": "{date}",
-      "mention_unreplied": "{date}"
+      "mention_unreplied": "{date}",
+      "business_gate_pending": "بانتظار القرار",
+      "release_spec_approval": "بانتظار الاعتماد",
+      "release_stage_ready": "الموعد المستهدف {date}"
     },
     "actions": {
       "review_overdue": "نشر تحديث",
@@ -73,7 +79,10 @@
       "deal_closing": "فتح الصفقة",
       "gate_ready": "مراجعة البوابة",
       "proposal_pending": "اتخاذ القرار",
-      "mention_unreplied": "الرد"
+      "mention_unreplied": "الرد",
+      "business_gate_pending": "قرّر",
+      "release_spec_approval": "راجع المواصفات",
+      "release_stage_ready": "أغلق المرحلة"
     },
     "gatePhase": "{phase} — كل الأدلة المطلوبة مرفوعة",
     "proposalActions": {
@@ -82,7 +91,10 @@
       "task_update": "تعديل مهمة",
       "status_update": "تحديث حالة",
       "lifecycle_advance": "تقدّم مرحلة"
-    }
+    },
+    "gateDecision": "القرار مستحق عند البوابة {gate}",
+    "specApproval": "المالك يعتمد هذه المواصفات",
+    "stageReady": "يمكن إغلاق مرحلة {stage} الآن"
   },
   "errors": {
     "invalid": "تحقق من الحقول وحاول مرة أخرى.",

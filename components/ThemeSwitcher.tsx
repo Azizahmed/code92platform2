@@ -4,6 +4,8 @@ import {Moon, Sun} from 'lucide-react';
 import {useEffect, useState} from 'react';
 import {useTranslations} from 'next-intl';
 
+import {THEME_COLORS} from '@/lib/theme-colors';
+
 type Theme = 'light' | 'dark';
 
 const STORAGE_KEY = 'code92-theme';
@@ -13,6 +15,9 @@ function applyTheme(theme: Theme) {
   root.classList.remove('light', 'dark');
   root.classList.add(theme);
   localStorage.setItem(STORAGE_KEY, theme);
+  document.querySelectorAll('meta[name="theme-color"]').forEach((meta) => {
+    meta.setAttribute('content', THEME_COLORS[theme]);
+  });
 }
 
 export default function ThemeSwitcher() {

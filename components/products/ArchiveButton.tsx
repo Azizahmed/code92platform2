@@ -4,6 +4,7 @@ import {useState, useTransition} from 'react';
 import {Archive, ArchiveRestore} from 'lucide-react';
 import {useTranslations} from 'next-intl';
 
+import {useConfirm} from '@/components/ui/ConfirmProvider';
 import {setProductArchivedAction} from '@/lib/actions/products';
 
 // Rendered for admins only (the page gates it); the server action and the
@@ -16,11 +17,12 @@ export default function ArchiveButton({
   archived: boolean;
 }) {
   const t = useTranslations('products');
+  const confirm = useConfirm();
   const [errorKey, setErrorKey] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
-  function handleClick() {
-    const confirmed = window.confirm(
+  async function handleClick() {
+    const confirmed = await confirm(
       archived ? t('edit.unarchiveConfirm') : t('edit.archiveConfirm')
     );
     if (!confirmed) return;

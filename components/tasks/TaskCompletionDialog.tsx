@@ -14,12 +14,16 @@ export default function TaskCompletionDialog({
   taskTitle,
   initialNote,
   pending,
+  allowSkip = true,
   onCancel,
   onConfirm
 }: {
   taskTitle: string;
   initialNote?: string | null;
   pending: boolean;
+  // False when adding a note to a task that is already complete: there is
+  // nothing to skip to.
+  allowSkip?: boolean;
   onCancel: () => void;
   onConfirm: (note: string | null) => void;
 }) {
@@ -111,14 +115,16 @@ export default function TaskCompletionDialog({
           >
             {pending ? t('completion.saving') : t('completion.confirm')}
           </button>
-          <button
-            type="button"
-            onClick={() => onConfirm(null)}
-            disabled={pending}
-            className="text-xs text-muted underline-offset-2 transition-colors hover:text-ink hover:underline disabled:opacity-50"
-          >
-            {t('completion.skip')}
-          </button>
+          {allowSkip ? (
+            <button
+              type="button"
+              onClick={() => onConfirm(null)}
+              disabled={pending}
+              className="text-xs text-muted underline-offset-2 transition-colors hover:text-ink hover:underline disabled:opacity-50"
+            >
+              {t('completion.skip')}
+            </button>
+          ) : null}
           <button
             type="button"
             onClick={onCancel}

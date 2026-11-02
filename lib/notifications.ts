@@ -79,7 +79,12 @@ export function notificationHref(item: Pick<
   if (item.channel_id) return `/channels/${item.channel_id}`;
   if (item.deal_id) return `/sales/deals/${item.deal_id}`;
   if (item.account_id) return `/sales/accounts/${item.account_id}`;
-  if (item.task_id) return item.product_id ? `/products/${item.product_id}#task-${item.task_id}` : '/tasks';
+  // ?task= opens the task panel over the page (components/tasks/TaskDrawer).
+  if (item.task_id) {
+    return item.product_id
+      ? `/products/${item.product_id}?tab=tasks&task=${item.task_id}`
+      : `/tasks?task=${item.task_id}`;
+  }
   return null;
 }
 
