@@ -4,6 +4,7 @@ import {Archive, ArchiveRestore, Trash2} from 'lucide-react';
 import {useState, useTransition} from 'react';
 import {useTranslations} from 'next-intl';
 
+import {useConfirm} from '@/components/ui/ConfirmProvider';
 import {useRouter} from '@/i18n/navigation';
 import {pushAfterAction} from '@/lib/navigation-guard';
 import {
@@ -26,12 +27,13 @@ export default function KnowledgeItemActions({
   deletable?: boolean;
 }) {
   const t = useTranslations('knowledge');
+  const confirm = useConfirm();
   const router = useRouter();
   const [errorKey, setErrorKey] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
-  function handleArchive() {
-    const confirmed = window.confirm(
+  async function handleArchive() {
+    const confirmed = await confirm(
       archived ? t('danger.unarchiveConfirm') : t('danger.archiveConfirm')
     );
     if (!confirmed) return;
@@ -45,8 +47,8 @@ export default function KnowledgeItemActions({
     });
   }
 
-  function handleDelete() {
-    if (!window.confirm(t('danger.deleteConfirm'))) return;
+  async function handleDelete() {
+    if (!await confirm(t('danger.deleteConfirm'))) return;
     setErrorKey(null);
 
     startTransition(async () => {

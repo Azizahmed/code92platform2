@@ -5,7 +5,7 @@ import {CheckCircle2, Circle, Minus, Plus} from 'lucide-react';
 import {useTranslations} from 'next-intl';
 
 import {setTaskReleaseAction} from '@/lib/actions/releases';
-import {Link} from '@/i18n/navigation';
+import {openTaskDrawer} from '@/lib/task-drawer';
 
 export type ScopeTask = {
   id: string;
@@ -20,13 +20,13 @@ export type ScopeTask = {
 // rather than from memory.
 export default function ReleaseScopePanel({
   releaseId,
-  productId,
   scoped,
   available,
   canManage
 }: {
   releaseId: string;
-  productId: string;
+  // Kept for callers; tasks now open in the side panel instead of the product page.
+  productId?: string;
   scoped: ScopeTask[];
   available: ScopeTask[];
   canManage: boolean;
@@ -86,16 +86,17 @@ export default function ReleaseScopePanel({
                   <Circle className="h-4 w-4" strokeWidth={1.75} />
                 )}
               </span>
-              <Link
-                href={`/products/${productId}#task-${task.id}`}
-                className={`min-w-0 flex-1 truncate transition-colors hover:text-accent ${
+              <button
+                type="button"
+                onClick={() => openTaskDrawer(task.id)}
+                className={`min-w-0 flex-1 truncate text-start transition-colors hover:text-accent ${
                   task.status === 'completed'
                     ? 'text-muted line-through'
                     : 'text-ink'
                 }`}
               >
                 {task.title}
-              </Link>
+              </button>
               <span className="hidden shrink-0 text-[11px] text-faint sm:block">
                 {task.assignee_name ?? t('scope.unassigned')}
               </span>

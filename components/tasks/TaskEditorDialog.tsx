@@ -45,10 +45,22 @@ function errorKey(error: unknown): string {
     : 'generic';
 }
 
+export type TaskEditorDefaults = {
+  productId?: string | null;
+  parentTaskId?: string | null;
+  projectId?: string | null;
+  assigneeId?: string | null;
+  title?: string;
+  dueDate?: string | null;
+};
+
 export default function TaskEditorDialog({
   task,
   products,
   members,
+  defaults,
+  lockProduct = false,
+  bare = false,
   onDone,
   onError
 }: {
@@ -56,23 +68,35 @@ export default function TaskEditorDialog({
   task?: ProductTask;
   products: TaskProductOption[];
   members: TaskMemberOption[];
-  onDone: () => void;
+  // Starting values for a new task: the product page files under its product,
+  // a subtask under its parent, a project's task under its project.
+  defaults?: TaskEditorDefaults;
+  // The product is fixed by where the form was opened.
+  lockProduct?: boolean;
+  // No card chrome: the form sits inside a modal or the side panel.
+  bare?: boolean;
+  onDone: (createdTaskId?: string) => void;
   onError: (key: string) => void;
 }) {
   const t = useTranslations('tasks');
   const fileInput = useRef<HTMLInputElement>(null);
-  const [title, setTitle] = useState(task?.title ?? '');
+  const [title, setTitle] = useState(task?.title ?? defaults?.title ?? '');
   const [notes, setNotes] = useState(task?.notes ?? '');
-  const [dueDate, setDueDate] = useState(task?.due_date ?? '');
-  const [assigneeId, setAssigneeId] = useState(task?.assignee_id ?? '');
-  const [productId, setProductId] = useState(task?.product_id ?? GENERAL);
+  const [dueDate, setDueDate] = useState(task?.due_date ?? defaults?.dueDate ?? '');
+  const [assigneeId, setAssigneeId] = useState(task?.assignee_id ?? defaults?.assigneeId ?? '');
+  const [productId, setProductId] = useState(task?.product_id ?? defaults?.productId ?? GENERAL);
+  const parentTaskId = task ? task.parent_task_id : defaults?.parentTaskId ?? null;
+  const projectId = task ? task.project_id : defaults?.projectId ?? null;
   const [files, setFiles] = useState<File[]>([]);
   const [pending, startTransition] = useTransition();
 
   // A task that already belongs to a product stays there: validate_product_task()
   // allows exactly one move, general → product, so offering the others would be
   // offering a control that always fails.
-  const productLocked = Boolean(task?.product_id);
+  const productLocked =
+    Boolean(task?.product_id) || (!task && (lockProduct || Boolean(parentTaskId)));
+  // A project's task has no product at all (product_tasks_one_scope).
+  const hideProduct = Boolean(projectId);
   // A subtask follows its parent, and a task already scoped into a release has
   // to leave that release first. Both are refused by the database.
   const adoptionBlocked =
@@ -110,12 +134,13 @@ export default function TaskEditorDialog({
             ...(!productLocked && productId !== GENERAL ? {productId} : {})
           })
         : await createTaskAction({
-            productId: productId === GENERAL ? null : productId,
-            parentTaskId: null,
+            productId: hideProduct || productId === GENERAL ? null : productId,
+            parentTaskId,
             title,
             notes: notes.trim() || null,
             dueDate: dueDate || null,
-            assigneeId: assigneeId || null
+            assigneeId: assigneeId || null,
+            projectId
           });
 
       if (!result.ok) {
@@ -150,22 +175,30 @@ export default function TaskEditorDialog({
         }
       }
 
-      onDone();
+      onDone(task ? undefined : result.taskId);
     });
   }
 
   return (
     <form
       onSubmit={submit}
-      className="space-y-4 rounded-lg border border-accent/20 bg-accent/[0.035] p-4"
+      className={
+        bare
+          ? 'space-y-4'
+          : 'space-y-4 rounded-lg border border-accent/20 bg-accent/[0.035] p-4'
+      }
     >
       <div className="flex items-center justify-between gap-3">
         <h3 className="text-sm font-medium">
-          {task ? t('form.editTitle') : t('form.newTitle')}
+          {task
+            ? t('form.editTitle')
+            : parentTaskId
+              ? t('form.subtaskTitle')
+              : t('form.newTitle')}
         </h3>
         <button
           type="button"
-          onClick={onDone}
+          onClick={() => onDone()}
           className="rounded p-1 text-faint transition-colors hover:bg-raised hover:text-ink"
           aria-label={t('form.cancel')}
         >
@@ -186,6 +219,7 @@ export default function TaskEditorDialog({
         />
       </label>
 
+      {hideProduct ? null : (
       <div className="grid gap-3 sm:grid-cols-2">
         <label className="block space-y-1.5">
           <span className="text-xs text-muted">{t('form.product')}</span>
@@ -204,14 +238,18 @@ export default function TaskEditorDialog({
           </select>
           <span className="block text-[11px] text-faint">
             {productLocked
-              ? t('form.productLockedHint')
+              ? task
+                ? t('form.productLockedHint')
+                : parentTaskId
+                  ? t('form.productBlockedHint')
+                  : t('form.productFixedHint')
               : adoptionBlocked
                 ? t('form.productBlockedHint')
                 : t('form.productHint')}
           </span>
         </label>
-
       </div>
+      )}
 
       <label className="block space-y-1.5">
         <span className="text-xs text-muted">{t('form.notes')}</span>
@@ -289,7 +327,7 @@ export default function TaskEditorDialog({
         </button>
         <button
           type="button"
-          onClick={onDone}
+          onClick={() => onDone()}
           className="rounded-md border border-hairline px-3.5 py-2 text-sm text-muted transition-colors hover:text-ink"
         >
           {t('form.cancel')}

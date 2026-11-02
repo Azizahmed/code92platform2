@@ -1,5 +1,6 @@
 import {getTranslations} from 'next-intl/server';
 
+import HelpTip from '@/components/ui/HelpTip';
 import ProjectsList from '@/components/projects/ProjectsList';
 import {Link} from '@/i18n/navigation';
 import {requireActiveMember} from '@/lib/auth';
@@ -53,7 +54,7 @@ export default async function ProjectsPage({
     <section className="space-y-6">
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="text-xl font-semibold">{t('list.title')}</h1>
+          <h1 className="flex items-center gap-1.5 text-xl font-semibold">{t('list.title')}<HelpTip term="projectPhase" /></h1>
           <p className="mt-1 text-sm text-muted">{t('list.subtitle')}</p>
         </div>
         <Link href="/projects/new" className="inline-flex items-center gap-2 rounded-md bg-accent px-3 py-2 text-xs font-semibold text-bg">

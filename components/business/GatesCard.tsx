@@ -3,6 +3,7 @@
 import {useState} from 'react';
 import {useTranslations} from 'next-intl';
 
+import HelpTip from '@/components/ui/HelpTip';
 import GateDecisionDialog from '@/components/business/GateDecisionDialog';
 import RelativeTime from '@/components/RelativeTime';
 import {gateWaitingAt, type BusinessStage, type GateNumber} from '@/lib/business-track';
@@ -49,7 +50,7 @@ export default function GatesCard({
   return (
     <section className="space-y-4 rounded-lg border border-hairline bg-panel p-4">
       <header className="flex flex-wrap items-center justify-between gap-2">
-        <h2 className="text-sm font-medium">{t('gate.title')}</h2>
+        <h2 className="flex items-center gap-1 text-sm font-medium">{t('gate.title')}<HelpTip term="gate" /></h2>
         <p className="text-[11px] text-faint">{t('gate.founderOnly')}</p>
       </header>
 

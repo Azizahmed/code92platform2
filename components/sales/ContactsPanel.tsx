@@ -10,6 +10,7 @@ import {
   updateContactAction,
   type ContactInput
 } from '@/lib/actions/sales';
+import {useConfirm} from '@/components/ui/ConfirmProvider';
 import type {Contact} from '@/lib/sales/types';
 import {useServerAction} from '@/lib/use-server-action';
 
@@ -71,6 +72,7 @@ function ContactForm({
 
 export default function ContactsPanel({accountId, contacts}: {accountId: string; contacts: Contact[]}) {
   const t = useTranslations('sales');
+  const confirm = useConfirm();
   const [editing, setEditing] = useState<string | 'new' | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pending, runAction] = useServerAction();
@@ -151,8 +153,8 @@ export default function ContactsPanel({accountId, contacts}: {accountId: string;
                 <button
                   type="button"
                   disabled={pending}
-                  onClick={() => {
-                    if (window.confirm(t('contacts.deleteConfirm', {name: contact.name}))) run(() => deleteContactAction(contact.id));
+                  onClick={async () => {
+                    if (await confirm(t('contacts.deleteConfirm', {name: contact.name}))) run(() => deleteContactAction(contact.id));
                   }}
                   aria-label={t('contacts.delete')}
                   className="rounded p-1.5 text-faint transition-colors hover:bg-danger/10 hover:text-danger"

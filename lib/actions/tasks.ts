@@ -8,6 +8,8 @@ import {createInsForgeServerClient} from '@/lib/insforge/server';
 
 export type TaskStatus = 'pending' | 'completed';
 
+export type TaskWorkflowStatus = 'todo' | 'in_progress' | 'blocked' | 'done';
+
 export type TaskAttachment = {
   id: string;
   task_id: string;
@@ -30,6 +32,9 @@ export type ProductTask = {
   due_date: string | null;
   assignee_id: string | null;
   status: TaskStatus;
+  // The four-state status every screen shows. Kept in step with `status` by
+  // validate_product_task(). Optional only for rows read by older queries.
+  workflow_status?: TaskWorkflowStatus;
   position: number;
   created_by: string;
   completed_at: string | null;
@@ -330,5 +335,139 @@ export async function deleteTaskAction(
     ok: true,
     taskId,
     storageKeys: (attachments ?? []).map((item) => item.storage_key as string)
+  };
+}
+
+// ============================================================
+// Task detail — the side panel
+// ============================================================
+
+export type TaskSubtaskSummary = {
+  id: string;
+  title: string;
+  status: TaskStatus;
+  workflow_status: TaskWorkflowStatus;
+  due_date: string | null;
+  assignee_id: string | null;
+  assignee_name: string | null;
+  release_id: string | null;
+  completion_note: string | null;
+};
+
+export type TaskDetail = ProductTask & {
+  workflow_status: TaskWorkflowStatus;
+  product_name: string | null;
+  project_name: string | null;
+  release_name: string | null;
+  assignee_name: string | null;
+  created_by_name: string | null;
+  completed_by_name: string | null;
+  parent: {id: string; title: string} | null;
+  subtasks: TaskSubtaskSummary[];
+};
+
+export type TaskDetailResult =
+  | {
+      ok: true;
+      task: TaskDetail;
+      members: {userId: string; displayName: string}[];
+      products: {id: string; name: string}[];
+    }
+  | {ok: false; error: string};
+
+const TASK_COLUMNS =
+  'id, product_id, parent_task_id, title, notes, due_date, assignee_id, status, workflow_status, position, created_by, completed_at, created_at, updated_at, release_id, completion_note, completed_by, project_id';
+
+// Everything the panel shows in one call: the task, its parent and subtasks,
+// attachments, the names behind every id, and the option lists its editor
+// needs. Read-only.
+export async function getTaskDetailAction(taskId: string): Promise<TaskDetailResult> {
+  if (!z.string().uuid().safeParse(taskId).success) return {ok: false, error: 'invalid'};
+  const caller = await requireActiveCaller();
+  if (!caller) return {ok: false, error: 'forbidden'};
+
+  const insforge = await createInsForgeServerClient();
+  const [{data: row}, {data: subtasks}, {data: attachments}, {data: watched}, {data: members}, {data: products}] =
+    await Promise.all([
+      insforge.database.from('product_tasks').select(TASK_COLUMNS).eq('id', taskId).maybeSingle(),
+      insforge.database
+        .from('product_tasks')
+        .select('id, title, status, workflow_status, due_date, assignee_id, release_id, completion_note')
+        .eq('parent_task_id', taskId)
+        .order('position', {ascending: true})
+        .order('created_at', {ascending: true}),
+      insforge.database
+        .from('task_attachments')
+        .select('id, task_id, storage_url, storage_key, file_name, mime_type, size_bytes, created_at')
+        .eq('task_id', taskId)
+        .order('created_at', {ascending: true}),
+      insforge.database
+        .from('task_watchers')
+        .select('task_id')
+        .eq('task_id', taskId)
+        .eq('user_id', caller.user.id),
+      insforge.database
+        .from('team_members')
+        .select('user_id, display_name')
+        .eq('is_active', true)
+        .order('display_name'),
+      insforge.database
+        .from('products')
+        .select('id, name, archived_at')
+        .order('name')
+    ]);
+
+  if (!row) return {ok: false, error: 'notFound'};
+  const task = row as unknown as Omit<ProductTask, 'attachments' | 'is_watching'> & {
+    workflow_status: TaskWorkflowStatus;
+  };
+
+  const [parentResult, projectResult, releaseResult] = await Promise.all([
+    task.parent_task_id
+      ? insforge.database.from('product_tasks').select('id, title').eq('id', task.parent_task_id).maybeSingle()
+      : Promise.resolve({data: null}),
+    task.project_id
+      ? insforge.database.from('projects').select('name').eq('id', task.project_id).maybeSingle()
+      : Promise.resolve({data: null}),
+    task.release_id
+      ? insforge.database.from('product_releases').select('version, name').eq('id', task.release_id).maybeSingle()
+      : Promise.resolve({data: null})
+  ]);
+
+  const nameOf = new Map(
+    (members ?? []).map((member) => [member.user_id as string, member.display_name as string])
+  );
+  const productName = task.product_id
+    ? ((products ?? []).find((product) => product.id === task.product_id)?.name as string | undefined) ?? null
+    : null;
+  const release = releaseResult.data as Record<string, unknown> | null;
+
+  return {
+    ok: true,
+    task: {
+      ...task,
+      attachments: (attachments ?? []) as unknown as TaskAttachment[],
+      is_watching: (watched ?? []).length > 0,
+      product_name: productName,
+      project_name: ((projectResult.data as {name?: string} | null)?.name as string | undefined) ?? null,
+      release_name: release
+        ? [release.version, release.name].filter(Boolean).join(' · ') || null
+        : null,
+      assignee_name: task.assignee_id ? nameOf.get(task.assignee_id) ?? null : null,
+      created_by_name: nameOf.get(task.created_by) ?? null,
+      completed_by_name: task.completed_by ? nameOf.get(task.completed_by) ?? null : null,
+      parent: (parentResult.data as {id: string; title: string} | null) ?? null,
+      subtasks: ((subtasks ?? []) as unknown as Omit<TaskSubtaskSummary, 'assignee_name'>[]).map((subtask) => ({
+        ...subtask,
+        assignee_name: subtask.assignee_id ? nameOf.get(subtask.assignee_id) ?? null : null
+      }))
+    },
+    members: (members ?? []).map((member) => ({
+      userId: member.user_id as string,
+      displayName: member.display_name as string
+    })),
+    products: (products ?? [])
+      .filter((product) => !product.archived_at)
+      .map((product) => ({id: product.id as string, name: product.name as string}))
   };
 }

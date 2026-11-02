@@ -1,5 +1,6 @@
 import {getTranslations} from 'next-intl/server';
 
+import HelpTip from '@/components/ui/HelpTip';
 import ArtifactPolicyTable, {type PolicyRow} from '@/components/governance/ArtifactPolicyTable';
 import CoverageTable from '@/components/governance/CoverageTable';
 import GateLogTable, {type GateLogEntry} from '@/components/governance/GateLogTable';
@@ -52,7 +53,7 @@ export default async function GovernancePage({
   return (
     <section className="space-y-8">
       <header>
-        <h1 className="text-xl font-semibold">{t('title')}</h1>
+        <h1 className="flex items-center gap-1.5 text-xl font-semibold">{t('title')}<HelpTip term="evidence" /></h1>
         <p className="mt-1 text-sm text-muted">{t('subtitle')}</p>
         <p className="mt-2 text-xs text-faint">{t('gapsSummary', {count: gapCount})}</p>
       </header>

@@ -1,6 +1,6 @@
 'use client';
 
-import {useEffect, useState} from 'react';
+import {Suspense, useEffect, useState} from 'react';
 import dynamic from 'next/dynamic';
 import {
   Bot,
@@ -10,6 +10,7 @@ import {
   Inbox,
   LayoutDashboard,
   ListTodo,
+  Search,
   LogOut,
   Menu,
   MessagesSquare,
@@ -23,7 +24,9 @@ import {useTranslations} from 'next-intl';
 import {Link, usePathname, useRouter} from '@/i18n/navigation';
 import {signOutAction} from '@/lib/actions/auth';
 import {CURRENT_VERSION} from '@/lib/platform-releases';
+import CommandPalette, {OPEN_PALETTE_EVENT} from '@/components/CommandPalette';
 import ControlPanel from '@/components/ControlPanel';
+import TaskDrawer from '@/components/tasks/TaskDrawer';
 import NavBadge, {useMyWorkBadge} from '@/components/NavBadge';
 import NotificationBell from '@/components/notifications/NotificationBell';
 
@@ -119,6 +122,20 @@ export default function AppShell({userName, userEmail, isAdmin, assistantUserId,
             <div className="text-[11px] text-faint">{t('consoleTag')}</div>
           </div>
         </div>
+
+        {assistantUserId ? (
+          <div className="px-3 pt-3">
+            <button
+              type="button"
+              onClick={() => window.dispatchEvent(new Event(OPEN_PALETTE_EVENT))}
+              className="flex w-full items-center gap-2 rounded-md border border-hairline bg-bg/40 px-2.5 py-2 text-xs text-faint transition-colors hover:border-accent/30 hover:text-muted"
+            >
+              <Search className="h-3.5 w-3.5" strokeWidth={1.75} />
+              <span className="flex-1 text-start">{t('nav.search')}</span>
+              <kbd className="rounded border border-hairline px-1 font-mono text-[10px]">Ctrl K</kbd>
+            </button>
+          </div>
+        ) : null}
 
         <nav className="flex-1 overflow-y-auto px-3 py-4">
           <div className="px-2 pb-2 text-[10px] font-medium uppercase tracking-widest text-faint">
@@ -222,6 +239,16 @@ export default function AppShell({userName, userEmail, isAdmin, assistantUserId,
             </div>
           </div>
           <div className="flex shrink-0 items-center gap-1.5">
+            {assistantUserId ? (
+              <button
+                type="button"
+                onClick={() => window.dispatchEvent(new Event(OPEN_PALETTE_EVENT))}
+                aria-label={t('nav.search')}
+                className="flex h-10 w-10 items-center justify-center rounded-lg border border-hairline bg-bg/50 text-muted transition-colors active:bg-raised active:text-ink"
+              >
+                <Search className="h-4 w-4" strokeWidth={1.75} />
+              </button>
+            ) : null}
             <NotificationBell />
             <button
               type="button"
@@ -305,6 +332,15 @@ export default function AppShell({userName, userEmail, isAdmin, assistantUserId,
         </ul>
         <div className="h-[env(safe-area-inset-bottom)]" />
       </nav>
+
+      {assistantUserId ? (
+        <>
+          <CommandPalette />
+          <Suspense fallback={null}>
+            <TaskDrawer />
+          </Suspense>
+        </>
+      ) : null}
 
       {assistantUserId ? <>
         {!assistantOpen ? <button type="button" aria-controls="platform-assistant" aria-expanded={false}

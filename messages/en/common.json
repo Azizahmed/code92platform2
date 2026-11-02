@@ -21,7 +21,8 @@
     "sales": "Sales",
     "more": "More",
     "changelog": "Release log",
-    "badge": "{count, plural, =1 {1 item needs you} other {# items need you}}"
+    "badge": "{count, plural, =1 {1 item needs you} other {# items need you}}",
+    "search": "Search or jump to…"
   },
   "actions": {
     "signOut": "Sign out",

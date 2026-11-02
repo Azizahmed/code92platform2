@@ -4,6 +4,7 @@ import {useState} from 'react';
 import {Trash2} from 'lucide-react';
 import {useTranslations} from 'next-intl';
 
+import {useConfirm} from '@/components/ui/ConfirmProvider';
 import RelativeTime from '@/components/RelativeTime';
 import {addReleaseArtifactAction, removeReleaseArtifactAction} from '@/lib/actions/releases';
 import {
@@ -36,6 +37,7 @@ export default function StageArtifacts({
   canManage: boolean;
 }) {
   const t = useTranslations('releases');
+  const confirm = useConfirm();
   const [key, setKey] = useState<ArtifactKey>(required[0] ?? 'intent');
   const [title, setTitle] = useState('');
   const [url, setUrl] = useState('');
@@ -80,8 +82,8 @@ export default function StageArtifacts({
                 type="button"
                 disabled={pending}
                 aria-label={t('artifacts.remove')}
-                onClick={() => {
-                  if (!window.confirm(t('artifacts.removeConfirm'))) return;
+                onClick={async () => {
+                  if (!await confirm(t('artifacts.removeConfirm'))) return;
                   void run(async () => {
                     const result = await removeReleaseArtifactAction(artifact.id);
                     if (!result.ok) setError(result.error);

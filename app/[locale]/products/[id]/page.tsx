@@ -289,6 +289,7 @@ export default async function ProductDetailPage({
       {activeTab === 'tasks' ? (
         <TasksTab
           productId={p.id}
+          productName={p.name}
           currentUserId={user.id}
           members={memberOptions}
           disabled={Boolean(p.archived_at)}

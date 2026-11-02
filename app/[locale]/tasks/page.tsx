@@ -5,20 +5,24 @@ import AllTasksBoard, {
   type AllTaskItem,
   type TaskProductOption
 } from '@/components/tasks/AllTasksBoard';
+import HelpTip from '@/components/ui/HelpTip';
 import type {TaskMemberOption} from '@/components/products/ProductTasksPanel';
 import {requireActiveMember} from '@/lib/auth';
 import type {
   ProductTask,
   TaskAttachment
 } from '@/lib/actions/tasks';
+import {businessDate} from '@/lib/dates';
 import {createInsForgeServerClient} from '@/lib/insforge/server';
 
 export default async function AllTasksPage({
-  params
+  params,
+  searchParams
 }: {
   params: Promise<{locale: string}>;
+  searchParams: Promise<{new?: string}>;
 }) {
-  const {locale} = await params;
+  const [{locale}, {new: openNew}] = await Promise.all([params, searchParams]);
   const insforge = await createInsForgeServerClient();
 
   const [{user}, t, [{data: tasks}, {data: products}, {data: members}]] =
@@ -29,7 +33,7 @@ export default async function AllTasksPage({
         insforge.database
           .from('product_tasks')
           .select(
-            'id, product_id, parent_task_id, title, notes, due_date, assignee_id, status, position, created_by, completed_at, created_at, updated_at, release_id, completion_note, completed_by, project_id'
+            'id, product_id, parent_task_id, title, notes, due_date, assignee_id, status, workflow_status, position, created_by, completed_at, created_at, updated_at, release_id, completion_note, completed_by, project_id'
           )
           .order('due_date', {ascending: true, nullsFirst: false})
           .order('created_at', {ascending: false}),
@@ -143,6 +147,7 @@ export default async function AllTasksPage({
         <div className="flex items-center gap-2">
           <ListTodo className="h-5 w-5 text-accent" strokeWidth={1.75} />
           <h1 className="text-xl font-semibold">{t('all.title')}</h1>
+          <HelpTip term="taskStatus" />
         </div>
         <p className="mt-1 text-sm text-muted">{t('all.subtitle')}</p>
       </header>
@@ -153,6 +158,8 @@ export default async function AllTasksPage({
         members={memberOptions}
         currentUserId={user.id}
         locale={locale}
+        today={businessDate()}
+        openNew={openNew === '1'}
       />
     </section>
   );

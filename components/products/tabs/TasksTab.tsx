@@ -7,12 +7,14 @@ import type {ProductTask, TaskAttachment} from '@/lib/actions/tasks';
 // viewer is following each one.
 export default async function TasksTab({
   productId,
+  productName,
   currentUserId,
   members,
   disabled,
   locale
 }: {
   productId: string;
+  productName: string;
   currentUserId: string;
   members: TaskMemberOption[];
   disabled: boolean;
@@ -23,7 +25,7 @@ export default async function TasksTab({
   const {data: tasks} = await insforge.database
     .from('product_tasks')
     .select(
-      'id, product_id, parent_task_id, title, notes, due_date, assignee_id, status, position, created_by, completed_at, created_at, updated_at, release_id, completion_note, completed_by'
+      'id, product_id, parent_task_id, title, notes, due_date, assignee_id, status, workflow_status, position, created_by, completed_at, created_at, updated_at, release_id, completion_note, completed_by'
     )
     .eq('product_id', productId)
     .order('position', {ascending: true})
@@ -63,6 +65,7 @@ export default async function TasksTab({
   return (
     <ProductTasksPanel
       productId={productId}
+      productName={productName}
       tasks={workItems}
       members={members}
       locale={locale}

@@ -52,5 +52,68 @@
       "product_no_business_owner": "No business owner",
       "product_no_operator": "No operator"
     }
+  },
+  "greeting": {
+    "morning": "Good morning, {name}",
+    "afternoon": "Good afternoon, {name}",
+    "evening": "Good evening, {name}"
+  },
+  "summary": {
+    "withOverdue": "{open, plural, =1 {1 open task} other {# open tasks}} across the team — {overdue} past due. {waiting, plural, =0 {Nothing is waiting on you.} =1 {1 thing is waiting on you.} other {# things are waiting on you.}}",
+    "calm": "{open, plural, =0 {No open tasks} =1 {1 open task} other {# open tasks}} across the team, none past due. {waiting, plural, =0 {Nothing is waiting on you.} =1 {1 thing is waiting on you.} other {# things are waiting on you.}}"
+  },
+  "actions": {
+    "myWork": "My work",
+    "newTask": "New task",
+    "viewAll": "View all"
+  },
+  "kpis": {
+    "open": "Open tasks",
+    "completed": "Completed this week",
+    "overdue": "Overdue",
+    "waiting": "Waiting on you",
+    "openTrend": "Open tasks at the end of each of the last 12 weeks",
+    "dueThisWeek": "{count} due in the next 7 days",
+    "sameAsLastWeek": "Same as last week",
+    "vsLastWeek": "{delta} {direction, select, up {more} other {fewer}} than last week",
+    "overdueNote": "Past their due date",
+    "allOnTime": "Everything is on time",
+    "waitingNote": "Decisions and replies",
+    "nothingWaiting": "You're all caught up"
+  },
+  "charts": {
+    "total": "{count} in total",
+    "trend": {
+      "title": "Tasks created vs completed",
+      "label": "Tasks created and completed per week, last 12 weeks",
+      "created": "Created",
+      "completed": "Completed",
+      "weekOf": "Week of {date}",
+      "week": "Week starting"
+    },
+    "status": {
+      "title": "Open work by status",
+      "openTasks": "open tasks"
+    },
+    "workload": {
+      "title": "Team workload",
+      "onTrack": "On track",
+      "overdue": "Overdue",
+      "you": "{name} (you)",
+      "former": "Former member",
+      "unassigned": "Unassigned",
+      "tooltip": "{name}: {onTrack} on track, {overdue} overdue",
+      "more": "{count, plural, =1 {1 more person} other {# more people}} in All tasks",
+      "empty": "No open tasks to share out."
+    }
+  },
+  "lists": {
+    "dueSoon": "Due in the next 7 days",
+    "nothingDue": "Nothing due this week.",
+    "recentlyCompleted": "Recently completed",
+    "nothingCompleted": "Nothing completed yet."
+  },
+  "pipeline": {
+    "title": "Pipeline"
   }
 }

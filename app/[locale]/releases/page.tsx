@@ -1,6 +1,7 @@
 import {Rocket} from 'lucide-react';
 import {getTranslations} from 'next-intl/server';
 
+import HelpTip from '@/components/ui/HelpTip';
 import ReleasesBoard from '@/components/releases/ReleasesBoard';
 import {requireActiveMember} from '@/lib/auth';
 import {businessDate} from '@/lib/dates';
@@ -42,6 +43,7 @@ export default async function ReleasesPage({
         <div className="flex items-center gap-2">
           <Rocket className="h-5 w-5 text-accent" strokeWidth={1.75} />
           <h1 className="text-xl font-semibold">{t('title')}</h1>
+          <HelpTip term="releaseStage" />
         </div>
         <p className="mt-1 text-sm text-muted">{t('subtitle')}</p>
       </header>

@@ -1,6 +1,7 @@
 import {Plus} from 'lucide-react';
 import {getTranslations} from 'next-intl/server';
 
+import HelpTip from '@/components/ui/HelpTip';
 import ProductsTable, {type ProductRow} from '@/components/products/ProductsTable';
 import {Link} from '@/i18n/navigation';
 import {requireActiveMember} from '@/lib/auth';
@@ -52,7 +53,7 @@ export default async function ProductsPage({
     <section className="space-y-6">
       <header className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h1 className="text-xl font-semibold">{t('list.title')}</h1>
+          <h1 className="flex items-center gap-1.5 text-xl font-semibold">{t('list.title')}<HelpTip term="businessStage" /></h1>
           <p className="mt-1 text-sm text-muted">{t('list.subtitle')}</p>
         </div>
         <Link

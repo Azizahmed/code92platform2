@@ -5,6 +5,7 @@ import {Trash2} from 'lucide-react';
 import {useTranslations} from 'next-intl';
 import {useOptimistic, useState, useTransition} from 'react';
 
+import {useConfirm} from '@/components/ui/ConfirmProvider';
 import HealthBadge, {type Health} from '@/components/HealthBadge';
 import RelativeTime from '@/components/RelativeTime';
 import StageChip, {type Stage} from '@/components/StageChip';
@@ -51,6 +52,7 @@ export default function StatusTimeline({
   disabled?: boolean;
 }) {
   const t = useTranslations('products');
+  const confirm = useConfirm();
   const [error, setError] = useState<string | null>(null);
   const [, startTransition] = useTransition();
   const [optimisticUpdates, removeOptimistic] = useOptimistic(
@@ -59,8 +61,8 @@ export default function StatusTimeline({
       current.filter((entry) => entry.id !== removedId)
   );
 
-  function remove(entry: TimelineEntry) {
-    if (!window.confirm(t('detail.deleteUpdateConfirm'))) return;
+  async function remove(entry: TimelineEntry) {
+    if (!await confirm(t('detail.deleteUpdateConfirm'))) return;
     setError(null);
     startTransition(async () => {
       // Drop the row first — the await below costs a full round trip.

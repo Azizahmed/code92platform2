@@ -21,6 +21,7 @@ import {
 import {useTranslations} from 'next-intl';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import {useConfirm} from '@/components/ui/ConfirmProvider';
 import {groupBy} from '@/lib/collections';
 
 import ProposalCard from '@/components/channels/ProposalCard';
@@ -644,6 +645,7 @@ function MessageRow({
   highlight: ReturnType<typeof mentionHighlight>;
 }) {
   const t = useTranslations('channels');
+  const confirm = useConfirm();
   const isSystem = message.kind === 'system';
   const isAgent = message.kind === 'agent';
 
@@ -741,8 +743,8 @@ function MessageRow({
             {canDelete ? (
               <button
                 type="button"
-                onClick={() => {
-                  if (window.confirm(t('message.confirmDelete'))) onDelete();
+                onClick={async () => {
+                  if (await confirm(t('message.confirmDelete'))) onDelete();
                 }}
                 className="inline-flex items-center gap-1 font-mono text-[10px] uppercase tracking-widest text-faint transition-colors hover:text-danger focus-visible:outline focus-visible:outline-2 focus-visible:outline-danger"
               >

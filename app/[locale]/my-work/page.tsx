@@ -1,10 +1,9 @@
 import {Bell, Inbox} from 'lucide-react';
 import {getTranslations} from 'next-intl/server';
 
-import MyWorkView, {
-  type MyWorkTask,
-  type WaitingItem
-} from '@/components/my-work/MyWorkView';
+import HelpTip from '@/components/ui/HelpTip';
+import MyWorkView, {type WaitingItem} from '@/components/my-work/MyWorkView';
+import type {AllTaskItem} from '@/components/tasks/AllTasksBoard';
 import {Link} from '@/i18n/navigation';
 import type {ProductTask, TaskAttachment} from '@/lib/actions/tasks';
 import {requireActiveMember} from '@/lib/auth';
@@ -19,9 +18,9 @@ export default async function MyWorkPage({
   searchParams
 }: {
   params: Promise<{locale: string}>;
-  searchParams: Promise<{tab?: string}>;
+  searchParams: Promise<{tab?: string; new?: string}>;
 }) {
-  const [{locale}, {tab}] = await Promise.all([params, searchParams]);
+  const [{locale}, {tab, new: openNew}] = await Promise.all([params, searchParams]);
   const insforge = await createInsForgeServerClient();
   const doneSince = new Date(Date.now() - DONE_WINDOW_DAYS * 86_400_000).toISOString();
 
@@ -58,10 +57,7 @@ export default async function MyWorkPage({
       insforge.database.rpc('my_waiting_on')
     ]);
 
-  const rows = (tasks ?? []) as unknown as Omit<
-    MyWorkTask,
-    'attachments' | 'is_watching' | 'product_name' | 'product_logo_url' | 'parent_title'
-  >[];
+  const rows = (tasks ?? []) as unknown as Omit<ProductTask, 'attachments' | 'is_watching'>[];
   const taskIds = rows.map((task) => task.id);
 
   // The editor shows a task's attachments; fetched only for the tasks listed.
@@ -90,16 +86,38 @@ export default async function MyWorkPage({
   const watchedIds = new Set((watched ?? []).map((row) => row.task_id as string));
   const productMap = new Map((products ?? []).map((product) => [product.id as string, product]));
   const titleById = new Map(rows.map((task) => [task.id, task.title]));
+  const nameById = new Map(
+    (members ?? []).map((member) => [member.user_id as string, member.display_name as string])
+  );
 
-  const myTasks: MyWorkTask[] = rows.map((task) => {
+  // Parents outside the caller's own list still need a name to show.
+  const missingParents = [
+    ...new Set(
+      rows
+        .map((task) => task.parent_task_id)
+        .filter((id): id is string => Boolean(id) && !titleById.has(id as string))
+    )
+  ];
+  if (missingParents.length > 0) {
+    const {data: parents} = await insforge.database
+      .from('product_tasks')
+      .select('id, title')
+      .in('id', missingParents);
+    for (const parent of parents ?? []) titleById.set(parent.id as string, parent.title as string);
+  }
+
+  const myTasks: AllTaskItem[] = rows.map((task) => {
     const product = task.product_id ? productMap.get(task.product_id) : undefined;
     return {
-      ...(task as Omit<ProductTask, 'attachments' | 'is_watching'> & {workflow_status: MyWorkTask['workflow_status']}),
+      ...task,
       attachments: attachmentsByTask.get(task.id) ?? [],
       is_watching: watchedIds.has(task.id),
       product_name: (product?.name as string | undefined) ?? null,
       product_logo_url: (product?.logo_url as string | null | undefined) ?? null,
-      parent_title: task.parent_task_id ? titleById.get(task.parent_task_id) ?? null : null
+      product_archived_at: (product?.archived_at as string | null | undefined) ?? null,
+      assignee_name: task.assignee_id ? nameById.get(task.assignee_id) ?? null : null,
+      parent_title: task.parent_task_id ? titleById.get(task.parent_task_id) ?? null : null,
+      completed_by_name: task.completed_by ? nameById.get(task.completed_by) ?? null : null
     };
   });
 
@@ -110,6 +128,7 @@ export default async function MyWorkPage({
           <div className="flex items-center gap-2">
             <Inbox className="h-5 w-5 text-accent" strokeWidth={1.75} />
             <h1 className="text-xl font-semibold">{t('title')}</h1>
+            <HelpTip term="waitingOnMe" />
           </div>
           <p className="mt-1 text-sm text-muted">{t('subtitle')}</p>
         </div>
@@ -135,6 +154,8 @@ export default async function MyWorkPage({
         }))}
         today={businessDate()}
         locale={locale}
+        currentUserId={user.id}
+        openNew={openNew === '1'}
       />
     </section>
   );

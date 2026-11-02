@@ -9,7 +9,11 @@ import {hasLocale, NextIntlClientProvider} from 'next-intl';
 import {getTranslations} from 'next-intl/server';
 
 import AppShell from '@/components/AppShell';
+import ServiceWorkerRegister from '@/components/ServiceWorkerRegister';
+import ConfirmProvider from '@/components/ui/ConfirmProvider';
+import ToastProvider from '@/components/ui/ToastProvider';
 import {routing} from '@/i18n/routing';
+import {THEME_COLORS} from '@/lib/theme-colors';
 import {getOwnMembership, getSessionUser} from '@/lib/auth';
 import {getMyWorkCounts} from '@/lib/my-work-counts';
 
@@ -24,8 +28,16 @@ const themeBootScript = `
         : (window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
       document.documentElement.classList.add(theme);
     } catch (_) {
+      theme = 'dark';
       document.documentElement.classList.add('dark');
     }
+    // The browser/status bar follows the app's theme, not only the OS one.
+    document.addEventListener('DOMContentLoaded', function () {
+      var color = theme === 'light' ? '${THEME_COLORS.light}' : '${THEME_COLORS.dark}';
+      document.querySelectorAll('meta[name="theme-color"]').forEach(function (m) {
+        m.setAttribute('content', color);
+      });
+    });
   })();
 `;
 
@@ -57,7 +69,11 @@ export function generateStaticParams() {
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
-  viewportFit: 'cover'
+  viewportFit: 'cover',
+  themeColor: [
+    {media: '(prefers-color-scheme: dark)', color: THEME_COLORS.dark},
+    {media: '(prefers-color-scheme: light)', color: THEME_COLORS.light}
+  ]
 };
 
 export async function generateMetadata({
@@ -67,7 +83,14 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const {locale} = await params;
   const t = await getTranslations({locale, namespace: 'common'});
-  return {title: t('appName')};
+  return {
+    title: t('appName'),
+    applicationName: t('appNameShort'),
+    // iOS ignores the manifest for these. 'black' keeps the status bar solid,
+    // so the sticky mobile header is not drawn under it.
+    appleWebApp: {capable: true, title: t('appNameShort'), statusBarStyle: 'black'},
+    formatDetection: {telephone: false}
+  };
 }
 
 export default async function LocaleLayout({
@@ -101,7 +124,10 @@ export default async function LocaleLayout({
         <script dangerouslySetInnerHTML={{__html: themeBootScript}} />
       </head>
       <body>
+        <ServiceWorkerRegister />
         <NextIntlClientProvider>
+          <ToastProvider>
+          <ConfirmProvider>
           <AppShell
             userName={member?.display_name ?? null}
             userEmail={user?.email ?? null}
@@ -111,6 +137,8 @@ export default async function LocaleLayout({
           >
             {children}
           </AppShell>
+          </ConfirmProvider>
+          </ToastProvider>
         </NextIntlClientProvider>
       </body>
     </html>

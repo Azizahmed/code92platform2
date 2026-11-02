@@ -4,6 +4,7 @@ import {useMemo, useState, useTransition} from 'react';
 import {Briefcase, Hash, MessageSquare, Package, Plus, X} from 'lucide-react';
 import {useTranslations} from 'next-intl';
 
+import {useConfirm} from '@/components/ui/ConfirmProvider';
 import {Link, usePathname, useRouter} from '@/i18n/navigation';
 import {pushAfterAction} from '@/lib/navigation-guard';
 import {
@@ -46,6 +47,7 @@ export default function ChannelRail({
   defaultChannelId: string | null;
 }) {
   const t = useTranslations('channels');
+  const confirm = useConfirm();
   const router = useRouter();
   const pathname = usePathname();
 
@@ -152,11 +154,11 @@ export default function ChannelRail({
     });
   }
 
-  function remove(channel: Channel) {
+  async function remove(channel: Channel) {
     // The confirm cannot promise which of the two will happen — only the server
     // knows whether the channel is empty — so it states the rule instead of
     // guessing, and the outcome is reported afterwards.
-    if (!window.confirm(t('remove.confirm', {name: channelLabel(channel, locale)}))) {
+    if (!await confirm(t('remove.confirm', {name: channelLabel(channel, locale)}))) {
       return;
     }
     setError(null);

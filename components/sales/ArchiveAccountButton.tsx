@@ -4,16 +4,18 @@ import {Archive, ArchiveRestore} from 'lucide-react';
 import {useTranslations} from 'next-intl';
 import {useState} from 'react';
 
+import {useConfirm} from '@/components/ui/ConfirmProvider';
 import {setAccountArchivedAction} from '@/lib/actions/sales';
 import {useServerAction} from '@/lib/use-server-action';
 
 export default function ArchiveAccountButton({accountId, archived}: {accountId: string; archived: boolean}) {
   const t = useTranslations('sales');
+  const confirm = useConfirm();
   const [error, setError] = useState<string | null>(null);
   const [pending, run] = useServerAction();
 
-  function toggle() {
-    if (!archived && !window.confirm(t('archive.confirm'))) return;
+  async function toggle() {
+    if (!archived && !await confirm(t('archive.confirm'))) return;
     setError(null);
     void run(async () => {
       const result = await setAccountArchivedAction(accountId, !archived);

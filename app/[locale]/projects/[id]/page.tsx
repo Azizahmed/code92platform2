@@ -58,7 +58,7 @@ export default async function ProjectDetailPage({
     insforge.database.from('project_watchers').select('user_id').eq('project_id', id).eq('user_id', user.id),
     insforge.database
       .from('product_tasks')
-      .select('id, title, status, due_date, assignee_id')
+      .select('id, title, status, workflow_status, due_date, assignee_id, release_id, completion_note')
       .eq('project_id', id)
       .order('created_at', {ascending: true}),
     insforge.database
@@ -116,13 +116,13 @@ export default async function ProjectDetailPage({
     id: string;
     title: string;
     status: 'pending' | 'completed';
+    workflow_status: ProjectTaskRow['workflow_status'];
     due_date: string | null;
     assignee_id: string | null;
+    release_id: string | null;
+    completion_note: string | null;
   }[]).map((row) => ({
-    id: row.id,
-    title: row.title,
-    status: row.status,
-    due_date: row.due_date,
+    ...row,
     assignee_name: row.assignee_id ? names.get(row.assignee_id) ?? null : null
   }));
 
@@ -237,7 +237,13 @@ export default async function ProjectDetailPage({
 
           <section className="space-y-3 rounded-lg border border-hairline bg-panel p-4">
             <h2 className="text-sm font-medium">{t('tasks.title')}</h2>
-            <ProjectTasks projectId={project.id} tasks={taskRows} canEdit={canEdit && isOpen} />
+            <ProjectTasks
+              projectId={project.id}
+              tasks={taskRows}
+              canEdit={canEdit && isOpen}
+              members={teamOptions.map((option) => ({userId: option.id, displayName: option.name}))}
+              locale={locale}
+            />
           </section>
 
           <section className="space-y-3 rounded-lg border border-hairline bg-panel p-4">

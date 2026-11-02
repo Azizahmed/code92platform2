@@ -4,6 +4,7 @@ import {useState} from 'react';
 import {Trash2} from 'lucide-react';
 import {useTranslations} from 'next-intl';
 
+import {useConfirm} from '@/components/ui/ConfirmProvider';
 import RelativeTime from '@/components/RelativeTime';
 import {
   addChecklistItemAction,
@@ -97,6 +98,7 @@ function ChecklistItem({
   canEdit: boolean;
 }) {
   const t = useTranslations('business');
+  const confirm = useConfirm();
   const [pending, run] = useServerAction();
   const [error, setError] = useState<string | null>(null);
 
@@ -129,8 +131,8 @@ function ChecklistItem({
         <button
           type="button"
           disabled={pending}
-          onClick={() => {
-            if (!window.confirm(t('checklist.removeConfirm'))) return;
+          onClick={async () => {
+            if (!await confirm(t('checklist.removeConfirm'))) return;
             void run(async () => {
               const result = await deleteChecklistItemAction(row.id);
               if (!result.ok) setError(result.error);
